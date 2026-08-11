@@ -22,6 +22,9 @@
           packages = with pkgs.${system}; [
             poetry
             python3
+            pyright            # Python Language Server (Type checking & Autocomplete)
+            ruff               # Fast Python Linter & Formatter LSP
+            nil                # Nix Language Server
           ];
         };
       });
