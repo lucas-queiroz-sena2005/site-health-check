@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "site-health-check"
+version = "0.1.0"
+description = "Web Health Auditor & Reconnaissance Tool"
+authors = ["Lucas Queiroz <author@example.com>"]
+readme = "README.md"
+license = "MIT"
+packages = [
+  { include = "site_health_check", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+
+[tool.poetry.scripts]
+site-check = "site_health_check.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
