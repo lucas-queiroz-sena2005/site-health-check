@@ -1,0 +1,31 @@
+monitors:
+  - name: "Unicamp Portal"
+    # Fallback push URL if a specific path doesn't have one
+    default_feedback_link: "http://kuma/api/push/unicamp_base"
+    
+    consults:
+      - base_url: "https://example.com"
+        
+        # 1. Global assertions applied to ALL paths below
+        global_expect_string: "Unicamp"
+        exclude_strings:
+          - "Not found"
+          - "Não encontrado..."
+          - "Internal Server Error"
+          
+        # 2. Lower-level SRE metrics to actively track and report
+        track_metrics:
+          - "tls_certificate_expiration"
+          - "latency"
+          
+        # 3. Specific endpoints to test under this base URL
+        paths:
+          - path: "/portal"
+            expect_string: "Welcome to Portal"
+            
+          - path: "/login"
+            method: "POST"
+            # External reference to keep credentials out of this config
+            request_payload_file: "secrets/login_payload.json" 
+            # Overrides the default feedback link just for the login check
+            feedback_link: "http://kuma/api/push/unicamp_login"

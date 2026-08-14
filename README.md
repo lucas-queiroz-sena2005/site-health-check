@@ -1,105 +1,21 @@
-# Site Health Check (`site-health-check`)
+# Site Health Check
 
-A fast, lightweight CLI and Python library for web service auditing, health checks, and reconnaissance.
-
----
+A high-performance SRE tool for auditing Network Ports, Deep TLS Certificates, and HTTP Payloads. Originally designed for OpenStack application observability.
 
 ## Features
-
-- **Status & Server Recon**: Inspects HTTP response codes, status reasons, and server banner headers.
-- **Fuzzy HTML Validation**: Asserts expected strings in the response body across whitespace and newline variations.
-- **Negative Assertions (Soft 404 Detection)**: Catches error messages, forbidden phrases, or maintenance indicators.
-- **Flexible Execution**: Use as a Poetry CLI command, runnable module (`python -m site_health_check`), or importable Python library.
-- **Nix Flake Support**: Reproducible environment support with Nix and Poetry2Nix.
-
----
-
-## Installation & Setup
-
-### Using Poetry
-
-```bash
-# Install dependencies
-poetry install
-
-# Run the test suite
-poetry run pytest
-```
-
-### Using Nix
-
-```bash
-nix develop
-```
-
----
+- **Smart Protocol Detection**: Automatically probes raw TCP sockets. If the port supports TLS, it extracts the certificate data. It then dynamically routes the HTTP payload checker to `https://` or `http://` based on the exact capabilities of the port.
+- **Port Ranges**: Supports complex port strings (e.g., `-p 80,443,8000-8050`).
+- **Deep TLS Inspection**: Extracts exact expiration dates and parses Ciphers without relying on web browsers.
+- **Unified State Export**: Dumps all findings into a deeply nested JSON file for downstream GUI consumption.
 
 ## Usage
 
-### 1. Command Line Interface
-
-You can run the tool directly via Poetry scripts:
-
+Run the scanner against a target domain or IP:
 ```bash
-# Basic health check
-poetry run site-check example.com
-
-# Verify that a specific string is present in the HTML response
-poetry run site-check example.com --string "Example Domain"
-
-# Fail if a forbidden string is found (Soft-404 detection)
-poetry run site-check example.com --string "Error 500" --exclude
-
-# Specify custom timeout (in seconds)
-poetry run site-check example.com --timeout 5
+poetry run python -m site_health_check cloudflare.com -p 80,443,8443
 ```
 
-Alternatively, run as a module:
-
+Export the results to a file for observability:
 ```bash
-poetry run python -m site_health_check example.com
+poetry run python -m site_health_check 192.168.1.50 -p 8000-8050 -o results.json
 ```
-
-### 2. Python Library
-
-You can also import and use the validation and checking logic programmatically:
-
-```python
-from site_health_check import perform_check, validate_html
-
-# Run a check programmatically
-response, validation_error, conn_err = perform_check(
-    target_url="https://example.com",
-    expected_string="Example Domain",
-    must_not_have=False,
-    timeout=10,
-)
-
-if response:
-    print(f"Status: {response.status_code}, Server: {response.headers.get('Server')}")
-```
-
----
-
-## Project Structure
-
-```text
-site-health-check/
-├── src/
-│   └── site_health_check/
-│       ├── __init__.py       # Package exports & version
-│       ├── __main__.py       # python -m entrypoint
-│       ├── cli.py            # CLI argument parsing & output formatting
-│       └── core.py           # Core HTTP check & HTML validation logic
-├── tests/
-│   └── test_validator.py     # Unit test suite
-├── flake.nix                 # Nix development shell & package definition
-├── pyproject.toml            # Poetry packaging configuration
-└── README.md
-```
-
----
-
-## License
-
-[MIT](LICENSE)

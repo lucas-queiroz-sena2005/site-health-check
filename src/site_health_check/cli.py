@@ -1,49 +1,41 @@
 """Command-line interface for the Site Health Check tool."""
 
 import argparse
+import json
 import sys
-from typing import Optional
-import requests
 
-from site_health_check.core import is_valid_url, perform_check
-
-
-def format_audit_summary(
-    url: str,
-    response: Optional[requests.Response],
-    validation_error: Optional[str] = None,
-    connection_error: Optional[str] = None,
-) -> str:
-    """Build a human-readable audit summary line."""
-    if connection_error:
-        return f"URL: {url} | Server: Unknown | Error Exception: {connection_error}"
-
-    server = response.headers.get("Server", "Unknown") if response else "Unknown"
-    status_line = f"HTTP {response.status_code} {response.reason}" if response else "No response"
-
-    summary = f"URL: {url} | Server: {server}"
-
-    # Handle HTTP Error Codes (4xx, 5xx)
-    if response and response.status_code >= 400:
-        summary += f" | Error Exception: {status_line}"
-
-    # Handle HTML Payload Validation Errors
-    if validation_error:
-        if "Error Exception:" in summary:
-            summary += f" | {validation_error}"
-        else:
-            summary += f" | Error Exception: {validation_error}"
-
-    return summary
+from site_health_check.core import scan_target
+from site_health_check.parsing import is_valid_url, parse_ports
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Construct the command-line argument parser."""
     parser = argparse.ArgumentParser(
         prog="site-check",
-        description="Web Health Auditor & Recon Tool",
+        description="Web Health Auditor & Network Prober",
     )
-    parser.add_argument("url", help="Target URL (e.g., example.com)")
+    parser.add_argument(
+        "target", help="Target Host or URL (e.g., example.com or 192.168.1.50)"
+    )
+
+    # Network Prober Arguments
+    parser.add_argument(
+        "-p", "--ports", default="443", help="Target port(s) (e.g., 443, 8000-8050)"
+    )
+    parser.add_argument(
+        "--check-tcp",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run TCP/TLS port scan",
+    )
+
+    # HTTP Check Arguments
+    parser.add_argument(
+        "--check-http",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run HTTP payload validation",
+    )
     parser.add_argument(
         "-s", "--string", help="String to validate in the HTML body", default=None
     )
@@ -59,36 +51,74 @@ def build_parser() -> argparse.ArgumentParser:
         default=10,
         help="Request timeout in seconds (default: 10)",
     )
+
+    # Observability & Output
+    parser.add_argument(
+        "--push-url", help="Optional Webhook URL for observability tools"
+    )
+    parser.add_argument(
+        "-o", "--output", help="Save results to specified JSON file", default=None
+    )
+
     return parser
 
 
-def main(args: Optional[list] = None) -> int:
+def main(args: list | None = None) -> int:
     """Main CLI entrypoint."""
     parser = build_parser()
     parsed_args = parser.parse_args(args)
-    target_url = parsed_args.url
+    target = parsed_args.target
 
-    if not is_valid_url(target_url):
-        print("Error: Invalid URL format.", file=sys.stderr)
+    if not is_valid_url(target):
+        print(f"Error: Invalid target format: {target}", file=sys.stderr)
         return 1
 
-    response, validation_error, connection_error = perform_check(
-        target_url=target_url,
+    target_ports = parse_ports(parsed_args.ports)
+    
+    print(f"\n[*] Starting Scan on {target}...")
+    results = scan_target(
+        target=target,
+        target_ports=target_ports,
+        check_tcp=parsed_args.check_tcp,
+        check_http=parsed_args.check_http,
         expected_string=parsed_args.string,
         must_not_have=parsed_args.exclude,
         timeout=parsed_args.timeout,
     )
 
-    summary = format_audit_summary(
-        url=target_url,
-        response=response,
-        validation_error=validation_error,
-        connection_error=connection_error,
-    )
-    print(summary)
+    # Unified Terminal Output
+    for port, res in results["ports"].items():
+        print(f"\n  -> Port {port}:")
+        
+        # TCP/TLS Output
+        if parsed_args.check_tcp:
+            print(f"     [NET] TCP: {res.get('tcp_status', 'N/A')} | TLS: {res.get('tls_status', 'N/A')}")
+            if res.get("error"):
+                print(f"           Error: {res['error']}")
+            elif res.get("tls_details"):
+                print(f"           Expires in: {res['tls_details']['days_left']} days")
+                
+        # HTTP Output
+        if parsed_args.check_http and res.get("http"):
+            http_res = res["http"]
+            status_line = (
+                f"HTTP {http_res['status_code']} {http_res['reason']}"
+                if http_res.get('status_code')
+                else "No response"
+            )
+            print(f"     [WEB] {status_line} ({http_res['url_tested']})")
+            if http_res.get("validation_error"):
+                print(f"           Validation Error: {http_res['validation_error']}")
+            if http_res.get("connection_error"):
+                print(f"           Connection Error: {http_res['connection_error']}")
 
-    if connection_error or (response and response.status_code >= 400) or validation_error:
-        return 1
+    # 4. State Export
+    if parsed_args.output and results:
+        with open(parsed_args.output, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"\n[+] Port scan results saved to {parsed_args.output}")
+
+    # Webhook push logic omitted for now as requested
 
     return 0
 

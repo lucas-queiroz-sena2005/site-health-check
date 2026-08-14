@@ -1,8 +1,7 @@
 """Unit tests for site_health_check core logic."""
 
-import pytest
-from site_health_check.core import is_valid_url, normalize_url, validate_html
 from site_health_check.cli import format_audit_summary
+from site_health_check.core import is_valid_url, normalize_url, validate_html
 
 
 class DummyResponse:
@@ -69,7 +68,9 @@ def test_format_audit_summary_success():
 
 
 def test_format_audit_summary_http_error():
-    res = DummyResponse(status_code=404, reason="Not Found", headers={"Server": "nginx"})
+    res = DummyResponse(
+        status_code=404, reason="Not Found", headers={"Server": "nginx"}
+    )
     summary = format_audit_summary("https://example.com", res)
     assert "URL: https://example.com | Server: nginx" in summary
     assert "Error Exception: HTTP 404 Not Found" in summary

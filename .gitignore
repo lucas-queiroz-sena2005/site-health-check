@@ -1,37 +1,12 @@
-# Byte-compiled / optimized / DLL files
+# Ignore Python compiled files
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
 
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-.eggs/
+# Ignore output files
+results.json
+*.json
 
-# Virtual Environments
+# Ignore virtual environments if created manually
 .venv/
-env/
 venv/
-ENV/
-
-# Nix build outputs and caches
-result
-result-*
-.direnv/
-
-# Testing & Coverage
-.pytest_cache/
-.coverage
-htmlcov/
-
-# IDEs and Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS artifacts
-.DS_Store
-Thumbs.db
+env/
