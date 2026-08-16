@@ -37,12 +37,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run HTTP payload validation",
     )
     parser.add_argument(
-        "-s", "--string", help="String to validate in the HTML body", default=None
+        "-e", "--expected", action="append", help="Expected string(s) to validate in the HTML body"
     )
     parser.add_argument(
-        "--exclude",
-        action="store_true",
-        help="Fail if the string IS found (negative validation)",
+        "-u", "--undesired", action="append", help="Undesired string(s) to fail if found"
     )
     parser.add_argument(
         "-t",
@@ -81,8 +79,8 @@ def main(args: list | None = None) -> int:
         target_ports=target_ports,
         check_tcp=parsed_args.check_tcp,
         check_http=parsed_args.check_http,
-        expected_string=parsed_args.string,
-        must_not_have=parsed_args.exclude,
+        expected_strings=parsed_args.expected,
+        undesired_strings=parsed_args.undesired,
         timeout=parsed_args.timeout,
     )
 
@@ -112,11 +110,11 @@ def main(args: list | None = None) -> int:
             if http_res.get("connection_error"):
                 print(f"           Connection Error: {http_res['connection_error']}")
 
-    # 4. State Export
+    # State Export
     if parsed_args.output and results:
-        with open(parsed_args.output, "w") as f:
-            json.dump(results, f, indent=2)
-        print(f"\n[+] Port scan results saved to {parsed_args.output}")
+        from site_health_check.exporter import export_results
+        saved_path = export_results(results, parsed_args.output)
+        print(f"\n[+] Port scan results saved to {saved_path}")
 
     # Webhook push logic omitted for now as requested
 

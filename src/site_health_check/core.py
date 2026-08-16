@@ -9,6 +9,7 @@ from typing import Any
 
 import requests
 
+from site_health_check.catcher import validate_html
 from site_health_check.parsing import normalize_url
 
 
@@ -74,27 +75,10 @@ def check_tcp_and_tls(host: str, port: int, timeout: float = 2.0) -> dict[str, A
     return response
 
 
-def validate_html(
-    html_content: str, expected_string: str, must_not_have: bool = False
-) -> tuple[bool, str | None]:
-    """Validate presence or absence of a string in HTML content with fuzzy whitespace."""
-    fuzzy_pattern = re.escape(expected_string).replace(r"\ ", r"\s+")
-    string_found = bool(re.search(fuzzy_pattern, html_content, re.IGNORECASE))
-
-    if must_not_have:
-        if string_found:
-            return False, f"Soft 404: Forbidden string '{expected_string}' was found."
-        return True, None
-    else:
-        if not string_found:
-            return False, f"Soft 404: Expected string '{expected_string}' not found."
-        return True, None
-
-
 def perform_check(
     target_url: str,
-    expected_string: str | None = None,
-    must_not_have: bool = False,
+    expected_strings: list[str] | None = None,
+    undesired_strings: list[str] | None = None,
     timeout: int = 10,
 ) -> tuple[requests.Response | None, str | None, str | None]:
     """
@@ -108,10 +92,14 @@ def perform_check(
         return None, None, f"Connection failed ({e})"
 
     validation_error = None
-    if expected_string:
-        _, validation_error = validate_html(
-            response.text, expected_string, must_not_have
+    if expected_strings or undesired_strings:
+        passed, msg = validate_html(
+            response.text, 
+            expected_strings=expected_strings, 
+            undesired_strings=undesired_strings
         )
+        if not passed:
+            validation_error = msg
 
     return response, validation_error, None
 
@@ -121,8 +109,8 @@ def scan_target(
     target_ports: list[int],
     check_tcp: bool = True,
     check_http: bool = True,
-    expected_string: str | None = None,
-    must_not_have: bool = False,
+    expected_strings: list[str] | None = None,
+    undesired_strings: list[str] | None = None,
     timeout: int = 10,
 ) -> dict[str, Any]:
     """
@@ -148,8 +136,8 @@ def scan_target(
             
             response, val_err, conn_err = perform_check(
                 target_url=url,
-                expected_string=expected_string,
-                must_not_have=must_not_have,
+                expected_strings=expected_strings,
+                undesired_strings=undesired_strings,
                 timeout=timeout,
             )
             
