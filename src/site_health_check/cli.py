@@ -73,50 +73,43 @@ def main(args: list | None = None) -> int:
 
     target_ports = parse_ports(parsed_args.ports)
     
-    print(f"\n[*] Starting Scan on {target}...")
-    results = scan_target(
-        target=target,
-        target_ports=target_ports,
+    from site_health_check.schema import TaskConfig, TaskFlags
+    
+    flags = TaskFlags(
         check_tcp=parsed_args.check_tcp,
         check_http=parsed_args.check_http,
+        timeout_seconds=parsed_args.timeout,
         expected_strings=parsed_args.expected,
         undesired_strings=parsed_args.undesired,
-        timeout=parsed_args.timeout,
+        recursive_san_check=False  # Could be added to CLI args later
     )
+    
+    task = TaskConfig(
+        target=target,
+        ports=target_ports,
+        flags=flags
+    )
+    
+    # Serialize to the universal JSON payload format
+    json_payload = [task.to_dict()]
+    
+    print(f"\n[*] Standardized Payload Built:")
+    print(json.dumps(json_payload, indent=2))
+    print(f"\n[*] Handing off to Core Engine...")
+    
+    # --- The Engine Boundary ---
+    from site_health_check.engine import run_engine
+    results = run_engine(json_payload)
 
     # Unified Terminal Output
-    for port, res in results["ports"].items():
-        print(f"\n  -> Port {port}:")
-        
-        # TCP/TLS Output
-        if parsed_args.check_tcp:
-            print(f"     [NET] TCP: {res.get('tcp_status', 'N/A')} | TLS: {res.get('tls_status', 'N/A')}")
-            if res.get("error"):
-                print(f"           Error: {res['error']}")
-            elif res.get("tls_details"):
-                print(f"           Expires in: {res['tls_details']['days_left']} days")
-                
-        # HTTP Output
-        if parsed_args.check_http and res.get("http"):
-            http_res = res["http"]
-            status_line = (
-                f"HTTP {http_res['status_code']} {http_res['reason']}"
-                if http_res.get('status_code')
-                else "No response"
-            )
-            print(f"     [WEB] {status_line} ({http_res['url_tested']})")
-            if http_res.get("validation_error"):
-                print(f"           Validation Error: {http_res['validation_error']}")
-            if http_res.get("connection_error"):
-                print(f"           Connection Error: {http_res['connection_error']}")
+    print("\n[+] Scan Complete. Output State:")
+    print(json.dumps(results, indent=2))
 
     # State Export
     if parsed_args.output and results:
         from site_health_check.exporter import export_results
         saved_path = export_results(results, parsed_args.output)
-        print(f"\n[+] Port scan results saved to {saved_path}")
-
-    # Webhook push logic omitted for now as requested
+        print(f"\n[+] Results saved to {saved_path}")
 
     return 0
 

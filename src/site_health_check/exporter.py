@@ -5,8 +5,9 @@ import os
 from datetime import datetime
 from typing import Any
 
+from site_health_check.schema import IpState
 
-def export_results(results: dict[str, Any], output_path: str | None = None) -> str:
+def export_results(results: dict[str, IpState], output_path: str | None = None) -> str:
     """
     Exports the scan results to a JSON file.
     If output_path is None, dynamically creates a file in the ./results/ directory.

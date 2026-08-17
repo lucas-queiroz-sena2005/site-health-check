@@ -1,6 +1,7 @@
 # Ignore Python compiled files
 __pycache__/
 *.pyc
+src/.ruff_cache/
 
 # Ignore output files
 results.json
