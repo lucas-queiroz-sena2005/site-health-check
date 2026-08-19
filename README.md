@@ -3,11 +3,11 @@
 A high-performance SRE tool for auditing Network Ports, Deep TLS Certificates, and HTTP Payloads. Originally designed for OpenStack application observability.
 
 ## What it is
-- **Multi-Protocol Prober:** Checks basic TCP connectivity and performs deep TLS inspection (extracting expiration dates and Subject Alternative Names).
+- **Infrastructure Health Monitor:** Checks basic TCP connectivity and performs deep TLS inspection (extracting expiration dates and Subject Alternative Names).
 - **Breadth-First Target Discovery:** Capable of recursively discovering and scanning any Subject Alternative Names (SANs) found on a TLS certificate using `--recursive-san`.
-- **Intelligent Virtual Host Engine:** Split caching ensures TCP connections are only opened once per IP/Port combination, while HTTP probes are executed for every distinct domain (Virtual Host) on that IP.
+- **SRE-focused Virtual Host Engine:** Split caching ensures TCP connections are only opened once per IP/Port combination, while HTTP checks are executed for every distinct domain (Virtual Host) on that IP.
 - **Port Range Scanner:** Natively supports scanning contiguous port ranges (e.g., `-p 80,443,8000-8050`).
-- **Stateful Logger:** Dumps all findings into a deeply nested JSON file designed for downstream GUI consumption and observability aggregation.
+- **Observability State Engine:** Dumps all findings into a deeply nested JSON file designed for downstream GUI consumption and observability aggregation.
 
 ## What it is NOT
 - **NOT an Alerting Engine:** It does not send emails, Slack messages, or SMS. Alerting should be delegated to external observability tools reading the JSON output.
