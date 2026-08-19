@@ -4,6 +4,12 @@ import re
 import sys
 
 
+def is_valid_ipv4(ipv4: str) -> bool:
+    """Validates whether the provided string matches a valid IPv4 address."""
+    regex = r"^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
+
+    return bool(re.match(regex, ipv4))
+
 def is_valid_url(url: str) -> bool:
     """Validate whether the provided string matches a valid URL/domain pattern."""
     regex = (
@@ -59,4 +65,4 @@ def parse_ports(ports_arg: int | str = 80) -> list[int]:
             print(f"Error parsing port argument: {e}", file=sys.stderr)
             sys.exit(1)
 
-    return sorted(list(set(target_ports)))
+    return sorted(set(target_ports))

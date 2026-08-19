@@ -4,8 +4,8 @@ import argparse
 import json
 import sys
 
-from site_health_check.core import scan_target
 from site_health_check.parsing import is_valid_url, parse_ports
+from site_health_check.schema import TaskConfig, TaskFlags
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -28,6 +28,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
         help="Run TCP/TLS port scan",
     )
+    parser.add_argument(
+        "--recursive-san",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Recursively queue and scan discovered SANs from TLS certificates",
+    )
 
     # HTTP Check Arguments
     parser.add_argument(
@@ -41,6 +47,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-u", "--undesired", action="append", help="Undesired string(s) to fail if found"
+    )
+    parser.add_argument(
+        "--check-virtual-hosts",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Check HTTP responses for all discovered Virtual Hosts on the same IP",
     )
     parser.add_argument(
         "-t",
@@ -72,16 +84,15 @@ def main(args: list | None = None) -> int:
         return 1
 
     target_ports = parse_ports(parsed_args.ports)
-    
-    from site_health_check.schema import TaskConfig, TaskFlags
-    
+  
     flags = TaskFlags(
         check_tcp=parsed_args.check_tcp,
         check_http=parsed_args.check_http,
         timeout_seconds=parsed_args.timeout,
         expected_strings=parsed_args.expected,
         undesired_strings=parsed_args.undesired,
-        recursive_san_check=False  # Could be added to CLI args later
+        recursive_san_check=parsed_args.recursive_san,
+        check_virtual_hosts=parsed_args.check_virtual_hosts
     )
     
     task = TaskConfig(
@@ -93,9 +104,9 @@ def main(args: list | None = None) -> int:
     # Serialize to the universal JSON payload format
     json_payload = [task.to_dict()]
     
-    print(f"\n[*] Standardized Payload Built:")
+    print("\n[*] Standardized Payload Built:")
     print(json.dumps(json_payload, indent=2))
-    print(f"\n[*] Handing off to Core Engine...")
+    print("\n[*] Handing off to Core Engine...")
     
     # --- The Engine Boundary ---
     from site_health_check.engine import run_engine

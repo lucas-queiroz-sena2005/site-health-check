@@ -2,10 +2,10 @@
 
 import json
 import os
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
 
 from site_health_check.schema import IpState
+
 
 def export_results(results: dict[str, IpState], output_path: str | None = None) -> str:
     """
@@ -15,7 +15,7 @@ def export_results(results: dict[str, IpState], output_path: str | None = None) 
     if not output_path:
         # Smart Default Logic
         target_name = results.get("target", "unknown").replace("://", "_").replace("/", "_")
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"{target_name}_{timestamp}.json"
         
         # Find the repository root (3 levels up from exporter.py: src/site_health_check/exporter.py -> repo/)

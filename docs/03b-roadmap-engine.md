@@ -70,9 +70,9 @@ async def main_engine(json_payload):
 
 ## Tasks
 
-- [ ] **Phase 2: BFS Engine Setup**
-  - [ ] Implement the `asyncio.Queue` and the main engine loop in `src/site_health_check/core.py`.
-  - [ ] Create the concurrent worker pool configuration (allow configuring the number of workers, e.g., 50-100).
-  - [ ] Implement the `seen_targets` caching mechanism (hash set) to prevent duplicate scans and infinite loops.
-  - [ ] Implement the central `results_state` dictionary that workers will update concurrently.
-  - [ ] Add the JSON disk-writing logic to dump the final `results_state` to `results.json` when the queue is empty.
+- [x] **Phase 2: BFS Engine Setup**
+  - [x] Implement the `asyncio.Queue` and the main engine loop in `src/site_health_check/engine.py`.
+  - [x] Create the concurrent worker pool configuration.
+  - [x] Implement the two-tier caching mechanism (`seen_tcp` and `seen_http`) to prevent duplicate IP scans while enforcing virtual host checks.
+  - [x] Implement the central `master_state` dictionary that workers will update concurrently.
+  - [x] Add the JSON disk-writing logic to dump the final `master_state` to `results.json` when the queue is empty.

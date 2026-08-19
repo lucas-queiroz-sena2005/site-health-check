@@ -1,7 +1,8 @@
 """Strict data schemas for the Site Health Check engine."""
 
 import dataclasses
-from typing import Optional, List, Dict, Any
+from typing import Any
+
 
 @dataclasses.dataclass
 class TaskFlags:
@@ -9,9 +10,10 @@ class TaskFlags:
     check_tcp: bool = True
     check_http: bool = True
     timeout_seconds: int = 10
-    expected_strings: Optional[List[str]] = None
-    undesired_strings: Optional[List[str]] = None
+    expected_strings: list[str] | None = None
+    undesired_strings: list[str] | None = None
     recursive_san_check: bool = False
+    check_virtual_hosts: bool = True
 
 @dataclasses.dataclass
 class TaskConfig:
@@ -20,19 +22,20 @@ class TaskConfig:
     The core engine ONLY accepts lists of serialized TaskConfig dictionaries.
     """
     target: str
-    ports: List[int]
+    ports: list[int]
     flags: TaskFlags
+    discovered_from: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize object to the standardized JSON payload."""
         return dataclasses.asdict(self)
 
 @dataclasses.dataclass
 class HttpRoutingCheck:
     """Represents the result of a specific HTTP test against a domain."""
-    status_code: Optional[int] = None
+    status_code: int | None = None
     path_checked: str = "/"
-    notes: Optional[str] = None
+    notes: str | None = None
 
 @dataclasses.dataclass
 class TlsCertificate:
@@ -40,24 +43,24 @@ class TlsCertificate:
     valid: bool = False
     expires_in_days: int = 0
     # A list of all SANs discovered on this certificate
-    domains_discovered_sans: List[str] = dataclasses.field(default_factory=list)
+    domains_discovered_sans: list[str] = dataclasses.field(default_factory=list)
 
 @dataclasses.dataclass
 class PortState:
     """Represents the physical reality of a single port on an IP."""
     tcp_status: str = "closed" # "open" or "closed"
-    tcp_latency_ms: Optional[int] = None
-    tls_certificate: Optional[TlsCertificate] = None
+    tcp_latency_ms: int | None = None
+    tls_certificate: TlsCertificate | None = None
     
     # Maps a Domain Name (e.g., 'susy.ic.unicamp.br') to its HTTP routing result
-    http_routing_checks: Dict[str, HttpRoutingCheck] = dataclasses.field(default_factory=dict)
+    http_routing_checks: dict[str, HttpRoutingCheck] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
 class IpState:
     """Represents the complete state of a single IP address."""
-    metadata: Dict[str, str] = dataclasses.field(default_factory=dict)
+    metadata: dict[str, str] = dataclasses.field(default_factory=dict)
     # Maps a Port Number (int) to its physical PortState
-    ports: Dict[int, PortState] = dataclasses.field(default_factory=dict)
+    ports: dict[int, PortState] = dataclasses.field(default_factory=dict)
 
 # The final results.json structure will simply be a dictionary mapping 
 # an IP string to its serialized IpState:  Dict[str, IpState]

@@ -2,10 +2,6 @@
 
 The `site-health-check` engine relies on a strict separation between **Input** (Commands/Tasks) and **Output** (State/Results). This guarantees the engine remains lightweight, deduplicated, and easy to integrate with external tools.
 
-For annotated examples of these schemas, please refer to the independent JSON files in the `schemas/` directory:
-- **[Input Schema (schemas/input.json)](file:///home/crow/Code/site-health-check/docs/schemas/input.json)**
-- **[Output Schema (schemas/output.json)](file:///home/crow/Code/site-health-check/docs/schemas/output.json)**
-
 ---
 
 ## 1. The Input Schema (Job Queue)

@@ -6,6 +6,8 @@ A high-performance SRE tool for auditing Network Ports, Deep TLS Certificates, a
 - **Smart Protocol Detection**: Automatically probes raw TCP sockets. If the port supports TLS, it extracts the certificate data. It then dynamically routes the HTTP payload checker to `https://` or `http://` based on the exact capabilities of the port.
 - **Port Ranges**: Supports complex port strings (e.g., `-p 80,443,8000-8050`).
 - **Deep TLS Inspection**: Extracts exact expiration dates and parses Ciphers without relying on web browsers.
+- **Breadth-First Target Discovery**: Capable of recursively scanning any Subject Alternative Names (SANs) discovered on a TLS certificate using `--recursive-san`.
+- **Intelligent Virtual Host Caching**: Split caching ensures TCP connections are only opened once per IP/Port, while HTTP probes are executed for every distinct domain (Virtual Host) on that IP. (Toggleable via `--[no-]check-virtual-hosts`).
 - **Unified State Export**: Dumps all findings into a deeply nested JSON file for downstream GUI consumption.
 
 ## Usage

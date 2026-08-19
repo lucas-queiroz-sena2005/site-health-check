@@ -1,20 +1,74 @@
 """TCP and TLS socket probes."""
 import asyncio
-from typing import Any, Dict
+import logging
+import ssl
+import time
 
-async def check_tcp_and_tls(ip: str, port: int, timeout: float = 2.0) -> Dict[str, Any]:
-    """
-    STUB: Implement your asyncio raw socket connection here.
-    Remember to wrap the socket in SSL if port == 443 to extract SANs.
-    """
-    # TODO: Replace with your actual asyncio.open_connection implementation
-    
-    # Returning a mock dictionary for now so the engine doesn't crash
-    return {
-        "tcp_status": "open",
-        "tcp_latency_ms": 10,
-        "tls_certificate": {
-            "valid": True,
-            "domains_discovered_sans": []
-        }
-    }
+logger = logging.getLogger(__name__)
+
+from cryptography import x509
+from cryptography.x509.oid import ExtensionOID
+
+from site_health_check.schema import PortState, TlsCertificate
+
+
+async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = None, timeout: float = 2.0) -> PortState:
+    """Verifies TCP connection, registers TLS Certificate data and acquires SANs"""
+    result = PortState()
+    start_time = time.perf_counter()
+
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    try:
+        _reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(
+                host=ip,
+                port=port,
+                ssl=ssl_context,
+                server_hostname=server_hostname
+            ),
+            timeout=timeout
+        )
+
+        # If we reach here without throwing an error, the port is open AND speaks TLS
+        result.tcp_status = "open"
+        result.tcp_latency_ms = int((time.perf_counter() - start_time) * 1000)
+
+        # Raw binary certificate
+        ssl_obj = writer.get_extra_info('ssl_object')
+        if ssl_obj:
+            raw_cert = ssl_obj.getpeercert(binary_form=True)
+            if raw_cert:
+                # We default to valid=False here. True validation requires checking the chain,
+                # but you could easily add a date check using the cryptography object below!
+                tls_obj = TlsCertificate(valid=False)
+
+                try:
+                    # Parse the binary cert using cryptography
+                    cert = x509.load_der_x509_certificate(raw_cert)
+
+                    # SANs extraction
+                    ext = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+                    tls_obj.domains_discovered_sans = ext.value.get_values_for_type(x509.DNSName)
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(f"Failed to parse cert or extract SANs: {e}")
+
+                result.tls_certificate = tls_obj
+
+        writer.close()
+        await writer.wait_closed()
+
+    except ssl.SSLError:
+        # Port OPEN, but is just plain TCP (e.g., plain HTTP).
+        result.tcp_status = "open"
+        result.tcp_latency_ms = int((time.perf_counter() - start_time) * 1000)
+    except asyncio.TimeoutError:
+        result.tcp_status = "closed"
+    except Exception as e:  # noqa: BLE001
+        # Network unreachable, connection refused, etc.
+        logger.debug(f"TCP connection failed for {ip}:{port} - {e}")
+        result.tcp_status = "closed"
+
+    return result
