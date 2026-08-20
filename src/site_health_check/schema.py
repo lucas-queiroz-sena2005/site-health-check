@@ -42,6 +42,7 @@ class TlsCertificate:
     """Represents the parsed TLS certificate data."""
     valid: bool = False
     expires_in_days: int = 0
+    issuer: str | None = None
     # A list of all SANs discovered on this certificate
     domains_discovered_sans: list[str] = dataclasses.field(default_factory=list)
 

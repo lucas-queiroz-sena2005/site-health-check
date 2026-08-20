@@ -3,6 +3,7 @@ import asyncio
 import logging
 import ssl
 import time
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,6 @@ async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = No
         if ssl_obj:
             raw_cert = ssl_obj.getpeercert(binary_form=True)
             if raw_cert:
-                # We default to valid=False here. True validation requires checking the chain,
-                # but you could easily add a date check using the cryptography object below!
                 tls_obj = TlsCertificate(valid=False)
 
                 try:
@@ -52,6 +51,40 @@ async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = No
                     # SANs extraction
                     ext = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
                     tls_obj.domains_discovered_sans = ext.value.get_values_for_type(x509.DNSName)
+
+                    # Issuer extraction
+                    tls_obj.issuer = cert.issuer.rfc4514_string()
+                    
+                    # Expiration and Date Validation
+                    try:
+                        not_before = cert.not_valid_before_utc
+                        not_after = cert.not_valid_after_utc
+                    except AttributeError:
+                        # Fallback for older cryptography versions
+                        not_before = cert.not_valid_before.replace(tzinfo=timezone.utc)
+                        not_after = cert.not_valid_after.replace(tzinfo=timezone.utc)
+                        
+                    now = datetime.now(timezone.utc)
+                    is_date_valid = not_before <= now <= not_after
+                    tls_obj.expires_in_days = (not_after - now).days
+                    
+                    # Name Validation (Does the SAN match the hostname?)
+                    is_name_valid = True
+                    if server_hostname:
+                        is_name_valid = False
+                        for san in tls_obj.domains_discovered_sans:
+                            if san.startswith("*."):
+                                base = san[2:]
+                                if server_hostname.endswith(base) and server_hostname.count('.') == base.count('.') + 1:
+                                    is_name_valid = True
+                                    break
+                            elif san == server_hostname:
+                                is_name_valid = True
+                                break
+                                
+                    tls_obj.valid = is_date_valid and is_name_valid and bool(tls_obj.issuer)
+                    
+
                 except Exception as e:  # noqa: BLE001
                     logger.debug(f"Failed to parse cert or extract SANs: {e}")
 
