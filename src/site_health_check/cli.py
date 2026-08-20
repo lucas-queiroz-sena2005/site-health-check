@@ -29,12 +29,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run TCP/TLS port scan",
     )
     parser.add_argument(
+        "-r",
         "--recursive-san",
         action=argparse.BooleanOptionalAction,
         default=False,
         help="Recursively queue and scan discovered SANs from TLS certificates",
     )
-
+    parser.add_argument(
+        "--out-of-scope-depth",
+        type=int,
+        default=0,
+        help="Depth of out-of-scope (different IP) recursive SAN resolution. 0 = strict same-IP only.",
+    )
+   
     # HTTP Check Arguments
     parser.add_argument(
         "--check-http",
@@ -92,7 +99,8 @@ def main(args: list | None = None) -> int:
         expected_strings=parsed_args.expected,
         undesired_strings=parsed_args.undesired,
         recursive_san_check=parsed_args.recursive_san,
-        check_virtual_hosts=parsed_args.check_virtual_hosts
+        check_virtual_hosts=parsed_args.check_virtual_hosts,
+        out_of_scope_depth=parsed_args.out_of_scope_depth
     )
     
     task = TaskConfig(

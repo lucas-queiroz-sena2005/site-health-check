@@ -14,6 +14,7 @@ class TaskFlags:
     undesired_strings: list[str] | None = None
     recursive_san_check: bool = False
     check_virtual_hosts: bool = True
+    out_of_scope_depth: int = 0
 
 @dataclasses.dataclass
 class TaskConfig:

@@ -4,7 +4,7 @@ A high-performance SRE tool for auditing Network Ports, Deep TLS Certificates, a
 
 ## What it is
 - **Infrastructure Health Monitor:** Checks basic TCP connectivity and performs deep TLS inspection (extracting expiration dates and Subject Alternative Names).
-- **Breadth-First Target Discovery:** Capable of recursively discovering and scanning any Subject Alternative Names (SANs) found on a TLS certificate using `--recursive-san`.
+- **Breadth-First Target Discovery:** Capable of recursively discovering and scanning any Subject Alternative Names (SANs) found on a TLS certificate using `--recursive-san`, with `--out-of-scope-depth` constraints to cleanly limit scanning scope and prevent unbounded external CDN sprawling.
 - **SRE-focused Virtual Host Engine:** Split caching ensures TCP connections are only opened once per IP/Port combination, while HTTP checks are executed for every distinct domain (Virtual Host) on that IP.
 - **Port Range Scanner:** Natively supports scanning contiguous port ranges (e.g., `-p 80,443,8000-8050`).
 - **Observability State Engine:** Dumps all findings into a deeply nested JSON file designed for downstream GUI consumption and observability aggregation.
@@ -27,6 +27,9 @@ poetry run site-check cloudflare.com -p 80,443,8443
 
 # Scan with recursive Subject Alternative Names (SAN) discovery
 poetry run site-check 8.8.8.8 -p 443 --recursive-san
+
+# Strict scope check: recursively scan SANs but strictly restrict to the target's physical IP address
+poetry run site-check example.com -p 443 --recursive-san --out-of-scope-depth 0
 
 # Disable virtual host HTTP checking for a raw IP sweep
 poetry run site-check 192.168.1.50 -p 8000-8050 --no-check-virtual-hosts

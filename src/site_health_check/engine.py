@@ -31,7 +31,23 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                 continue
 
             state_key = ip_address
-            print(f"[Worker {worker_id}] Processing {target} (IP: {state_key}) on ports {ports}")
+            
+            # --- Depth and Scope Tracking ---
+            parent_ip = task.get("parent_ip")
+            current_depth = task.get("depth", 0)
+            
+            if parent_ip is None:
+                # Seed task
+                parent_ip = ip_address
+            elif ip_address != parent_ip:
+                current_depth += 1
+                
+            max_depth = task.get("flags", {}).get("out_of_scope_depth", 0)
+            if current_depth > max_depth:
+                print(f"[Worker {worker_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
+                continue
+
+            print(f"[Worker {worker_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
             
             # Initialize if IP is new
             if state_key not in master_state:
@@ -64,7 +80,6 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                     tcp_result = await check_tcp_and_tls(state_key, port, server_hostname=host_header)
                     master_state[state_key].ports[port] = tcp_result
                     
-                    # --- THE BFS QUEUE MAGIC ---
                     # If we found SANs, and recursive checking is enabled in the flags, 
                     # we push them to the BACK of the queue!
                     if tcp_result.tls_certificate and task.get("flags", {}).get("recursive_san_check"):
@@ -75,7 +90,9 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                                     "target": san, 
                                     "ports": [port],
                                     "flags": task.get("flags", {}),
-                                    "discovered_from": discovered_from
+                                    "discovered_from": discovered_from,
+                                    "parent_ip": ip_address,
+                                    "depth": current_depth
                                 })
                 
                 if not skip_http:
@@ -123,6 +140,11 @@ def run_engine(payload: list[dict[str, Any]]) -> dict[str, Any]:
     The synchronous boundary that the CLI calls.
     It triggers the asyncio event loop and returns the final serialized dictionary.
     """
+    global master_state, seen_tcp, seen_http
+    master_state.clear()
+    seen_tcp.clear()
+    seen_http.clear()
+    
     print("\n[*] Starting Asyncio Breadth-First Engine...")
     final_state_objects = asyncio.run(async_main(payload))
     
