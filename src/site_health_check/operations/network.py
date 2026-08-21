@@ -2,6 +2,7 @@
 
 import asyncio
 import socket
+import ipaddress
 
 
 async def resolve_target(target: str) -> tuple[str, str, bool]:
@@ -18,9 +19,9 @@ async def resolve_target(target: str) -> tuple[str, str, bool]:
     is_domain = False
     
     try:
-        # Check if it's already a valid IPv4 address
-        socket.inet_aton(target)
-    except OSError:
+        # Check if it's already a valid IPv4 address natively
+        ipaddress.IPv4Address(target)
+    except ValueError:
         is_domain = True
         try:
             # Resolve domain asynchronously

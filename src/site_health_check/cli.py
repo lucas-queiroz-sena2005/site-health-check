@@ -4,8 +4,8 @@ import argparse
 import json
 import sys
 
-from site_health_check.parsing import is_valid_url, parse_ports
-from site_health_check.schema import TaskConfig, TaskFlags
+from site_health_check.parsing import validate_and_clean_target, parse_ports, expand_target_ranges
+from site_health_check.schemas.engine import TaskConfig, TaskFlags
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Check HTTP responses for all discovered Virtual Hosts on the same IP",
     )
     parser.add_argument(
+        "--spoof-user-agent",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Spoof a standard browser User-Agent to prevent WAF blocks (default: False)",
+    )
+    parser.add_argument(
         "-t",
         "--timeout",
         type=int,
@@ -84,12 +90,12 @@ def main(args: list | None = None) -> int:
     """Main CLI entrypoint."""
     parser = build_parser()
     parsed_args = parser.parse_args(args)
-    target = parsed_args.target
-
-    if not is_valid_url(target):
-        print(f"Error: Invalid target format: {target}", file=sys.stderr)
+    validation_result = validate_and_clean_target(parsed_args.target)
+    if not validation_result.is_valid:
+        print(validation_result.error_message, file=sys.stderr)
         return 1
 
+    expanded_targets = expand_target_ranges(validation_result.segments)
     target_ports = parse_ports(parsed_args.ports)
   
     flags = TaskFlags(
@@ -100,17 +106,18 @@ def main(args: list | None = None) -> int:
         undesired_strings=parsed_args.undesired,
         recursive_san_check=parsed_args.recursive_san,
         check_virtual_hosts=parsed_args.check_virtual_hosts,
-        out_of_scope_depth=parsed_args.out_of_scope_depth
+        out_of_scope_depth=parsed_args.out_of_scope_depth,
+        spoof_user_agent=parsed_args.spoof_user_agent
     )
     
-    task = TaskConfig(
-        target=target,
-        ports=target_ports,
-        flags=flags
-    )
-    
-    # Serialize to the universal JSON payload format
-    json_payload = [task.to_dict()]
+    json_payload = []
+    for t in expanded_targets:
+        task = TaskConfig(
+            target=t,
+            ports=target_ports,
+            flags=flags
+        )
+        json_payload.append(task.to_dict())
     
     print("\n[*] Standardized Payload Built:")
     print(json.dumps(json_payload, indent=2))

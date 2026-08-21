@@ -1,68 +1,228 @@
-"""Parsing utilities for the Site Health Check tool."""
-
 import re
 import sys
+import ipaddress
+from functools import wraps
+from typing import Callable, Any
+from site_health_check.schemas.parsing import TargetSegment, TargetValidationResult
+
+DOMAIN_REGEX = r"^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^localhost$"
 
 
-def is_valid_ipv4(ipv4: str) -> bool:
-    """Validates whether the provided string matches a valid IPv4 address."""
-    regex = r"^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
-
-    return bool(re.match(regex, ipv4))
-
-def is_valid_url(url: str) -> bool:
-    """Validate whether the provided string matches a valid URL/domain pattern."""
-    regex = (
-        r"^(https?://)?"
-        r"(([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}|localhost|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
-        r"(:\d{1,5})?"
-        r"(/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?$"
-    )
-    return bool(re.match(regex, url))
+def exit_on_error(func: Callable) -> Callable:
+    """
+    Decorator to catch ValueErrors and cleanly exit the CLI execution.
+    This prevents messy stack traces from polluting the user's terminal.
+    """
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return func(*args, **kwargs)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+    return wrapper
 
 
 def normalize_url(url: str) -> str:
-    """Ensure URL has an http or https scheme. Defaults to https."""
+    """
+    Ensures that a URL string has an 'http' or 'https' scheme.
+    Defaults to 'https://' if none is provided.
+    """
     if not url.startswith(("http://", "https://")):
         return f"https://{url}"
     return url
 
 
+def _strip_scheme_and_validate_port(target: str) -> str:
+    """
+    Strips accidental HTTP/HTTPS schemes from targets and ensures they do not
+    contain trailing ports, raising a ValueError if ports are detected.
+    """
+    cleaned = target.strip()
+    if cleaned.startswith("http://"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("https://"):
+        cleaned = cleaned[8:]
+        
+    if ":" in cleaned:
+        last_part = cleaned.split(":")[-1]
+        if last_part.split("/")[0].isdigit():
+            raise ValueError(f"Target string '{cleaned}' should not contain a port (e.g., ':443'). Please use the -p / --ports argument instead.")
+            
+    # Strip trailing paths (e.g., example.com/api -> example.com)
+    if "/" in cleaned:
+        parts = cleaned.split("/")
+        if not (len(parts) == 2 and parts[1].isdigit()):
+            cleaned = parts[0]
+            
+    return cleaned
+
+
+def _categorize_segment(cleaned: str) -> TargetSegment:
+    """
+    Categorizes a cleaned segment string natively using the ipaddress library.
+    Identifies if a string is a domain, a raw IP, an IP range, or a CIDR block.
+    """
+    # Hyphenated IP bounds (e.g., "10.0.0.5-10.0.0.8" or "10.0.0.5/24-10.0.0.8/24")
+    if "-" in cleaned and not bool(re.match(DOMAIN_REGEX, cleaned)):
+        hyphen_parts = cleaned.split("-")
+        if len(hyphen_parts) == 2:
+            try:
+                base1 = hyphen_parts[0].split("/")[0] if "/" in hyphen_parts[0] else hyphen_parts[0]
+                base2 = hyphen_parts[1].split("/")[0] if "/" in hyphen_parts[1] else hyphen_parts[1]
+                
+                ipaddress.IPv4Address(base1)
+                ipaddress.IPv4Address(base2)
+                
+                if "/" in cleaned:
+                    suffix1 = hyphen_parts[0].split("/")[1]
+                    return TargetSegment(segment_type="cidr", data=f"{base1}-{base2}", suffix=f"/{suffix1}")
+                return TargetSegment(segment_type="ip", data=cleaned, suffix=None)
+            except ValueError:
+                pass
+
+    # Single CIDR block or Single IP (e.g., "10.0.0.0/24" or "10.0.0.5")
+    try:
+        network = ipaddress.IPv4Network(cleaned, strict=False)
+        if "/" in cleaned:
+            return TargetSegment(segment_type="cidr", data=str(network.network_address), suffix=f"/{network.prefixlen}")
+        return TargetSegment(segment_type="ip", data=cleaned, suffix=None)
+    except ValueError:
+        pass
+
+    # Domain Fallback (e.g., "example.com")
+    if bool(re.match(DOMAIN_REGEX, cleaned)):
+        return TargetSegment(segment_type="domain", data=cleaned, suffix=None)
+
+    raise ValueError(f"'{cleaned}' is not a valid Domain, IPv4 address, or CIDR block.")
+
+
+def validate_and_clean_target(target: str) -> TargetValidationResult:
+    """
+    Validates a target string (comma-separated), strips accidental schemes,
+    and cleanly categorizes them into segments.
+    """
+    segments = []
+    parts = target.split(",")
+    for part in parts:
+        if not part.strip():
+            continue
+        try:
+            cleaned = _strip_scheme_and_validate_port(part)
+            segment = _categorize_segment(cleaned)
+            segments.append(segment)
+        except ValueError as e:
+            return TargetValidationResult(is_valid=False, error_message=str(e), segments=[])
+            
+    if not segments:
+        return TargetValidationResult(is_valid=False, error_message="Error: No valid targets provided.", segments=[])
+        
+    return TargetValidationResult(is_valid=True, error_message="Valid targets", segments=segments)
+
+
+def expand_range(start_val: str, end_val: str | None, range_type: str) -> list[str | int]:
+    """
+    Universal range expansion function. 
+    Expands hyphenated string ranges into fully enumerated lists based on their type.
+    """
+    if range_type == "port":
+        start, end = int(start_val), int(str(end_val))
+        if start > end:
+            raise ValueError(f"Range start ({start}) cannot be > end ({end})")
+        return [port for port in range(start, end + 1) if 0 < port <= 65535]
+    
+    elif range_type == "ip":
+        try:
+            start_ip = int(ipaddress.IPv4Address(start_val))
+            end_ip = int(ipaddress.IPv4Address(str(end_val)))
+            if start_ip > end_ip:
+                raise ValueError(f"Range start ({start_val}) cannot be > end ({end_val})")
+            return [str(ipaddress.IPv4Address(ip)) for ip in range(start_ip, end_ip + 1)]
+        except ValueError as e:
+            raise ValueError(f"Invalid IP range: {e}")
+            
+    elif range_type == "cidr":
+        try:
+            if end_val:
+                # CIDR range logic: Iterate within the network bounds of the suffix
+                suffix = start_val.split("/")[-1]
+                start_ip = ipaddress.IPv4Address(start_val.split("/")[0])
+                end_ip = ipaddress.IPv4Address(end_val.split("/")[0])
+                
+                if start_ip > end_ip:
+                    raise ValueError(f"Range start ({start_val}) cannot be > end ({end_val})")
+
+                # Reconstruct the network block based on the start IP and suffix
+                network = ipaddress.IPv4Network(f"{start_ip}/{suffix}", strict=False)
+                results = []
+
+                for ip in network:
+                    if ip < start_ip:
+                        continue
+                    if ip > end_ip:
+                        break
+                    results.append(str(ip))
+                return results
+            else:
+                # Single CIDR block generation
+                network = ipaddress.IPv4Network(start_val, strict=False)
+                return [str(ip) for ip in network.hosts()]
+        except ValueError as e:
+            raise ValueError(f"Invalid CIDR block or range: {e}")
+            
+    raise ValueError(f"Unknown range type: {range_type}")
+
+
+def expand_target_ranges(segments: list[TargetSegment]) -> list[str]:
+    """
+    Expands segments into a flat list of raw IPs and Domains.
+    Note: The final list MUST NOT contain CIDR suffixes.
+    """
+    final_targets = []
+    for seg in segments:
+        if seg.segment_type == "domain":
+            final_targets.append(seg.data)
+        elif seg.segment_type == "ip":
+            if "-" in seg.data:
+                start, end = seg.data.split("-")
+                # mypy workaround: expand_range returns list[str | int]
+                final_targets.extend(str(t) for t in expand_range(start, end, "ip"))
+            else:
+                final_targets.append(seg.data)
+        elif seg.segment_type == "cidr":
+            if "-" in seg.data:
+                start, end = seg.data.split("-")
+                final_targets.extend(str(t) for t in expand_range(f"{start}{seg.suffix}", f"{end}{seg.suffix}", "cidr"))
+            else:
+                final_targets.extend(str(t) for t in expand_range(f"{seg.data}{seg.suffix}", None, "cidr"))
+    return final_targets
+
+
+@exit_on_error
 def parse_ports(ports_arg: int | str = 80) -> list[int]:
     """Parses port arguments (ints, CSVs, or ranges) into a valid list of ports."""
     if isinstance(ports_arg, int):
         if 0 < ports_arg <= 65535:
             return [ports_arg]
-        print(f"Error: Port {ports_arg} is out of valid range (1-65535)")
-        sys.exit(1)
+        raise ValueError(f"Port {ports_arg} is out of valid range (1-65535)")
 
     target_ports = []
     for part in str(ports_arg).replace(" ", "").split(","):
         if not part:
             continue
-        try:
-            if "-" in part:
-                numbers = part.split("-")
-                if len(numbers) != 2:
-                    raise ValueError(f"Invalid range format in '{part}'")
-                start, end = int(numbers[0]), int(numbers[1])
-                if start > end:
-                    raise ValueError(f"Range start ({start}) cannot be > end ({end})")
-
-                for port in range(start, end + 1):
-                    if 0 < port <= 65535:
-                        target_ports.append(port)
-                    else:
-                        raise ValueError(f"Port {port} out of valid range (1-65535)")
+        if "-" in part:
+            numbers = part.split("-")
+            if len(numbers) != 2:
+                raise ValueError(f"Invalid range format in '{part}'")
+            ports_in_range = expand_range(numbers[0], numbers[1], "port")
+            if not ports_in_range:
+                raise ValueError(f"No valid ports found in range '{part}'")
+            target_ports.extend(int(p) for p in ports_in_range)
+        else:
+            port = int(part)
+            if 0 < port <= 65535:
+                target_ports.append(port)
             else:
-                port = int(part)
-                if 0 < port <= 65535:
-                    target_ports.append(port)
-                else:
-                    raise ValueError(f"Port {port} out of valid range (1-65535)")
-
-        except ValueError as e:
-            print(f"Error parsing port argument: {e}", file=sys.stderr)
-            sys.exit(1)
+                raise ValueError(f"Port {port} out of valid range (1-65535)")
 
     return sorted(set(target_ports))

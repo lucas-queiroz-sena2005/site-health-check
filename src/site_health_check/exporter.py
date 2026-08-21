@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from site_health_check.schema import IpState
+from site_health_check.schemas.engine import IpState
 
 
 def export_results(results: dict[str, IpState], output_path: str | None = None) -> str:

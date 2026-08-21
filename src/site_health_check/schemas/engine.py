@@ -1,8 +1,5 @@
-"""Strict data schemas for the Site Health Check engine."""
-
 import dataclasses
 from typing import Any
-
 
 @dataclasses.dataclass
 class TaskFlags:
@@ -15,6 +12,7 @@ class TaskFlags:
     recursive_san_check: bool = False
     check_virtual_hosts: bool = True
     out_of_scope_depth: int = 0
+    spoof_user_agent: bool = False
 
 @dataclasses.dataclass
 class TaskConfig:
@@ -63,10 +61,3 @@ class IpState:
     metadata: dict[str, str] = dataclasses.field(default_factory=dict)
     # Maps a Port Number (int) to its physical PortState
     ports: dict[int, PortState] = dataclasses.field(default_factory=dict)
-
-# The final results.json structure will simply be a dictionary mapping 
-# an IP string to its serialized IpState:  Dict[str, IpState]
-# Example:
-# final_output = {
-#     "143.106.10.50": dataclasses.asdict(my_ip_state_object)
-# }

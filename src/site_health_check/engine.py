@@ -1,12 +1,14 @@
 """The Core Asynchronous Execution Engine (Breadth-First Search)."""
 
 import asyncio
+import aiohttp
 from typing import Any
 
+import ipaddress
 from site_health_check.operations.network import resolve_target
-from site_health_check.parsing import is_valid_ipv4
 from site_health_check.probes.tcp import check_tcp_and_tls
-from site_health_check.schema import IpState
+from site_health_check.probes.http import check_http_routing
+from site_health_check.schemas.engine import IpState
 
 # The master state dictionary: IP (str) -> IpState
 master_state: dict[str, IpState] = {}
@@ -85,7 +87,12 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                     if tcp_result.tls_certificate and task.get("flags", {}).get("recursive_san_check"):
                         for san in tcp_result.tls_certificate.domains_discovered_sans:
                             if "*" not in san:  # Avoid queuing wildcard domains directly
-                                discovered_from = state_key if is_valid_ipv4(san) else None
+                                try:
+                                    ipaddress.IPv4Address(san)
+                                    discovered_from = state_key
+                                except ValueError:
+                                    discovered_from = None
+                                    
                                 await queue.put({
                                     "target": san, 
                                     "ports": [port],
@@ -98,8 +105,10 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                 if not skip_http:
                     seen_http.add(http_cache_key)
                     # 2. The HTTP Pass (aiohttp)
-                    # You will implement this in probes/http.py
-                    # http_result = await check_http_routing(state_key, port, host_header=host_header)
+                    from site_health_check.schemas.engine import TaskFlags
+                    flags_obj = TaskFlags(**task.get("flags", {}))
+                    http_result = await check_http_routing(state_key, port, host_header=host_header, flags=flags_obj)
+                    master_state[state_key].ports[port].http_routing_checks[host_header_key] = http_result
         
         except Exception as e:
             import traceback
