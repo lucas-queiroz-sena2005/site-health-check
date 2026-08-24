@@ -10,6 +10,7 @@ A high-performance SRE tool for auditing Network Ports, Deep TLS Certificates, a
 - **HTTP Payload Validation:** Deep validation of HTTP response codes, expected HTML strings, and routing through reverse proxies using custom DNS interception.
 - **Breadth-First Target Discovery:** Capable of recursively discovering and scanning any Subject Alternative Names (SANs) found on a TLS certificate using `--recursive-san`, with `--out-of-scope-depth` constraints to cleanly limit scanning scope and prevent unbounded external CDN sprawling.
 - **Observability State Engine:** Dumps all findings into a deeply nested JSON file designed for downstream GUI consumption and observability aggregation.
+- **Concurrent Execution Tuning:** Fine-tune scanner performance with configurable asynchronous worker pools (`-w` or `--workers`) and delayed execution pacing (`--delay`) to manage load and evade rate-limits.
 
 ## What it is NOT
 - **NOT an Alerting Engine:** It does not send emails, Slack messages, or SMS. Alerting should be delegated to external observability tools reading the JSON output.
@@ -37,6 +38,9 @@ poetry run site-check example.com -p 443 --recursive-san --out-of-scope-depth 0
 
 # Test virtual host payload validation
 poetry run site-check example.com -p 80,443 --expected-strings "Welcome" --undesired-strings "Error 500"
+
+# Tune the engine execution with custom worker pools and execution delays
+poetry run site-check example.com -p 443 -w 50 --delay 0.5
 
 # Export the results to a file for observability pipelines
 poetry run site-check example.com -p 443 -o results.json

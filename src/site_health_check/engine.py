@@ -23,6 +23,10 @@ async def worker(worker_id: str, queue: asyncio.Queue):
         task = await queue.get()
         
         try:
+            delay = task.get("flags", {}).get("worker_delay", 0.0)
+            if delay > 0:
+                await asyncio.sleep(delay)
+
             target = task["target"]
             ports = task["ports"]
             
@@ -79,7 +83,18 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                     
                 if not skip_tcp:
                     seen_tcp.add(tcp_cache_key)
+                    
+                    # Pre-initialize PortState synchronously to prevent KeyErrors
+                    # from other workers doing concurrent HTTP checks on the same IP/Port
+                    if port not in master_state[state_key].ports:
+                        from site_health_check.schemas.engine import PortState
+                        master_state[state_key].ports[port] = PortState()
+                        
                     tcp_result = await check_tcp_and_tls(state_key, port, server_hostname=host_header)
+                    
+                    # Preserve any HTTP routing checks added by concurrent workers while we were awaiting
+                    existing_checks = master_state[state_key].ports[port].http_routing_checks
+                    tcp_result.http_routing_checks.update(existing_checks)
                     master_state[state_key].ports[port] = tcp_result
                     
                     # If we found SANs, and recursive checking is enabled in the flags, 
@@ -117,7 +132,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
         finally:
             queue.task_done()
 
-async def async_main(payload: list[dict[str, Any]]):
+async def async_main(payload: list[dict[str, Any]], workers_count: int = 100):
     """
     Initializes the BFS queue, spawns the workers, and blocks until finished.
     """
@@ -127,10 +142,9 @@ async def async_main(payload: list[dict[str, Any]]):
     for task in payload:
         await queue.put(task)
         
-    worker_limit = 1
     workers = []
     
-    for i in range(worker_limit):
+    for i in range(workers_count):
         worker_task = asyncio.create_task(worker(f"W-{i}", queue))
         workers.append(worker_task)
         
@@ -144,7 +158,7 @@ async def async_main(payload: list[dict[str, Any]]):
     await asyncio.gather(*workers, return_exceptions=True)
     return master_state
 
-def run_engine(payload: list[dict[str, Any]]) -> dict[str, Any]:
+def run_engine(payload: list[dict[str, Any]], workers_count: int = 100) -> dict[str, Any]:
     """
     The synchronous boundary that the CLI calls.
     It triggers the asyncio event loop and returns the final serialized dictionary.
@@ -154,8 +168,8 @@ def run_engine(payload: list[dict[str, Any]]) -> dict[str, Any]:
     seen_tcp.clear()
     seen_http.clear()
     
-    print("\n[*] Starting Asyncio Breadth-First Engine...")
-    final_state_objects = asyncio.run(async_main(payload))
+    print(f"\n[*] Starting Asyncio Breadth-First Engine with {workers_count} workers...")
+    final_state_objects = asyncio.run(async_main(payload, workers_count=workers_count))
     
     import dataclasses
     serialized_results = {}

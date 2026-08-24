@@ -13,6 +13,7 @@ class TaskFlags:
     check_virtual_hosts: bool = True
     out_of_scope_depth: int = 0
     spoof_user_agent: bool = False
+    worker_delay: float = 0.0
 
 @dataclasses.dataclass
 class TaskConfig:

@@ -75,6 +75,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Request timeout in seconds (default: 10)",
     )
 
+    # Engine Execution & Tuning Arguments
+    parser.add_argument(
+        "-w",
+        "--workers",
+        type=int,
+        default=100,
+        help="Number of concurrent asynchronous workers (default: 100)",
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.0,
+        help="Make each worker wait the given seconds before executing a task (default: 0)",
+    )
+    
     # Observability & Output
     parser.add_argument(
         "--push-url", help="Optional Webhook URL for observability tools"
@@ -107,7 +122,8 @@ def main(args: list | None = None) -> int:
         recursive_san_check=parsed_args.recursive_san,
         check_virtual_hosts=parsed_args.check_virtual_hosts,
         out_of_scope_depth=parsed_args.out_of_scope_depth,
-        spoof_user_agent=parsed_args.spoof_user_agent
+        spoof_user_agent=parsed_args.spoof_user_agent,
+        worker_delay=parsed_args.delay
     )
     
     json_payload = []
@@ -125,7 +141,7 @@ def main(args: list | None = None) -> int:
     
     # --- The Engine Boundary ---
     from site_health_check.engine import run_engine
-    results = run_engine(json_payload)
+    results = run_engine(json_payload, workers_count=parsed_args.workers)
 
     # Unified Terminal Output
     print("\n[+] Scan Complete. Output State:")

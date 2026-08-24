@@ -38,22 +38,16 @@ def _strip_scheme_and_validate_port(target: str) -> str:
     Strips accidental HTTP/HTTPS schemes from targets and ensures they do not
     contain trailing ports, raising a ValueError if ports are detected.
     """
-    cleaned = target.strip()
-    if cleaned.startswith("http://"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("https://"):
-        cleaned = cleaned[8:]
+    cleaned = re.sub(r"^https?://", "", target.strip())
         
-    if ":" in cleaned:
-        last_part = cleaned.split(":")[-1]
-        if last_part.split("/")[0].isdigit():
-            raise ValueError(f"Target string '{cleaned}' should not contain a port (e.g., ':443'). Please use the -p / --ports argument instead.")
+    if re.search(r":\d+(/|$)", cleaned):
+        raise ValueError(f"Target string '{cleaned}' should not contain a port. Please use the -p / --ports argument instead.")
             
-    # Strip trailing paths (e.g., example.com/api -> example.com)
-    if "/" in cleaned:
-        parts = cleaned.split("/")
-        if not (len(parts) == 2 and parts[1].isdigit()):
-            cleaned = parts[0]
+    # Strip trailing paths for domains (e.g., example.com/api -> example.com)
+    # We check if the base part (before any '/') is a valid domain.
+    base_target = cleaned.split("/")[0]
+    if bool(re.match(DOMAIN_REGEX, base_target)):
+        return base_target
             
     return cleaned
 
@@ -63,25 +57,28 @@ def _categorize_segment(cleaned: str) -> TargetSegment:
     Categorizes a cleaned segment string natively using the ipaddress library.
     Identifies if a string is a domain, a raw IP, an IP range, or a CIDR block.
     """
-    # Hyphenated IP bounds (e.g., "10.0.0.5-10.0.0.8" or "10.0.0.5/24-10.0.0.8/24")
-    if "-" in cleaned and not bool(re.match(DOMAIN_REGEX, cleaned)):
-        hyphen_parts = cleaned.split("-")
-        if len(hyphen_parts) == 2:
-            try:
-                base1 = hyphen_parts[0].split("/")[0] if "/" in hyphen_parts[0] else hyphen_parts[0]
-                base2 = hyphen_parts[1].split("/")[0] if "/" in hyphen_parts[1] else hyphen_parts[1]
-                
-                ipaddress.IPv4Address(base1)
-                ipaddress.IPv4Address(base2)
-                
-                if "/" in cleaned:
-                    suffix1 = hyphen_parts[0].split("/")[1]
-                    return TargetSegment(segment_type="cidr", data=f"{base1}-{base2}", suffix=f"/{suffix1}")
-                return TargetSegment(segment_type="ip", data=cleaned, suffix=None)
-            except ValueError:
-                pass
+    # 1. Domain (e.g., "example.com")
+    if bool(re.match(DOMAIN_REGEX, cleaned)):
+        return TargetSegment(segment_type="domain", data=cleaned, suffix=None)
 
-    # Single CIDR block or Single IP (e.g., "10.0.0.0/24" or "10.0.0.5")
+    # 2. Hyphenated IP bounds (e.g., "10.0.0.5-10.0.0.8" or "10.0.0.5/24-10.0.0.8/24")
+    if "-" in cleaned:
+        try:
+            start_str, end_str = cleaned.split("-")
+            
+            # Natively validate the base IP addresses
+            start_ip = ipaddress.IPv4Address(start_str.split("/")[0])
+            end_ip = ipaddress.IPv4Address(end_str.split("/")[0])
+            
+            if "/" in cleaned:
+                suffix = start_str.split("/")[1]
+                return TargetSegment(segment_type="cidr", data=f"{start_ip}-{end_ip}", suffix=f"/{suffix}")
+            
+            return TargetSegment(segment_type="ip", data=cleaned, suffix=None)
+        except (ValueError, IndexError):
+            pass
+
+    # 3. Single CIDR block or Single IP (e.g., "10.0.0.0/24" or "10.0.0.5")
     try:
         network = ipaddress.IPv4Network(cleaned, strict=False)
         if "/" in cleaned:
@@ -89,10 +86,6 @@ def _categorize_segment(cleaned: str) -> TargetSegment:
         return TargetSegment(segment_type="ip", data=cleaned, suffix=None)
     except ValueError:
         pass
-
-    # Domain Fallback (e.g., "example.com")
-    if bool(re.match(DOMAIN_REGEX, cleaned)):
-        return TargetSegment(segment_type="domain", data=cleaned, suffix=None)
 
     raise ValueError(f"'{cleaned}' is not a valid Domain, IPv4 address, or CIDR block.")
 
