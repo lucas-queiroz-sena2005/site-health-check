@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Site Health Check - Comprehensive Architecture Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              gruvbox: {
+                bg: '#fbf1c7', card: '#ebdbb2', text: '#3c3836', gray: '#928374',
+                red: '#cc241d', green: '#98971a', yellow: '#d79921', blue: '#458588',
+                purple: '#b16286', aqua: '#689d6a', border: '#d5c4a1'
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "base", securityLevel: "loose", themeVariables: {
+        primaryColor: '#ebdbb2', primaryTextColor: '#3c3836', primaryBorderColor: '#d5c4a1',
+        lineColor: '#928374', secondaryColor: '#fbf1c7', tertiaryColor: '#ebdbb2', fontSize: '14px'
+      }});
+    </script>
+    <style>
+      body { scroll-behavior: smooth; }
+      .seam { stroke-dasharray: 4 4; stroke: #928374; }
+      .deep { fill: #458588 !important; color: #fbf1c7 !important; }
+      .gruvbox-shadow { box-shadow: 4px 4px 0px 0px rgba(146, 131, 116, 0.2); }
+      nav a { transition: all 0.2s; }
+      nav a:hover { color: #458588; padding-left: 5px; }
+      pre { background-color: #3c3836; color: #ebdbb2; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    </style>
+</head>
+<body class="bg-gruvbox-bg text-gruvbox-text font-sans flex">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="w-72 fixed h-screen bg-gruvbox-card border-r-2 border-gruvbox-border p-6 overflow-y-auto">
+        <h1 class="text-xl font-bold text-gruvbox-blue mb-8 border-b-2 border-gruvbox-border pb-4">Site Health Check</h1>
+        <ul class="space-y-4 text-sm font-semibold">
+            <li><a href="#terminology" class="text-gruvbox-text block">1. Terminology Dictionary</a></li>
+            <li><a href="#responsibilities" class="text-gruvbox-text block">2. Responsibilities Matrix</a></li>
+            <li><a href="#contracts" class="text-gruvbox-text block">3. Data Contracts (I/O)</a></li>
+            <li><a href="#cli-mode" class="text-gruvbox-text block">4. Phase 1: CLI Mode</a></li>
+            <li><a href="#mvp-mode" class="text-gruvbox-text block">5. Phase 2: MVP Microservices</a></li>
+            <li><a href="#prod-mode" class="text-gruvbox-text block">6. Phase 3: Full Production</a></li>
+        </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="ml-72 flex-1 p-12 max-w-6xl">
+        <header class="mb-12">
+            <h1 class="text-5xl font-extrabold text-gruvbox-text mb-4 tracking-tight">System Architecture Guide</h1>
+            <p class="text-lg text-gruvbox-gray">A comprehensive blueprint clarifying the terminology, data flows, and evolutionary phases of the Site Health Check engine.</p>
+        </header>
+
+        <!-- 1. TERMINOLOGY -->
+        <section id="terminology" class="mb-16">
+            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">1. Terminology Dictionary</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-red rounded-full mr-2"></span> Job (The Request)</h3>
+                    <p class="text-sm">A high-level, human-readable command. (e.g., <em>"Scan the CIDR 192.168.1.0/24 with custom timeout flags"</em>). It exists in the API.</p>
+                </div>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-yellow rounded-full mr-2"></span> Task (The Atomic Unit)</h3>
+                    <p class="text-sm">A physical JSON payload in RabbitMQ representing exactly ONE target. A single <code>Job</code> is expanded into thousands of <code>Tasks</code>.</p>
+                </div>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-aqua rounded-full mr-2"></span> Result (The Output)</h3>
+                    <p class="text-sm">The JSON payload generated after a Task is executed, containing status codes, latency, and custom version checks.</p>
+                </div>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-green rounded-full mr-2"></span> Label (Metadata)</h3>
+                    <p class="text-sm">Key-value tags attached to Tasks and Results (e.g., <code>group: professors</code>). Vital for future Prometheus querying.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. RESPONSIBILITIES -->
+        <section id="responsibilities" class="mb-16">
+            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">2. Responsibilities Matrix</h2>
+            <p class="mb-6 text-gruvbox-text">Strict separation of responsibilities prevents shallow, fragile code. Each module has a single reason to change.</p>
+            <table class="w-full text-left bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
+                <thead class="bg-gruvbox-border text-gruvbox-text">
+                    <tr>
+                        <th class="p-4">Module</th>
+                        <th class="p-4">It DOES...</th>
+                        <th class="p-4">It DOES NOT...</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gruvbox-border">
+                    <tr>
+                        <td class="p-4 font-bold text-gruvbox-blue">API (FastAPI)</td>
+                        <td class="p-4 text-sm">Handle HTTP requests from React, write configs to SQLite, authenticate users.</td>
+                        <td class="p-4 text-sm text-gruvbox-red">Do not ping websites. Do not calculate IP ranges.</td>
+                    </tr>
+                    <tr>
+                        <td class="p-4 font-bold text-gruvbox-blue">Dispatcher (Splitter)</td>
+                        <td class="p-4 text-sm">Read a <code>Job</code>, parse CIDR blocks, query DB for "professors", and generate 1000s of JSON <code>Tasks</code>.</td>
+                        <td class="p-4 text-sm text-gruvbox-red">Do not ping websites. Do not serve web traffic.</td>
+                    </tr>
+                    <tr>
+                        <td class="p-4 font-bold text-gruvbox-blue">Scanner (Engine)</td>
+                        <td class="p-4 text-sm">Receive ONE JSON <code>Task</code>, ping the exact IP, check custom headers/versions, return a <code>Result</code>.</td>
+                        <td class="p-4 text-sm text-gruvbox-red">Do not talk to SQLite. Do not parse CIDR blocks.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 3. DATA CONTRACTS -->
+        <section id="contracts" class="mb-16">
+            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">3. Data Contracts (JSON I/O)</h2>
+            <p class="mb-6 text-gruvbox-text">Because the Scanner is entirely decoupled, we must rigorously define the exact JSON shapes it expects (Inputs) and produces (Outputs).</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="font-bold text-xl mb-3 text-gruvbox-aqua">INPUT: The "Task" Payload</h3>
+                    <p class="text-sm mb-3">Generated by the Dispatcher, consumed by the Scanner.</p>
+                    <pre class="text-sm"><code>{
+  "job_id": "REQ-001",
+  "target_ip": "192.168.1.5",
+  "port": 443,
+  "flags": {
+    "timeout_ms": 5000,
+    "verify_ssl": false,
+    "check_version": true
+  },
+  "labels": {
+    "target_group": "professors",
+    "scan_type": "ad-hoc"
+  }
+}</code></pre>
+                </div>
+                <div>
+                    <h3 class="font-bold text-xl mb-3 text-gruvbox-green">OUTPUT: The "Result" Payload</h3>
+                    <p class="text-sm mb-3">Generated by the Scanner, consumed by the Database writer.</p>
+                    <pre class="text-sm"><code>{
+  "job_id": "REQ-001",
+  "target_ip": "192.168.1.5",
+  "status": "UP",
+  "http_code": 200,
+  "latency_ms": 142,
+  "version_found": "nginx/1.21.0",
+  "timestamp": "2026-08-25T14:55:00Z",
+  "labels": {
+    "target_group": "professors",
+    "scan_type": "ad-hoc"
+  }
+}</code></pre>
+                </div>
+            </div>
+            <div class="mt-4 p-4 bg-gruvbox-yellow/20 border-l-4 border-gruvbox-yellow text-sm">
+                <strong>Crucial Detail:</strong> Notice how the <code>labels</code> block is simply copied from the Input to the Output. The Scanner doesn't care what is in there, it just passes it through. This is the secret to making Prometheus filtering work later without changing the Scanner code!
+            </div>
+        </section>
+
+        <!-- 4. CLI MODE -->
+        <section id="cli-mode" class="mb-16">
+            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">4. Phase 1: CLI Mode (Nmap style)</h2>
+            <p class="mb-4">Before we even turn on RabbitMQ, the Engine must work natively on your laptop. Using Hexagonal Architecture, a CLI Adapter translates terminal commands into the JSON <code>Task</code> contract.</p>
+            <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                <pre class="mermaid bg-transparent flex justify-center">
+                    flowchart LR
+                        classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836;
+                        classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7;
+                        
+                        User[You] -- "$ engine scan 10.0.0.1" --> CLI[CLI Adapter]
+                        CLI -- Builds Task JSON --> Core((Scanner Core))
+                        Core -- Returns Result JSON --> CLI
+                        CLI -- Prints to Screen --> User
+
+                        class Core core;
+                </pre>
+            </div>
+        </section>
+
+        <!-- 5. MVP MODE -->
+        <section id="mvp-mode" class="mb-16">
+            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">5. Phase 2: MVP Microservices</h2>
+            <p class="mb-4">We introduce the FastAPI, the Dispatcher, RabbitMQ, and SQLite. Notice that the <strong>Scanner Core</strong> did not change a single line of code. We just wrote a new Adapter (RabbitMQ Adapter) to feed it.</p>
+            <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                <pre class="mermaid bg-transparent flex justify-center">
+                    flowchart TD
+                        classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836;
+                        classDef rmq fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7;
+                        classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7;
+                        classDef db fill:#98971a,stroke:#79740e,stroke-width:2px,color:#fbf1c7;
+
+                        Cron[Cron/Scheduler] --> API[FastAPI]
+                        API -->|Save Job| DB[(SQLite Database)]
+                        API --> Dispatcher[Dispatcher Module]
+                        
+                        Dispatcher -->|Loop & Stream 1000s of Tasks| RMQ[(RabbitMQ: Tasks Queue)]
+                        
+                        RMQ -->|Pull 1 Task| Adapter[RabbitMQ Adapter]
+                        Adapter --> Core((Python Scanner Core))
+                        Core --> Adapter
+                        
+                        Adapter -->|Push Result| RMQ2[(RabbitMQ: Results Queue)]
+                        RMQ2 --> Writer[SQLite DB Writer]
+                        Writer --> DB
+                        
+                        class RMQ,RMQ2 rmq;
+                        class Core core;
+                        class DB db;
+                </pre>
+            </div>
+        </section>
+
+        <!-- 6. PRODUCTION MODE -->
+        <section id="prod-mode" class="mb-16">
+            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">6. Phase 3: Full Production</h2>
+            <p class="mb-4">We are running at massive scale. The Python Scanner is struggling, so we rewrite it in Go. We also need rich metrics, so we introduce Prometheus. Because of our strict responsibilities and JSON contracts, <strong>we do not have to touch the FastAPI, Dispatcher, or SQLite Config DB.</strong></p>
+            <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                <pre class="mermaid bg-transparent flex justify-center">
+                    flowchart TD
+                        classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836;
+                        classDef rmq fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7;
+                        classDef core fill:#b16286,stroke:#8f3f71,stroke-width:2px,color:#fbf1c7;
+                        classDef db fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#fbf1c7;
+
+                        React[React Frontend] --> API[FastAPI Configuration]
+                        API --> Dispatcher[Dispatcher]
+                        
+                        Dispatcher --> RMQ[(RabbitMQ)]
+                        
+                        RMQ --> Go1((Go Scanner Node 1))
+                        RMQ --> Go2((Go Scanner Node 2))
+                        RMQ --> Go3((Go Scanner Node 3))
+                        
+                        Go1 --> RMQ2[(RabbitMQ Results)]
+                        Go2 --> RMQ2
+                        Go3 --> RMQ2
+                        
+                        RMQ2 --> PromAdapter[Prometheus Metrics Exporter]
+                        PromAdapter --> Prom[(Prometheus Time-Series DB)]
+                        
+                        class RMQ,RMQ2 rmq;
+                        class Go1,Go2,Go3 core;
+                        class Prom db;
+                </pre>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>
