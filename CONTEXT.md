@@ -1,24 +1,58 @@
-# Domain Glossary & Terminology
+# Site Health Check
 
-This document defines the shared vocabulary and core concepts (the Domain Model) for the Site Health Check project. Using these terms consistently prevents confusion across the API, Frontend, and Engine.
+A synthetic prober for Unicamp's OpenStack cloud. It scans domains, IPs, and CIDR ranges for TCP connectivity, TLS validity, and HTTP routing correctness — and recursively discovers additional targets through TLS certificate SANs.
 
-## Core Concepts (Data)
+## Language
 
-*   **Job (or Scan Request):** A high-level, human-readable request to check something. It can be a single URL, a massive CIDR block (e.g., `10.0.0.0/8`), or a predefined category (e.g., "all professors"). It exists primarily in the API and Frontend.
-*   **Target:** A fully resolved, atomic destination to be checked. For example, the `Job` might be `192.168.1.0/24`, but one resulting `Target` is `192.168.1.5:443`.
-*   **Task:** The physical payload (usually JSON) sent to the Message Broker representing exactly one `Target` and the specific instructions (flags) on how to check it.
-*   **Result:** The outcome of a `Task` (e.g., Status 200, latency 45ms).
-*   **Label (Metadata):** Key-value pairs attached to a `Task` and its `Result` (e.g., `group: students`). This is crucial for eventual Prometheus integration.
+### Scan inputs
 
-## Architectural Modules (The Services)
+**Target**:
+A raw, unresolved address that identifies something to be scanned. Can be a domain name, bare IP, URL, or CIDR range. Resolution (DNS lookup, CIDR expansion into individual IPs) happens downstream; a Target is the input expression, not the resolved result.
+_Avoid_: host, destination
 
-*   **The API (Configuration Service):** The Python (FastAPI) application. It handles user authentication, CRUD operations on the database (SQLite), and serves data to the Frontend.
-*   **The Dispatcher (Splitter / Job Creator):** The module responsible for *Job Expansion*. It takes a high-level `Job`, handles the recursion (parsing CIDR blocks, looking up category members in the DB), and spits out thousands of atomic `Tasks`. 
-*   **The Scanner (Execution Engine):** The module responsible *only* for executing network requests. It receives a `Task`, performs the HTTP ping, and returns a `Result`. It knows nothing about databases or CIDR block recursion.
-*   **The Broker (RabbitMQ):** The queue that sits between the Dispatcher and the Scanner, holding `Tasks` until a Scanner is ready to process them.
+**Task**:
+The atomic unit of work the Scanner consumes. Represents one expanded, single-address Target together with its ports and flags. A CIDR /24 block produces 254 Tasks. In the current CLI the Task is delivered via an in-process queue; in the distributed architecture it is a RabbitMQ message published by the Dispatcher.
+_Avoid_: job, payload, message
 
-## Architectural Patterns
+**Job**:
+A user-submitted scan request from the Frontend. Carries a Target expression (which may be a CIDR block, IP range, or category name), ports, flags, and labels. The Dispatcher expands one Job into many Tasks. Does not exist in the current CLI phase.
+_Avoid_: scan request
 
-*   **Hexagonal Architecture (Ports and Adapters):** A pattern where the core business logic (e.g., The Scanner) is completely isolated from the outside world. It defines a "Port" (an interface). "Adapters" are plugged into that port. For example, a `RabbitMQAdapter` feeds tasks from the queue, while a `CLIAdapter` feeds tasks from terminal arguments.
-*   **Scatter-Gather (Splitter Pattern):** The pattern of breaking a massive `Job` into atomic `Tasks` (scattering), processing them independently, and writing them back to the database (gathering).
-*   **Decompose by Business Capability:** Separating the system into distinct modules based on what they do (e.g., API vs. Dispatcher vs. Scanner).
+**Label**:
+A key-value pair attached to a Task and passed unchanged through to its Result (e.g., `target_group: professors`). Used to filter and group Results in Prometheus without modifying the Scanner.
+_Avoid_: tag, metadata, annotation
+
+**Classification**:
+A logical organizational grouping assigned to a Target or range (e.g., `professors`, `datacenter_core`). Helps SREs group, schedule, and run targeted scans across vast infrastructure ranges without typing raw CIDR expressions.
+
+**Sub-classification**:
+A specific sub-tag under a Classification (e.g., `physics_dept`, `hypervisors`).
+
+
+### Scan outputs
+
+**Result**:
+The complete outcome of scanning one IP address — its port states, TLS certificates, and HTTP routing check outcomes, keyed by IP. Multiple Targets that resolve to the same IP produce one merged Result, not separate ones.
+_Avoid_: report, output
+
+**IpState**:
+The in-code representation of a Result. A tree rooted at one IP address, branching to PortStates, each of which may carry a TlsCertificate and a map of HttpRoutingChecks.
+_Avoid_: state, record
+
+### Services
+
+**Dispatcher**:
+The service that receives a Job and expands it into individual Tasks published to the Broker. Never probes the network.
+_Avoid_: splitter, job creator
+
+**Scanner**:
+The service that consumes Tasks, performs network probes (TCP connect, TLS handshake, HTTP request), and publishes Results. Never reads the database and never expands CIDR blocks.
+_Avoid_: execution engine, worker, prober
+
+**API**:
+The FastAPI service that accepts Job requests from the Frontend, persists them to SQLite, and serves paginated Results. Never probes the network.
+_Avoid_: backend, server
+
+**Broker**:
+The RabbitMQ instance that decouples the Dispatcher from the Scanner. Holds Tasks until a Scanner worker consumes them, and carries Results back to the Result Writer.
+_Avoid_: queue, message bus, transport

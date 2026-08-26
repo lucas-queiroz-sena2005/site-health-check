@@ -27,13 +27,13 @@ A new `frontend/` directory at the root of the project to house the React applic
     1.  **Target Management:** A simple list/form to add/remove targets from SQLite.
     2.  **Results Viewer:** A view that reads the generated `results.json` from the engine and displays it cleanly (setting the foundation for the future Topology Node Graph).
 
-### 3. Integrating the Engine (The Subprocess Model)
-The existing CLI engine remains completely "dumb" and stateless. It knows absolutely nothing about SQLite. 
+### 3. Integrating the Engine (The Single-Process asyncio Model)
+The existing CLI engine will be refactored to consume from an `asyncio.Queue` instead of a static list.
 
-*   FastAPI acts as the orchestrator. Whether triggered by `cron` or an ad-hoc UI click, FastAPI reads the targets from SQLite, formats them into a standardized JSON payload, and passes them to the Engine.
-*   **Execution Strategy:** FastAPI spawns the Engine as an external OS process using `subprocess.Popen()`. 
-    *   **Crash Protection:** Because it runs in an isolated memory space, if the Engine runs out of memory (OOM) during a massive `/16` scan, it crashes cleanly without bringing down the FastAPI server or the UI.
-    *   **Golang Future-Proofing:** By treating the Python Engine as a black-box executable now, the future transition to Golang requires zero code changes to FastAPI. The subprocess command simply changes from `site-check-python` to `./site-check-go`. The Engine processes the payload and dumps `results.json`.
+*   FastAPI acts as the orchestrator. When a Job arrives, FastAPI writes it to SQLite and immediately pushes the Tasks into an in-memory `asyncio.Queue`.
+*   **Execution Strategy:** FastAPI spawns the Dispatcher and Scanner as background coroutines running on its own event loop.
+    *   **Simplicity:** Zero infrastructure overhead. `uvicorn` runs the entire stack (API + Scanner).
+    *   **Golang/RabbitMQ Future-Proofing:** Python's `asyncio.Queue` behaves conceptually exactly like Go's `channels` and RabbitMQ's message queues. Swapping `queue.put()` with `rabbitmq.publish()` in Phase 3 will be a seamless architectural shift. (See ADR 0003).
 
 ---
 
