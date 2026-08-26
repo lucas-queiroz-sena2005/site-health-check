@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Site Health Check - Comprehensive Architecture Guide</title>
+    <title>Site Health Check — Architecture Guide</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -10,9 +10,10 @@
           extend: {
             colors: {
               gruvbox: {
-                bg: '#fbf1c7', card: '#ebdbb2', text: '#3c3836', gray: '#928374',
+                bg: '#fbf1c7', bg2: '#f2e5bc', card: '#ebdbb2', text: '#3c3836', gray: '#928374',
                 red: '#cc241d', green: '#98971a', yellow: '#d79921', blue: '#458588',
-                purple: '#b16286', aqua: '#689d6a', border: '#d5c4a1'
+                purple: '#b16286', aqua: '#689d6a', orange: '#d65d0e', border: '#d5c4a1',
+                darkbg: '#3c3836', darktext: '#ebdbb2'
               }
             }
           }
@@ -23,231 +24,686 @@
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
       mermaid.initialize({ startOnLoad: true, theme: "base", securityLevel: "loose", themeVariables: {
         primaryColor: '#ebdbb2', primaryTextColor: '#3c3836', primaryBorderColor: '#d5c4a1',
-        lineColor: '#928374', secondaryColor: '#fbf1c7', tertiaryColor: '#ebdbb2', fontSize: '14px'
+        lineColor: '#928374', secondaryColor: '#fbf1c7', tertiaryColor: '#ebdbb2', fontSize: '13px'
       }});
+
+      // Page navigation
+      document.addEventListener('DOMContentLoaded', () => {
+        const pages = document.querySelectorAll('.page');
+        const navLinks = document.querySelectorAll('[data-page]');
+        function showPage(id) {
+          pages.forEach(p => p.classList.add('hidden'));
+          document.getElementById(id)?.classList.remove('hidden');
+          navLinks.forEach(l => l.classList.remove('bg-gruvbox-blue', 'text-gruvbox-bg'));
+          document.querySelector(`[data-page="${id}"]`)?.classList.add('bg-gruvbox-blue', 'text-gruvbox-bg');
+        }
+        navLinks.forEach(l => l.addEventListener('click', e => { e.preventDefault(); showPage(l.dataset.page); }));
+        showPage('page-overview');
+      });
     </script>
     <style>
       body { scroll-behavior: smooth; }
-      .seam { stroke-dasharray: 4 4; stroke: #928374; }
-      .deep { fill: #458588 !important; color: #fbf1c7 !important; }
-      .gruvbox-shadow { box-shadow: 4px 4px 0px 0px rgba(146, 131, 116, 0.2); }
-      nav a { transition: all 0.2s; }
-      nav a:hover { color: #458588; padding-left: 5px; }
-      pre { background-color: #3c3836; color: #ebdbb2; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+      .gruvbox-shadow { box-shadow: 3px 3px 0px 0px rgba(146, 131, 116, 0.25); }
+      pre.code-block { background-color: #3c3836; color: #ebdbb2; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.8rem; }
       code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      p code, td code, li code { background-color: #ebdbb2; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; border: 1px solid #d5c4a1; }
+      .nav-link { transition: all 0.15s ease; border-radius: 6px; }
+      .nav-link:hover { background-color: #d5c4a1; }
+      .callout { border-left: 4px solid; padding: 12px 16px; border-radius: 0 6px 6px 0; font-size: 0.9rem; }
+      .callout-warn { border-color: #d79921; background: rgba(215,153,33,0.12); }
+      .callout-info { border-color: #458588; background: rgba(69,133,136,0.1); }
+      .callout-danger { border-color: #cc241d; background: rgba(204,36,29,0.1); }
     </style>
 </head>
-<body class="bg-gruvbox-bg text-gruvbox-text font-sans flex">
+<body class="bg-gruvbox-bg text-gruvbox-text font-sans flex min-h-screen">
 
-    <!-- SIDEBAR NAVIGATION -->
-    <aside class="w-72 fixed h-screen bg-gruvbox-card border-r-2 border-gruvbox-border p-6 overflow-y-auto">
-        <h1 class="text-xl font-bold text-gruvbox-blue mb-8 border-b-2 border-gruvbox-border pb-4">Site Health Check</h1>
-        <ul class="space-y-4 text-sm font-semibold">
-            <li><a href="#terminology" class="text-gruvbox-text block">1. Terminology Dictionary</a></li>
-            <li><a href="#responsibilities" class="text-gruvbox-text block">2. Responsibilities Matrix</a></li>
-            <li><a href="#contracts" class="text-gruvbox-text block">3. Data Contracts (I/O)</a></li>
-            <li><a href="#cli-mode" class="text-gruvbox-text block">4. Phase 1: CLI Mode</a></li>
-            <li><a href="#mvp-mode" class="text-gruvbox-text block">5. Phase 2: MVP Microservices</a></li>
-            <li><a href="#prod-mode" class="text-gruvbox-text block">6. Phase 3: Full Production</a></li>
-        </ul>
+    <!-- SIDEBAR -->
+    <aside class="w-64 fixed h-screen bg-gruvbox-card border-r-2 border-gruvbox-border p-5 overflow-y-auto flex flex-col">
+        <h1 class="text-lg font-bold text-gruvbox-blue mb-2">Site Health Check</h1>
+        <p class="text-xs text-gruvbox-gray mb-6">Architecture Documentation</p>
+
+        <p class="text-[10px] font-bold uppercase tracking-widest text-gruvbox-gray mb-2">Pages</p>
+        <nav class="space-y-1 text-sm font-medium flex-1">
+            <a href="#" data-page="page-overview" class="nav-link block px-3 py-2 text-gruvbox-text">1. System Overview</a>
+            <a href="#" data-page="page-current" class="nav-link block px-3 py-2 text-gruvbox-text">2. What Exists Today</a>
+            <a href="#" data-page="page-modules" class="nav-link block px-3 py-2 text-gruvbox-text">3. Module Map</a>
+            <a href="#" data-page="page-contracts" class="nav-link block px-3 py-2 text-gruvbox-text">4. Data Contracts</a>
+            <a href="#" data-page="page-phases" class="nav-link block px-3 py-2 text-gruvbox-text">5. Evolution Phases</a>
+            <a href="#" data-page="page-decisions" class="nav-link block px-3 py-2 text-gruvbox-text">6. Final Decisions</a>
+        </nav>
+        <p class="text-[10px] text-gruvbox-gray mt-4">Last updated: 2026-08-25</p>
     </aside>
 
-    <!-- MAIN CONTENT -->
-    <main class="ml-72 flex-1 p-12 max-w-6xl">
-        <header class="mb-12">
-            <h1 class="text-5xl font-extrabold text-gruvbox-text mb-4 tracking-tight">System Architecture Guide</h1>
-            <p class="text-lg text-gruvbox-gray">A comprehensive blueprint clarifying the terminology, data flows, and evolutionary phases of the Site Health Check engine.</p>
-        </header>
+    <!-- MAIN -->
+    <main class="ml-64 flex-1 p-10 max-w-5xl">
 
-        <!-- 1. TERMINOLOGY -->
-        <section id="terminology" class="mb-16">
-            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">1. Terminology Dictionary</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
-                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-red rounded-full mr-2"></span> Job (The Request)</h3>
-                    <p class="text-sm">A high-level, human-readable command. (e.g., <em>"Scan the CIDR 192.168.1.0/24 with custom timeout flags"</em>). It exists in the API.</p>
-                </div>
-                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
-                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-yellow rounded-full mr-2"></span> Task (The Atomic Unit)</h3>
-                    <p class="text-sm">A physical JSON payload in RabbitMQ representing exactly ONE target. A single <code>Job</code> is expanded into thousands of <code>Tasks</code>.</p>
-                </div>
-                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
-                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-aqua rounded-full mr-2"></span> Result (The Output)</h3>
-                    <p class="text-sm">The JSON payload generated after a Task is executed, containing status codes, latency, and custom version checks.</p>
-                </div>
-                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
-                    <h3 class="font-bold text-lg mb-2 flex items-center"><span class="w-3 h-3 bg-gruvbox-green rounded-full mr-2"></span> Label (Metadata)</h3>
-                    <p class="text-sm">Key-value tags attached to Tasks and Results (e.g., <code>group: professors</code>). Vital for future Prometheus querying.</p>
-                </div>
-            </div>
-        </section>
+        <!-- ==================== PAGE 1: OVERVIEW ==================== -->
+        <div id="page-overview" class="page">
+            <header class="mb-10">
+                <h1 class="text-4xl font-extrabold tracking-tight mb-3">System Overview</h1>
+                <p class="text-gruvbox-gray text-lg">How the Site Health Check system is structured, what each piece does, and how they connect.</p>
+            </header>
 
-        <!-- 2. RESPONSIBILITIES -->
-        <section id="responsibilities" class="mb-16">
-            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">2. Responsibilities Matrix</h2>
-            <p class="mb-6 text-gruvbox-text">Strict separation of responsibilities prevents shallow, fragile code. Each module has a single reason to change.</p>
-            <table class="w-full text-left bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
-                <thead class="bg-gruvbox-border text-gruvbox-text">
-                    <tr>
-                        <th class="p-4">Module</th>
-                        <th class="p-4">It DOES...</th>
-                        <th class="p-4">It DOES NOT...</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gruvbox-border">
-                    <tr>
-                        <td class="p-4 font-bold text-gruvbox-blue">API (FastAPI)</td>
-                        <td class="p-4 text-sm">Handle HTTP requests from React, write configs to SQLite, authenticate users.</td>
-                        <td class="p-4 text-sm text-gruvbox-red">Do not ping websites. Do not calculate IP ranges.</td>
-                    </tr>
-                    <tr>
-                        <td class="p-4 font-bold text-gruvbox-blue">Dispatcher (Splitter)</td>
-                        <td class="p-4 text-sm">Read a <code>Job</code>, parse CIDR blocks, query DB for "professors", and generate 1000s of JSON <code>Tasks</code>.</td>
-                        <td class="p-4 text-sm text-gruvbox-red">Do not ping websites. Do not serve web traffic.</td>
-                    </tr>
-                    <tr>
-                        <td class="p-4 font-bold text-gruvbox-blue">Scanner (Engine)</td>
-                        <td class="p-4 text-sm">Receive ONE JSON <code>Task</code>, ping the exact IP, check custom headers/versions, return a <code>Result</code>.</td>
-                        <td class="p-4 text-sm text-gruvbox-red">Do not talk to SQLite. Do not parse CIDR blocks.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">Terminology</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gruvbox-card p-5 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                        <h3 class="font-bold mb-1 flex items-center"><span class="w-2.5 h-2.5 bg-gruvbox-red rounded-full mr-2"></span>Job</h3>
+                        <p class="text-sm">A user-facing scan request. Could be a single domain, a CIDR block, or a category name like "professors". Created by the Frontend or CLI. Stored in SQLite.</p>
+                    </div>
+                    <div class="bg-gruvbox-card p-5 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                        <h3 class="font-bold mb-1 flex items-center"><span class="w-2.5 h-2.5 bg-gruvbox-yellow rounded-full mr-2"></span>TaskConfig</h3>
+                        <p class="text-sm">The standardized JSON payload the Engine accepts. Contains a single <code>target</code> string, a list of <code>ports</code>, and a <code>TaskFlags</code> object. This is what exists in the code today.</p>
+                    </div>
+                    <div class="bg-gruvbox-card p-5 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                        <h3 class="font-bold mb-1 flex items-center"><span class="w-2.5 h-2.5 bg-gruvbox-aqua rounded-full mr-2"></span>IpState (Result)</h3>
+                        <p class="text-sm">The Engine's output. A nested dict keyed by IP address, containing port states, TLS certificates, HTTP routing checks, and metadata. This is the current output format.</p>
+                    </div>
+                    <div class="bg-gruvbox-card p-5 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                        <h3 class="font-bold mb-1 flex items-center"><span class="w-2.5 h-2.5 bg-gruvbox-green rounded-full mr-2"></span>Labels (Future)</h3>
+                        <p class="text-sm">Key-value metadata tags (e.g., <code>group: students</code>). Not yet implemented. Will enable Prometheus-style querying and Frontend filtering.</p>
+                    </div>
+                </div>
+            </section>
 
-        <!-- 3. DATA CONTRACTS -->
-        <section id="contracts" class="mb-16">
-            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">3. Data Contracts (JSON I/O)</h2>
-            <p class="mb-6 text-gruvbox-text">Because the Scanner is entirely decoupled, we must rigorously define the exact JSON shapes it expects (Inputs) and produces (Outputs).</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                    <h3 class="font-bold text-xl mb-3 text-gruvbox-aqua">INPUT: The "Task" Payload</h3>
-                    <p class="text-sm mb-3">Generated by the Dispatcher, consumed by the Scanner.</p>
-                    <pre class="text-sm"><code>{
-  "job_id": "REQ-001",
-  "target_ip": "192.168.1.5",
-  "port": 443,
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">End-to-End Flow (Full Vision)</h2>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <pre class="mermaid bg-transparent">
+flowchart LR
+    classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836
+    classDef rmq fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7
+    classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7
+    classDef db fill:#98971a,stroke:#79740e,stroke-width:2px,color:#fbf1c7
+    classDef fe fill:#b16286,stroke:#8f3f71,stroke-width:2px,color:#fbf1c7
+
+    FE["React Frontend"] --> API["FastAPI (API)"]
+    API -->|Save Job| DB[("SQLite")]
+    API --> Disp["Dispatcher"]
+    Disp -->|Stream Tasks| RMQ[("RabbitMQ")]
+    RMQ -->|Pull Task| Scanner["Scanner (Engine)"]
+    Scanner -->|Push Result| RMQ2[("RabbitMQ Results")]
+    RMQ2 --> Writer["Result Writer"]
+    Writer --> DB
+
+    class FE fe
+    class RMQ,RMQ2 rmq
+    class Scanner core
+    class DB db
+                    </pre>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">Service Inventory</h2>
+                <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
+                    <thead class="bg-gruvbox-border">
+                        <tr>
+                            <th class="p-3">Module</th>
+                            <th class="p-3">Language</th>
+                            <th class="p-3">Receives From</th>
+                            <th class="p-3">Sends To</th>
+                            <th class="p-3">Responsibility</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gruvbox-border">
+                        <tr><td class="p-3 font-bold text-gruvbox-purple">Frontend</td><td class="p-3">React</td><td class="p-3">User</td><td class="p-3">API</td><td class="p-3">Dashboard UI, scan configuration forms, results display</td></tr>
+                        <tr><td class="p-3 font-bold text-gruvbox-blue">API</td><td class="p-3">Python (FastAPI)</td><td class="p-3">Frontend, Cron</td><td class="p-3">SQLite, Dispatcher</td><td class="p-3">REST endpoints, Job persistence, serve results to Frontend</td></tr>
+                        <tr><td class="p-3 font-bold text-gruvbox-orange">Dispatcher</td><td class="p-3">Python</td><td class="p-3">API</td><td class="p-3">RabbitMQ</td><td class="p-3">Expand Jobs → atomic TaskConfigs, stream into queue</td></tr>
+                        <tr><td class="p-3 font-bold text-gruvbox-aqua">Scanner</td><td class="p-3">Python → Go</td><td class="p-3">RabbitMQ</td><td class="p-3">RabbitMQ Results</td><td class="p-3">Execute network probes (TCP, TLS, HTTP), return IpState results</td></tr>
+                        <tr><td class="p-3 font-bold text-gruvbox-green">Result Writer</td><td class="p-3">Python</td><td class="p-3">RabbitMQ Results</td><td class="p-3">SQLite → Prometheus</td><td class="p-3">Consume results, persist to database</td></tr>
+                    </tbody>
+                </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- ==================== PAGE 2: WHAT EXISTS TODAY ==================== -->
+        <div id="page-current" class="page hidden">
+            <header class="mb-10">
+                <h1 class="text-4xl font-extrabold tracking-tight mb-3">What Exists Today</h1>
+                <p class="text-gruvbox-gray text-lg">The actual code, data models, and architecture currently in the repository.</p>
+            </header>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">Current Architecture (CLI Only)</h2>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <pre class="mermaid bg-transparent">
+flowchart TD
+    classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836
+    classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7
+    classDef exists fill:#98971a,stroke:#79740e,stroke-width:2px,color:#fbf1c7
+
+    User["User Terminal"] -->|"site-check target -p 443"| CLI["cli.py (argparse)"]
+    CLI --> Parser["parsing.py"]
+    Parser -->|"TargetSegment[]"| Expand["expand_target_ranges()"]
+    Expand -->|"['10.0.0.1','10.0.0.2',...]"| Builder["Build TaskConfig.to_dict()"]
+    Builder -->|"[{target, ports, flags}]"| Engine["engine.py (run_engine)"]
+    Engine -->|"asyncio.Queue + 100 workers"| BFS["BFS Worker Loop"]
+    BFS --> TCP["probes/tcp.py"]
+    BFS --> HTTP["probes/http.py"]
+    BFS -->|"SAN recursion"| BFS
+    Engine -->|"dict[ip, IpState]"| Output["stdout / JSON file"]
+
+    class Engine,BFS core
+    class CLI,Parser,Expand,Builder,TCP,HTTP,Output exists
+                    </pre>
+                </div>
+                <div class="callout callout-info mt-4">
+                    <strong>Key insight:</strong> The engine already accepts a serialized <code>[TaskConfig.to_dict()]</code> payload via <code>run_engine(payload)</code>. 
+                    The seam between CLI and Engine already exists. This is the exact boundary we will exploit for the RabbitMQ adapter.
+                </div>
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">Existing Data Models</h2>
+                <p class="mb-4 text-sm">All models are Python <code>dataclasses</code> in <code>src/site_health_check/schemas/</code>.</p>
+
+                <h3 class="font-bold text-lg text-gruvbox-orange mt-6 mb-3">Input Models (what the Engine receives)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gruvbox-card p-4 rounded-lg border border-gruvbox-border">
+                        <h4 class="font-bold text-sm text-gruvbox-blue mb-2">TaskConfig</h4>
+                        <pre class="code-block"><code>target: str              # "susy.ic.unicamp.br"
+ports: list[int]         # [80, 443, 8443]
+flags: TaskFlags         # see below
+discovered_from: str?    # SAN recursion parent</code></pre>
+                    </div>
+                    <div class="bg-gruvbox-card p-4 rounded-lg border border-gruvbox-border">
+                        <h4 class="font-bold text-sm text-gruvbox-blue mb-2">TaskFlags (12 fields)</h4>
+                        <pre class="code-block"><code>check_tcp: bool = True
+check_http: bool = True
+timeout_seconds: int = 10
+expected_strings: list[str]? = None
+undesired_strings: list[str]? = None
+recursive_san_check: bool = False
+check_virtual_hosts: bool = True
+out_of_scope_depth: int = 0
+spoof_user_agent: bool = False
+worker_delay: float = 0.0</code></pre>
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-lg text-gruvbox-aqua mt-6 mb-3">Output Models (what the Engine produces)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="bg-gruvbox-card p-4 rounded-lg border border-gruvbox-border">
+                        <h4 class="font-bold text-sm text-gruvbox-blue mb-2">IpState (root per IP)</h4>
+                        <pre class="code-block"><code>metadata: dict[str, str]
+  # e.g. {"resolved_from": "susy..."}
+ports: dict[int, PortState]
+  # e.g. {443: PortState(...)}</code></pre>
+                    </div>
+                    <div class="bg-gruvbox-card p-4 rounded-lg border border-gruvbox-border">
+                        <h4 class="font-bold text-sm text-gruvbox-blue mb-2">PortState (per port)</h4>
+                        <pre class="code-block"><code>tcp_status: str       # "open" / "closed"
+tcp_latency_ms: int?
+tls_certificate: TlsCertificate?
+http_routing_checks: 
+  dict[str, HttpRoutingCheck]
+  # domain → HTTP result</code></pre>
+                    </div>
+                    <div class="bg-gruvbox-card p-4 rounded-lg border border-gruvbox-border">
+                        <h4 class="font-bold text-sm text-gruvbox-blue mb-2">TlsCertificate</h4>
+                        <pre class="code-block"><code>valid: bool
+expires_in_days: int
+issuer: str?
+domains_discovered_sans: list[str]</code></pre>
+                    </div>
+                    <div class="bg-gruvbox-card p-4 rounded-lg border border-gruvbox-border">
+                        <h4 class="font-bold text-sm text-gruvbox-blue mb-2">HttpRoutingCheck</h4>
+                        <pre class="code-block"><code>status_code: int?
+path_checked: str = "/"
+notes: str?</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">Current Output Sample</h2>
+                <p class="text-sm mb-3">This is an actual serialized <code>IpState</code> result from the engine:</p>
+                <pre class="code-block"><code>{
+  "143.106.10.50": {
+    "metadata": {
+      "resolved_from": "susy.ic.unicamp.br",
+      "discovered_from": null
+    },
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 15,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 45,
+          "issuer": "CN=Let's Encrypt Authority",
+          "domains_discovered_sans": [
+            "susy.ic.unicamp.br",
+            "rogue-student-project.com"
+          ]
+        },
+        "http_routing_checks": {
+          "susy.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  }
+}</code></pre>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-bold text-gruvbox-red border-b-2 border-gruvbox-border pb-2 mb-4">What Does NOT Exist Yet</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gruvbox-card p-4 rounded-lg border-2 border-dashed border-gruvbox-red text-center">
+                        <p class="font-bold text-gruvbox-red mb-1">No Database</p>
+                        <p class="text-xs text-gruvbox-gray">Zero persistence. Results go to stdout or a JSON file dump.</p>
+                    </div>
+                    <div class="bg-gruvbox-card p-4 rounded-lg border-2 border-dashed border-gruvbox-red text-center">
+                        <p class="font-bold text-gruvbox-red mb-1">No API / Frontend</p>
+                        <p class="text-xs text-gruvbox-gray">CLI-only via argparse. No FastAPI, no React, no HTTP endpoints.</p>
+                    </div>
+                    <div class="bg-gruvbox-card p-4 rounded-lg border-2 border-dashed border-gruvbox-red text-center">
+                        <p class="font-bold text-gruvbox-red mb-1">No Message Queue</p>
+                        <p class="text-xs text-gruvbox-gray">No RabbitMQ. Internal asyncio.Queue only (in-process, not distributed).</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ==================== PAGE 3: MODULE MAP ==================== -->
+        <div id="page-modules" class="page hidden">
+            <header class="mb-10">
+                <h1 class="text-4xl font-extrabold tracking-tight mb-3">Module Map & Responsibilities</h1>
+                <p class="text-gruvbox-gray text-lg">What each module does, what it must never do, and which language it is written in.</p>
+            </header>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-purple border-b-2 border-gruvbox-border pb-2 mb-4">Frontend (React)</h2>
+                <table class="w-full text-left text-sm bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
+                    <tr class="bg-gruvbox-border"><th class="p-3 w-1/4">Aspect</th><th class="p-3">Details</th></tr>
+                    <tr><td class="p-3 font-bold">Language</td><td class="p-3">TypeScript / React</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold">Talks to</td><td class="p-3">API only (via REST HTTP)</td></tr>
+                    <tr><td class="p-3 font-bold text-gruvbox-green">Does</td><td class="p-3">Display scan results dashboard. Provide forms for creating Jobs (target input, port selection, flag toggles). Show scan progress and history. Allow browsing results by Job, by IP, by domain.</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold text-gruvbox-red">Does NOT</td><td class="p-3">Never sends raw CIDR blocks to be expanded. Never talks to RabbitMQ or SQLite directly. Never runs scan logic.</td></tr>
+                </table>
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">API (FastAPI)</h2>
+                <table class="w-full text-left text-sm bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
+                    <tr class="bg-gruvbox-border"><th class="p-3 w-1/4">Aspect</th><th class="p-3">Details</th></tr>
+                    <tr><td class="p-3 font-bold">Language</td><td class="p-3">Python (FastAPI)</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold">Talks to</td><td class="p-3">Frontend (serves HTTP), SQLite (reads/writes), Dispatcher (triggers)</td></tr>
+                    <tr><td class="p-3 font-bold text-gruvbox-green">Does</td><td class="p-3">Accepts Job creation requests from Frontend. Validates input. Saves Job definition + flags to SQLite. Returns job_id. Serves paginated results from SQLite to Frontend. Handles future auth.</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold text-gruvbox-red">Does NOT</td><td class="p-3">Never expands CIDR blocks. Never pings websites. Never talks to RabbitMQ directly.</td></tr>
+                </table>
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-orange border-b-2 border-gruvbox-border pb-2 mb-4">Dispatcher (Splitter)</h2>
+                <table class="w-full text-left text-sm bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
+                    <tr class="bg-gruvbox-border"><th class="p-3 w-1/4">Aspect</th><th class="p-3">Details</th></tr>
+                    <tr><td class="p-3 font-bold">Language</td><td class="p-3">Python (stays Python permanently)</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold">Talks to</td><td class="p-3">API (receives Job), SQLite (looks up categories), RabbitMQ (publishes Tasks)</td></tr>
+                    <tr><td class="p-3 font-bold text-gruvbox-green">Does</td><td class="p-3">Reads a Job from the API. Expands CIDR ranges, IP ranges, and category lookups into individual targets. Uses existing <code>parsing.py</code> logic. Builds <code>TaskConfig.to_dict()</code> payloads. Streams them one-by-one into RabbitMQ's Task queue.</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold text-gruvbox-red">Does NOT</td><td class="p-3">Never pings websites. Never serves web traffic. Never writes scan results.</td></tr>
+                </table>
+                <div class="callout callout-info mt-3">
+                    <strong>Key:</strong> The Dispatcher reuses the existing <code>parsing.py</code> and <code>expand_target_ranges()</code> code. That logic simply moves out of cli.py and into the Dispatcher module.
+                </div>
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-aqua border-b-2 border-gruvbox-border pb-2 mb-4">Scanner (Execution Engine)</h2>
+                <table class="w-full text-left text-sm bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
+                    <tr class="bg-gruvbox-border"><th class="p-3 w-1/4">Aspect</th><th class="p-3">Details</th></tr>
+                    <tr><td class="p-3 font-bold">Language</td><td class="p-3">Python (MVP) → Go (Production)</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold">Talks to</td><td class="p-3">RabbitMQ (pulls Tasks, pushes Results), Target websites (TCP/TLS/HTTP probes)</td></tr>
+                    <tr><td class="p-3 font-bold text-gruvbox-green">Does</td><td class="p-3">Pulls a <code>TaskConfig</code> from RabbitMQ. Runs <code>engine.py</code> logic: DNS resolution, TCP connect, TLS cert extraction, HTTP routing checks, SAN recursive discovery (internal BFS). Returns the full <code>IpState</code> result to RabbitMQ Results queue.</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold text-gruvbox-red">Does NOT</td><td class="p-3">Never talks to SQLite. Never expands CIDR blocks. Never serves HTTP endpoints. Has zero knowledge of "Jobs" or "categories".</td></tr>
+                </table>
+                <div class="callout callout-warn mt-3">
+                    <strong>SAN Recursion stays here.</strong> The internal BFS loop and <code>asyncio.Queue</code> that discovers SANs and re-queues them stays inside the Scanner for the MVP. This means recursion is self-contained within one Scanner instance.
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-bold text-gruvbox-green border-b-2 border-gruvbox-border pb-2 mb-4">Result Writer</h2>
+                <table class="w-full text-left text-sm bg-gruvbox-card border border-gruvbox-border rounded-lg overflow-hidden gruvbox-shadow">
+                    <tr class="bg-gruvbox-border"><th class="p-3 w-1/4">Aspect</th><th class="p-3">Details</th></tr>
+                    <tr><td class="p-3 font-bold">Language</td><td class="p-3">Python</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold">Talks to</td><td class="p-3">RabbitMQ Results queue (consumes), SQLite (writes)</td></tr>
+                    <tr><td class="p-3 font-bold text-gruvbox-green">Does</td><td class="p-3">Consumes finished <code>IpState</code> results from the Results queue. Deserializes the JSON. Writes structured rows into SQLite tables. Later: a second consumer writes to Prometheus.</td></tr>
+                    <tr class="bg-gruvbox-bg2"><td class="p-3 font-bold text-gruvbox-red">Does NOT</td><td class="p-3">Never pings websites. Never talks to the Frontend. Never expands jobs.</td></tr>
+                </table>
+            </section>
+        </div>
+
+        <!-- ==================== PAGE 4: DATA CONTRACTS ==================== -->
+        <div id="page-contracts" class="page hidden">
+            <header class="mb-10">
+                <h1 class="text-4xl font-extrabold tracking-tight mb-3">Data Contracts</h1>
+                <p class="text-gruvbox-gray text-lg">The exact JSON shapes flowing between each module. These are the "seams" that allow us to swap Python for Go later.</p>
+            </header>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-orange border-b-2 border-gruvbox-border pb-2 mb-4">Contract 1: Frontend → API (Job Creation)</h2>
+                <p class="text-sm mb-3">What the React frontend sends when a user requests a scan.</p>
+                <pre class="code-block"><code>POST /api/jobs
+
+{
+  "target": "192.168.1.0/24,susy.ic.unicamp.br",
+  "ports": "80,443",
   "flags": {
-    "timeout_ms": 5000,
-    "verify_ssl": false,
-    "check_version": true
+    "check_tcp": true,
+    "check_http": true,
+    "timeout_seconds": 10,
+    "recursive_san_check": true,
+    "out_of_scope_depth": 1,
+    "expected_strings": ["login"],
+    "check_virtual_hosts": true,
+    "spoof_user_agent": false
   },
   "labels": {
-    "target_group": "professors",
-    "scan_type": "ad-hoc"
+    "target_group": "professors"
   }
-}</code></pre>
+}
+
+Response: { "job_id": "JOB-0042", "status": "dispatching" }</code></pre>
+                <div class="callout callout-info mt-3">
+                    The <code>flags</code> object maps directly to the existing <code>TaskFlags</code> dataclass. The <code>target</code> string uses the same flexible format the CLI already supports (CIDR, ranges, domains, comma-separated).
                 </div>
-                <div>
-                    <h3 class="font-bold text-xl mb-3 text-gruvbox-green">OUTPUT: The "Result" Payload</h3>
-                    <p class="text-sm mb-3">Generated by the Scanner, consumed by the Database writer.</p>
-                    <pre class="text-sm"><code>{
-  "job_id": "REQ-001",
-  "target_ip": "192.168.1.5",
-  "status": "UP",
-  "http_code": 200,
-  "latency_ms": 142,
-  "version_found": "nginx/1.21.0",
-  "timestamp": "2026-08-25T14:55:00Z",
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-orange border-b-2 border-gruvbox-border pb-2 mb-4">Contract 2: Dispatcher → RabbitMQ (Task Queue)</h2>
+                <p class="text-sm mb-3">What the Dispatcher publishes after expanding the Job. This is the existing <code>TaskConfig.to_dict()</code> format, plus <code>job_id</code> and <code>labels</code>.</p>
+                <pre class="code-block"><code>// One message per expanded target. A /24 CIDR = 254 of these messages.
+{
+  "job_id": "JOB-0042",
+  "target": "192.168.1.5",
+  "ports": [80, 443],
+  "flags": {
+    "check_tcp": true,
+    "check_http": true,
+    "timeout_seconds": 10,
+    "recursive_san_check": true,
+    "out_of_scope_depth": 1,
+    "expected_strings": ["login"],
+    "undesired_strings": null,
+    "check_virtual_hosts": true,
+    "spoof_user_agent": false,
+    "worker_delay": 0.0
+  },
+  "discovered_from": null,
   "labels": {
-    "target_group": "professors",
-    "scan_type": "ad-hoc"
+    "target_group": "professors"
   }
 }</code></pre>
+                <div class="callout callout-warn mt-3">
+                    <strong>The Splitter Pattern:</strong> The Dispatcher never builds a giant list in memory. It calculates one IP, publishes one message, moves to the next. Memory stays flat.
                 </div>
-            </div>
-            <div class="mt-4 p-4 bg-gruvbox-yellow/20 border-l-4 border-gruvbox-yellow text-sm">
-                <strong>Crucial Detail:</strong> Notice how the <code>labels</code> block is simply copied from the Input to the Output. The Scanner doesn't care what is in there, it just passes it through. This is the secret to making Prometheus filtering work later without changing the Scanner code!
-            </div>
-        </section>
+            </section>
 
-        <!-- 4. CLI MODE -->
-        <section id="cli-mode" class="mb-16">
-            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">4. Phase 1: CLI Mode (Nmap style)</h2>
-            <p class="mb-4">Before we even turn on RabbitMQ, the Engine must work natively on your laptop. Using Hexagonal Architecture, a CLI Adapter translates terminal commands into the JSON <code>Task</code> contract.</p>
-            <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
-                <pre class="mermaid bg-transparent flex justify-center">
-                    flowchart LR
-                        classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836;
-                        classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7;
-                        
-                        User[You] -- "$ engine scan 10.0.0.1" --> CLI[CLI Adapter]
-                        CLI -- Builds Task JSON --> Core((Scanner Core))
-                        Core -- Returns Result JSON --> CLI
-                        CLI -- Prints to Screen --> User
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-aqua border-b-2 border-gruvbox-border pb-2 mb-4">Contract 3: Scanner → RabbitMQ (Result Queue)</h2>
+                <p class="text-sm mb-3">What the Scanner publishes after completing a scan. This is the existing <code>IpState</code> serialized format, plus <code>job_id</code> and <code>labels</code> passed through.</p>
+                <pre class="code-block"><code>{
+  "job_id": "JOB-0042",
+  "labels": { "target_group": "professors" },
+  "flags_used": {
+    "check_tcp": true,
+    "check_http": false
+  },
+  "results": {
+    "192.168.1.5": {
+      "metadata": {
+        "resolved_from": null,
+        "discovered_from": null
+      },
+      "ports": {
+        "443": {
+          "tcp_status": "open",
+          "tcp_latency_ms": 12,
+          "tls_certificate": {
+            "valid": true,
+            "expires_in_days": 90,
+            "issuer": "CN=Let's Encrypt",
+            "domains_discovered_sans": ["example.com"]
+          },
+          "http_routing_checks": {
+            "192.168.1.5": {
+              "status_code": 200,
+              "path_checked": "/",
+              "notes": "Expected string 'login' found"
+            }
+          }
+        },
+        "80": {
+          "tcp_status": "closed",
+          "tcp_latency_ms": null,
+          "tls_certificate": null,
+          "http_routing_checks": {}
+        }
+      }
+    }
+  }
+}</code></pre>
+                <div class="callout callout-info mt-3">
+                    <strong>Labels & Flags pass-through:</strong> The Scanner receives <code>labels</code> and <code>flags</code> in the Task and copies them unchanged to the Result. It never modifies them. The Result Writer uses <code>flags_used</code> to know which incremental timestamps to update. This is how Prometheus filtering works later without changing Scanner code.
+                </div>
+            </section>
 
-                        class Core core;
-                </pre>
-            </div>
-        </section>
+            <section>
+                <h2 class="text-2xl font-bold text-gruvbox-green border-b-2 border-gruvbox-border pb-2 mb-4">Contract 4: API → Frontend (Results Query)</h2>
+                <p class="text-sm mb-3">What the React frontend receives when it queries for scan results.</p>
+                <pre class="code-block"><code>GET /api/jobs/JOB-0042/results?page=1
 
-        <!-- 5. MVP MODE -->
-        <section id="mvp-mode" class="mb-16">
-            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">5. Phase 2: MVP Microservices</h2>
-            <p class="mb-4">We introduce the FastAPI, the Dispatcher, RabbitMQ, and SQLite. Notice that the <strong>Scanner Core</strong> did not change a single line of code. We just wrote a new Adapter (RabbitMQ Adapter) to feed it.</p>
-            <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
-                <pre class="mermaid bg-transparent flex justify-center">
-                    flowchart TD
-                        classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836;
-                        classDef rmq fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7;
-                        classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7;
-                        classDef db fill:#98971a,stroke:#79740e,stroke-width:2px,color:#fbf1c7;
+{
+  "job_id": "JOB-0042",
+  "status": "completed",
+  "total_targets": 254,
+  "completed": 254,
+  "results": [
+    {
+      "ip": "192.168.1.5",
+      "ports": {
+        "443": { "tcp_status": "open", "latency_ms": 12, "tls_valid": true },
+        "80":  { "tcp_status": "closed" }
+      }
+    },
+    ...
+  ],
+  "page": 1,
+  "total_pages": 13
+}</code></pre>
+                <div class="callout callout-info mt-3">
+                    <strong>Pagination is mandatory.</strong> A /16 CIDR scan generates 65,534 results. The Frontend must never receive all of them at once.
+                </div>
+            </section>
+        </div>
 
-                        Cron[Cron/Scheduler] --> API[FastAPI]
-                        API -->|Save Job| DB[(SQLite Database)]
-                        API --> Dispatcher[Dispatcher Module]
-                        
-                        Dispatcher -->|Loop & Stream 1000s of Tasks| RMQ[(RabbitMQ: Tasks Queue)]
-                        
-                        RMQ -->|Pull 1 Task| Adapter[RabbitMQ Adapter]
-                        Adapter --> Core((Python Scanner Core))
-                        Core --> Adapter
-                        
-                        Adapter -->|Push Result| RMQ2[(RabbitMQ: Results Queue)]
-                        RMQ2 --> Writer[SQLite DB Writer]
-                        Writer --> DB
-                        
-                        class RMQ,RMQ2 rmq;
-                        class Core core;
-                        class DB db;
-                </pre>
-            </div>
-        </section>
+        <!-- ==================== PAGE 5: EVOLUTION PHASES ==================== -->
+        <div id="page-phases" class="page hidden">
+            <header class="mb-10">
+                <h1 class="text-4xl font-extrabold tracking-tight mb-3">Evolution Phases</h1>
+                <p class="text-gruvbox-gray text-lg">How the system evolves from a CLI tool to a full production platform, and what changes at each step.</p>
+            </header>
 
-        <!-- 6. PRODUCTION MODE -->
-        <section id="prod-mode" class="mb-16">
-            <h2 class="text-3xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-6">6. Phase 3: Full Production</h2>
-            <p class="mb-4">We are running at massive scale. The Python Scanner is struggling, so we rewrite it in Go. We also need rich metrics, so we introduce Prometheus. Because of our strict responsibilities and JSON contracts, <strong>we do not have to touch the FastAPI, Dispatcher, or SQLite Config DB.</strong></p>
-            <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
-                <pre class="mermaid bg-transparent flex justify-center">
-                    flowchart TD
-                        classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836;
-                        classDef rmq fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7;
-                        classDef core fill:#b16286,stroke:#8f3f71,stroke-width:2px,color:#fbf1c7;
-                        classDef db fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#fbf1c7;
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">Phase 1: CLI Mode (Current)</h2>
+                <p class="mb-4">This is what exists today. The full pipeline runs in a single Python process. No database, no queue, no API.</p>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <pre class="mermaid bg-transparent">
+flowchart LR
+    classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836
+    classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7
 
-                        React[React Frontend] --> API[FastAPI Configuration]
-                        API --> Dispatcher[Dispatcher]
-                        
-                        Dispatcher --> RMQ[(RabbitMQ)]
-                        
-                        RMQ --> Go1((Go Scanner Node 1))
-                        RMQ --> Go2((Go Scanner Node 2))
-                        RMQ --> Go3((Go Scanner Node 3))
-                        
-                        Go1 --> RMQ2[(RabbitMQ Results)]
-                        Go2 --> RMQ2
-                        Go3 --> RMQ2
-                        
-                        RMQ2 --> PromAdapter[Prometheus Metrics Exporter]
-                        PromAdapter --> Prom[(Prometheus Time-Series DB)]
-                        
-                        class RMQ,RMQ2 rmq;
-                        class Go1,Go2,Go3 core;
-                        class Prom db;
-                </pre>
-            </div>
-        </section>
+    User["$ site-check target -p 443 -r"] --> CLI["cli.py"]
+    CLI -->|"parse + expand"| Payload["TaskConfig JSON list"]
+    Payload --> Engine["engine.py (asyncio BFS)"]
+    Engine --> Screen["stdout / JSON file"]
+
+    class Engine core
+                    </pre>
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-3 text-sm">
+                    <div class="bg-gruvbox-card p-3 rounded border border-gruvbox-border text-center"><strong>Parsing:</strong> cli.py + parsing.py</div>
+                    <div class="bg-gruvbox-card p-3 rounded border border-gruvbox-border text-center"><strong>Execution:</strong> engine.py (in-process)</div>
+                    <div class="bg-gruvbox-card p-3 rounded border border-gruvbox-border text-center"><strong>Storage:</strong> None (stdout/file)</div>
+                </div>
+            </section>
+
+            <section class="mb-12">
+                <h2 class="text-2xl font-bold text-gruvbox-yellow border-b-2 border-gruvbox-border pb-2 mb-4">Phase 2: MVP (Target)</h2>
+                <p class="mb-4">We add FastAPI, SQLite, React, RabbitMQ, and the Dispatcher. The Scanner engine code barely changes — we wrap it with a RabbitMQ adapter. The CLI continues to work independently.</p>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <pre class="mermaid bg-transparent">
+flowchart TD
+    classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836
+    classDef rmq fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7
+    classDef core fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7
+    classDef db fill:#98971a,stroke:#79740e,stroke-width:2px,color:#fbf1c7
+    classDef fe fill:#b16286,stroke:#8f3f71,stroke-width:2px,color:#fbf1c7
+
+    React["React Dashboard"] --> API["FastAPI"]
+    CLI2["CLI (preserved)"] -.->|"still works standalone"| Engine
+
+    API -->|"Save Job"| DB[("SQLite")]
+    API --> Disp["Dispatcher"]
+    Disp -->|"Stream TaskConfigs"| RMQ[("RabbitMQ Tasks")]
+    RMQ --> Adapter["RMQ Adapter"]
+    Adapter --> Engine["Python Scanner"]
+    Engine --> Adapter
+    Adapter -->|"Push IpState"| RMQ2[("RabbitMQ Results")]
+    RMQ2 --> Writer["Result Writer"]
+    Writer --> DB
+
+    class React fe
+    class RMQ,RMQ2 rmq
+    class Engine core
+    class DB db
+                    </pre>
+                </div>
+                <div class="mt-4 grid grid-cols-4 gap-3 text-sm">
+                    <div class="bg-gruvbox-card p-3 rounded border border-gruvbox-border text-center"><strong>Frontend:</strong> React</div>
+                    <div class="bg-gruvbox-card p-3 rounded border border-gruvbox-border text-center"><strong>Dispatch:</strong> Python</div>
+                    <div class="bg-gruvbox-card p-3 rounded border border-gruvbox-border text-center"><strong>Scan:</strong> Python engine</div>
+                    <div class="bg-gruvbox-card p-3 rounded border border-gruvbox-border text-center"><strong>Storage:</strong> Cron + SQLite</div>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-bold text-gruvbox-purple border-b-2 border-gruvbox-border pb-2 mb-4">Phase 3: Production</h2>
+                <p class="mb-4">Python Scanner is replaced by Go Scanner nodes. SQLite results consumer is augmented with a Prometheus exporter. The FastAPI, Dispatcher, and React apps do not change at all.</p>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <pre class="mermaid bg-transparent">
+flowchart TD
+    classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836
+    classDef rmq fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7
+    classDef core fill:#b16286,stroke:#8f3f71,stroke-width:2px,color:#fbf1c7
+    classDef db fill:#689d6a,stroke:#427b58,stroke-width:2px,color:#fbf1c7
+
+    React["React Frontend"] --> API["FastAPI"]
+    API --> Disp["Dispatcher"]
+    Disp --> RMQ[("RabbitMQ")]
+    RMQ --> Go1(("Go Scanner 1"))
+    RMQ --> Go2(("Go Scanner 2"))
+    RMQ --> Go3(("Go Scanner 3"))
+    Go1 --> RMQ2[("RabbitMQ Results")]
+    Go2 --> RMQ2
+    Go3 --> RMQ2
+    RMQ2 --> Writer["SQLite Writer"]
+    RMQ2 --> Prom["Prometheus Exporter"]
+    Prom --> PromDB[("Prometheus")]
+
+    class RMQ,RMQ2 rmq
+    class Go1,Go2,Go3 core
+    class PromDB db
+                    </pre>
+                </div>
+                <div class="callout callout-info mt-4">
+                    <strong>What changed from Phase 2 to Phase 3:</strong> Only two things. (1) The Python Scanner was replaced by Go Scanner nodes. (2) A Prometheus exporter was added as a second consumer of the Results queue. Everything else (React, FastAPI, Dispatcher, SQLite config) stayed untouched.
+                </div>
+            </section>
+        </div>
+
+        <!-- ==================== PAGE 6: FINAL DECISIONS ==================== -->
+        <div id="page-decisions" class="page hidden">
+            <header class="mb-10">
+                <h1 class="text-4xl font-extrabold tracking-tight mb-3">Final Decisions (Rules Engine)</h1>
+                <p class="text-gruvbox-gray text-lg">The architectural choices finalized for the MVP database schema, job configuration, and metrics.</p>
+            </header>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-blue border-b-2 border-gruvbox-border pb-2 mb-4">1. The Profile vs Trigger Pattern (Configuration Merging)</h2>
+                <p class="mb-4 text-sm">We decided against complex state-aware tri-state flags (True/False/Neutral) and overlapping crons. Instead, we decouple the <strong>Rules (Profiles)</strong> from the <strong>Execution (Jobs/Crons)</strong>.</p>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <pre class="mermaid bg-transparent">
+graph TD
+    classDef default fill:#ebdbb2,stroke:#d5c4a1,stroke-width:2px,color:#3c3836
+    classDef high fill:#cc241d,stroke:#9d0006,stroke-width:2px,color:#fbf1c7
+    classDef med fill:#d79921,stroke:#b57614,stroke-width:2px,color:#fbf1c7
+    classDef low fill:#458588,stroke:#076678,stroke-width:2px,color:#fbf1c7
+    classDef base fill:#928374,stroke:#7c6f64,stroke-width:2px,color:#fbf1c7
+
+    Base[1. Global Defaults<br/>(check_tcp=True, timeout=10)] --> Group[2. Group Profile<br/>(e.g., check_http=False)]
+    Group --> Target[3. Target Profile<br/>(e.g., timeout=30)]
+    Target --> Job[4. Job Override<br/>(e.g., User clicked 'Run without TCP')]
+    Job --> Final((Final Merged TaskFlags))
+
+    class Job high
+    class Target med
+    class Group low
+    class Base base
+                    </pre>
+                </div>
+                <div class="callout callout-info mt-4">
+                    <strong>Pydantic Dictionary Merging:</strong> The Dispatcher dynamically builds the final flag set for a target by layering the profiles on top of each other. The right-most (most specific) layer wins. A Job trigger always forces its overrides across all targeted IPs.
+                </div>
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-green border-b-2 border-gruvbox-border pb-2 mb-4">2. Incremental Probe Timestamps</h2>
+                <p class="mb-4 text-sm">Since Jobs can run specific flags (e.g., a Job that only runs TCP checks), we cannot have a single <code>last_scanned_at</code> column on the target. We must track state at the probe level.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gruvbox-bg p-4 rounded-lg border border-gruvbox-border">
+                        <h4 class="font-bold text-sm mb-2 text-gruvbox-blue">PortStateRecord (SQLite)</h4>
+                        <pre class="code-block text-xs"><code>{
+  "port": 443,
+  "tcp_status": "open",
+  "tcp_last_checked_at": "2026-08-26T15:00:00Z",
+  "tls_valid": true,
+  "tls_last_checked_at": "2026-08-26T15:00:00Z",
+  "http_status_code": 200,
+  "http_last_checked_at": "2026-08-25T09:00:00Z" // older!
+}</code></pre>
+                    </div>
+                    <div class="bg-gruvbox-bg p-4 rounded-lg flex flex-col justify-center">
+                        <p class="text-sm text-gruvbox-gray">When the <strong>Result Writer</strong> consumes an <code>IpState</code>, it inspects the flags used for that task. If <code>check_http</code> was false, it updates the TCP and TLS timestamps but leaves the HTTP timestamp completely untouched.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-10">
+                <h2 class="text-2xl font-bold text-gruvbox-orange border-b-2 border-gruvbox-border pb-2 mb-4">3. Prometheus Overlapping Groups</h2>
+                <p class="mb-4 text-sm">A target can belong to multiple groups. Exporting metrics with comma-separated labels (<code>groups="professors,students"</code>) breaks PromQL aggregations.</p>
+                <div class="bg-gruvbox-card p-6 rounded-lg border border-gruvbox-border gruvbox-shadow">
+                    <h4 class="font-bold text-sm mb-2">The Join Metric Pattern (target_group_info)</h4>
+                    <pre class="code-block text-xs"><code># 1. The health metric contains ONLY the target identity
+site_health_tcp_status{target="susy.ic.unicamp.br"} 1
+
+# 2. The API/DB exports static "info" metrics defining membership
+target_group_info{target="susy.ic.unicamp.br", group="professors"} 1
+target_group_info{target="susy.ic.unicamp.br", group="department-servers"} 1
+
+# 3. Grafana joins them dynamically
+site_health_tcp_status * on(target) group_left target_group_info{group="professors"}</code></pre>
+                </div>
+            </section>
+        </div>
 
     </main>
 
