@@ -29,6 +29,16 @@ A logical organizational grouping assigned to a Target or range (e.g., `professo
 A specific sub-tag under a Classification (e.g., `physics_dept`, `hypervisors`).
 
 
+### Target States
+
+**Ghost**:
+An IP address or domain that failed to respond to the current scan, but has a historical record of responding in a previous scan. This indicates a potential outage or infrastructure regression.
+_Avoid_: dead node, missing target
+
+**Void Space**:
+IP addresses within a scanned CIDR block that did not respond and have no historical record of ever responding. These are typically unassigned IPs or empty subnets.
+_Avoid_: empty IPs, unresponsive block
+
 ### Scan outputs
 
 **Result**:
@@ -56,3 +66,15 @@ _Avoid_: backend, server
 **Broker**:
 The RabbitMQ instance that decouples the Dispatcher from the Scanner. Holds Tasks until a Scanner worker consumes them, and carries Results back to the Result Writer.
 _Avoid_: queue, message bus, transport
+
+
+## Architectural Decisions Log
+
+- **ADR 0001**: Single Context & Lightweight ADRs.
+- **ADR 0002**: Stateless Isolation for Job Targets (Overlapping target scans permitted).
+- **ADR 0003**: Single-Process Monolith MVP (`asyncio.Queue` backend).
+- **ADR 0004**: API-Driven Historical Diffing & Void Aggregation (FastAPI on-the-fly diffing, parameterized `?ghost_window=14d`, Void node squashing).
+- **ADR 0005**: Saved Views & Read-Time UI Filtering (Universal job targets, read-time filtering, SQLite saved view states).
+- **ADR 0006**: Go Engine Architecture & Pluggable TargetStreamer (Go channel core, `InMemSplitter` for CLI, `RabbitMQConsumer` for distributed).
+- **ADR 0007**: Frontend UX, Topology DAG, and Sorting Mechanics (Multi-Block node stats, File-manager sorting, Expandable UX rows, and DAG state).
+
