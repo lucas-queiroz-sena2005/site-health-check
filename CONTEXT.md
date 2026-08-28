@@ -89,4 +89,5 @@ _Avoid_: queue, message bus, transport
 - **ADR 0005**: Saved Views & Read-Time UI Filtering (Universal job targets, read-time filtering, SQLite saved view states).
 - **ADR 0006**: Go Engine Architecture & Pluggable TargetStreamer (Go channel core, `InMemSplitter` for CLI, `RabbitMQConsumer` for distributed).
 - **ADR 0007**: Frontend UX, Topology DAG, and Sorting Mechanics (Multi-Block node stats, File-manager sorting, Expandable UX rows, and DAG state).
+- **ADR 0008**: Reject L3 Network Tracing (Strictly rely on L7/L4 data to prevent OpenStack DDoS).
 
