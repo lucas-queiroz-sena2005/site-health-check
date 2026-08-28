@@ -43,6 +43,7 @@ async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = No
             raw_cert = ssl_obj.getpeercert(binary_form=True)
             if raw_cert:
                 tls_obj = TlsCertificate(valid=False)
+                tls_obj.protocol_version = ssl_obj.version()
 
                 try:
                     # Parse the binary cert using cryptography

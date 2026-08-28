@@ -34,7 +34,10 @@ class TaskConfig:
 class HttpRoutingCheck:
     """Represents the result of a specific HTTP test against a domain."""
     status_code: int | None = None
+    http_latency_ms: int | None = None
     path_checked: str = "/"
+    redirects_to_url: str | None = None
+    server_header: str | None = None
     notes: str | None = None
 
 @dataclasses.dataclass
@@ -43,6 +46,7 @@ class TlsCertificate:
     valid: bool = False
     expires_in_days: int = 0
     issuer: str | None = None
+    protocol_version: str | None = None
     # A list of all SANs discovered on this certificate
     domains_discovered_sans: list[str] = dataclasses.field(default_factory=list)
 
@@ -57,8 +61,14 @@ class PortState:
     http_routing_checks: dict[str, HttpRoutingCheck] = dataclasses.field(default_factory=dict)
 
 @dataclasses.dataclass
+class IpMetadata:
+    """Metadata detailing the origin of this IP state."""
+    resolved_from: str | None = None
+    discovered_from: list[str] = dataclasses.field(default_factory=list)
+
+@dataclasses.dataclass
 class IpState:
     """Represents the complete state of a single IP address."""
-    metadata: dict[str, str] = dataclasses.field(default_factory=dict)
+    metadata: IpMetadata = dataclasses.field(default_factory=IpMetadata)
     # Maps a Port Number (int) to its physical PortState
     ports: dict[int, PortState] = dataclasses.field(default_factory=dict)

@@ -59,9 +59,9 @@ async def worker(worker_id: str, queue: asyncio.Queue):
             if state_key not in master_state:
                 master_state[state_key] = IpState()
                 if is_domain:
-                    master_state[state_key].metadata["resolved_from"] = target
+                    master_state[state_key].metadata.resolved_from = target
                 if task.get("discovered_from"):
-                    master_state[state_key].metadata["discovered_from"] = task.get("discovered_from")
+                    master_state[state_key].metadata.discovered_from.append(task.get("discovered_from"))
                 
             # Execute the probes for each port
             for port in ports:

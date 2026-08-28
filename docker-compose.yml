@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   frontend:
-    build: .
+    build: ./frontend-prototype
     container_name: site-health-check-prototype
     ports:
       - "8080:80"
