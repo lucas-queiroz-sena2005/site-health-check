@@ -49,6 +49,18 @@ _Avoid_: report, output
 The in-code representation of a Result. A tree rooted at one IP address, branching to PortStates, each of which may carry a TlsCertificate and a map of HttpRoutingChecks.
 _Avoid_: state, record
 
+**PortState**:
+The physical reality of a single port on an IP. Includes `tcp_latency_ms`, which measures the strict socket establishment time (TCP 3-way handshake) independently of application responsiveness.
+
+**HttpRoutingCheck**:
+The result of an HTTP test against a specific domain on a port. Includes `http_latency_ms` (Time-to-First-Byte) to measure application responsiveness, `server_header`, and `redirects_to_url` (which captures HTTP 302 Locations for L7 path tracing). Note: To fetch final destination data natively, automatic redirects are currently allowed, so `redirects_to_url` acts as a placeholder for the future Go rewrite.
+
+**resolved_from**:
+A metadata field on the IpState indicating the identity of the target. It answers: "What hostname did we type into the DNS resolver to find this IP?"
+
+**discovered_from**:
+A metadata field on the IpState representing the graph edge. It lists the originating entities (IPs or Domains) that caused this Target to be queued (e.g., via a SAN or redirect). Distinct from `resolved_from`.
+
 ### Services
 
 **Dispatcher**:
