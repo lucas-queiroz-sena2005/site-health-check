@@ -45,6 +45,13 @@ _Avoid_: empty IPs, unresponsive block
 The complete outcome of scanning one IP address — its port states, TLS certificates, and HTTP routing check outcomes, keyed by IP. Multiple Targets that resolve to the same IP produce one merged Result, not separate ones.
 _Avoid_: report, output
 
+**Unified Target View**:
+A merged representation of a target's health built by FastAPI across multiple Job Results.
+_Avoid_: global health, merged graph
+
+**Data Hierarchy Invalidation**:
+The rule that foundational state changes (e.g., L4 Port Closed) automatically invalidate and hide dependent states (e.g., L7 HTTP data) from older jobs during merging, preventing misinformation.
+
 **IpState**:
 The in-code representation of a Result. A tree rooted at one IP address, branching to PortStates, each of which may carry a TlsCertificate and a map of HttpRoutingChecks.
 _Avoid_: state, record
@@ -90,4 +97,5 @@ _Avoid_: queue, message bus, transport
 - **ADR 0006**: Go Engine Architecture & Pluggable TargetStreamer (Go channel core, `InMemSplitter` for CLI, `RabbitMQConsumer` for distributed).
 - **ADR 0007**: Frontend UX, Topology DAG, and Sorting Mechanics (Multi-Block node stats, File-manager sorting, Expandable UX rows, and DAG state).
 - **ADR 0008**: Reject L3 Network Tracing (Strictly rely on L7/L4 data to prevent OpenStack DDoS).
+- **ADR 0009**: Unified Target Merging & Data Hierarchy Invalidation (FastAPI dynamic merge rules to prevent misinformation).
 
