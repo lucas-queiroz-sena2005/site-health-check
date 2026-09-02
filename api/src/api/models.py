@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pydantic import BaseModel, ConfigDict, Field as PydanticField, model_serializer
 from sqlmodel import Field, SQLModel, Column, JSON, Relationship
 from typing import Literal
@@ -9,6 +10,7 @@ class Job(SQLModel, table=True):
     targets: list[str] = Field(sa_column=Column(JSON))
     ports: list[int] = Field(sa_column=Column(JSON))
     labels: dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class JobCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
