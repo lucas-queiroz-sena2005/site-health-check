@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from pydantic import BaseModel, ConfigDict, Field as PydanticField, model_serializer
 from sqlmodel import Field, SQLModel, Column, JSON, Relationship
-from typing import Literal
+from typing import Literal, Any
 
 class Job(SQLModel, table=True):
     __tablename__: str = "jobs"  # type: ignore
@@ -21,6 +21,21 @@ class JobCreate(BaseModel):
 
 class JobResponse(BaseModel):
     id: int
+
+class SavedView(SQLModel, table=True):
+    __tablename__: str = "saved_views"  # type: ignore
+
+    id: int | None = Field(default=None, primary_key=True)
+    view_state: dict[str, Any] = Field(sa_column=Column(JSON))
+
+class SavedViewCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    view_state: dict[str, Any]
+
+class SavedViewResponse(BaseModel):
+    id: int
+    view_state: dict[str, Any]
 
 class HttpRoutingCheck(SQLModel, table=True):
     __tablename__: str = "http_routing_checks"  # type: ignore
