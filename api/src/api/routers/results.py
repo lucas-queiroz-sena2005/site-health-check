@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, col, and_
 from pydantic import BaseModel
 
 from api.database import get_session
@@ -51,10 +51,13 @@ def get_results_summary(
     statement = (
         select(
             IpState.metadata_resolved_from,
-            func.count(IpState.id.distinct()).label("total_ips"),
-            func.count(PortState.id.distinct()).label("active_ports")
+            func.count(col(IpState.id).distinct()).label("total_ips"),
+            func.count(col(PortState.id).distinct()).label("active_ports")
         )
-        .outerjoin(PortState, (IpState.id == PortState.ip_state_id) & (PortState.tcp_status == "open"))
+        .outerjoin(PortState, and_(
+            col(IpState.id) == col(PortState.ip_state_id), 
+            col(PortState.tcp_status) == "open"
+        ))
     )
     
     if job_id is not None:
@@ -101,8 +104,8 @@ def get_results(
         # Find all IPs that had an open port in a job created after the cutoff
         historical_stmt = (
             select(IpState.ip_address)
-            .join(PortState, IpState.id == PortState.ip_state_id)
-            .join(Job, IpState.job_id == Job.id)
+            .join(PortState, col(IpState.id) == col(PortState.ip_state_id))
+            .join(Job, col(IpState.job_id) == col(Job.id))
             .where(PortState.tcp_status == "open")
             .where(Job.created_at >= cutoff)
             .distinct()
@@ -110,7 +113,7 @@ def get_results(
         # We only care about IPs in the current result set
         current_ips = [r.ip_address for r in results]
         if current_ips:
-            historical_stmt = historical_stmt.where(IpState.ip_address.in_(current_ips))
+            historical_stmt = historical_stmt.where(col(IpState.ip_address).in_(current_ips))
             historical_active_ips = set(session.exec(historical_stmt).all())
             
     # Apply void aggregation if we are returning a raw list of results (not explicitly filtering to active-only)
