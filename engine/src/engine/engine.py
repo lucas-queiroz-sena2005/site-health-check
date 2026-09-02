@@ -5,10 +5,10 @@ import aiohttp
 from typing import Any
 
 import ipaddress
-from site_health_check.operations.network import resolve_target
-from site_health_check.probes.tcp import check_tcp_and_tls
-from site_health_check.probes.http import check_http_routing
-from site_health_check.schemas.engine import IpState
+from engine.operations.network import resolve_target
+from engine.probes.tcp import check_tcp_and_tls
+from engine.probes.http import check_http_routing
+from engine.schemas.engine import IpState
 
 # The master state dictionary: IP (str) -> IpState
 master_state: dict[str, IpState] = {}
@@ -87,7 +87,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                     # Pre-initialize PortState synchronously to prevent KeyErrors
                     # from other workers doing concurrent HTTP checks on the same IP/Port
                     if port not in master_state[state_key].ports:
-                        from site_health_check.schemas.engine import PortState
+                        from engine.schemas.engine import PortState
                         master_state[state_key].ports[port] = PortState()
                         
                     tcp_result = await check_tcp_and_tls(state_key, port, server_hostname=host_header)
@@ -120,7 +120,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                 if not skip_http:
                     seen_http.add(http_cache_key)
                     # 2. The HTTP Pass (aiohttp)
-                    from site_health_check.schemas.engine import TaskFlags
+                    from engine.schemas.engine import TaskFlags
                     flags_obj = TaskFlags(**task.get("flags", {}))
                     http_result = await check_http_routing(state_key, port, host_header=host_header, flags=flags_obj)
                     master_state[state_key].ports[port].http_routing_checks[host_header_key] = http_result

@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from site_health_check.schemas.engine import IpState
+from engine.schemas.engine import IpState
 
 
 def export_results(results: dict[str, IpState], output_path: str | None = None) -> str:
@@ -18,7 +18,7 @@ def export_results(results: dict[str, IpState], output_path: str | None = None) 
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"{target_name}_{timestamp}.json"
         
-        # Find the repository root (3 levels up from exporter.py: src/site_health_check/exporter.py -> repo/)
+        # Find the repository root (3 levels up from exporter.py: src/engine/exporter.py -> repo/)
         current_dir = os.path.dirname(os.path.abspath(__file__))
         repo_root = os.path.dirname(os.path.dirname(current_dir))
         

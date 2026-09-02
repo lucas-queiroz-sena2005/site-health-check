@@ -3,7 +3,7 @@ import sys
 import ipaddress
 from functools import wraps
 from typing import Callable, Any
-from site_health_check.schemas.parsing import TargetSegment, TargetValidationResult
+from engine.schemas.parsing import TargetSegment, TargetValidationResult
 
 DOMAIN_REGEX = r"^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^localhost$"
 

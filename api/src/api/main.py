@@ -3,8 +3,8 @@ import asyncio
 from fastapi import FastAPI
 from sqlmodel import SQLModel
 
-from site_health_check.api.database import engine
-from site_health_check.api.routers import jobs
+from api.database import engine
+from api.routers import jobs
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

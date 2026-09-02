@@ -7,8 +7,8 @@ from typing import Any
 import aiohttp
 import aiohttp.abc
 
-from site_health_check.catcher import validate_html
-from site_health_check.schemas.engine import HttpRoutingCheck, TaskFlags
+from engine.catcher import validate_html
+from engine.schemas.engine import HttpRoutingCheck, TaskFlags
 
 class SingleIPResolver(aiohttp.abc.AbstractResolver):
     """

@@ -4,8 +4,8 @@ import argparse
 import json
 import sys
 
-from site_health_check.parsing import validate_and_clean_target, parse_ports, expand_target_ranges
-from site_health_check.schemas.engine import TaskConfig, TaskFlags
+from engine.parsing import validate_and_clean_target, parse_ports, expand_target_ranges
+from engine.schemas.engine import TaskConfig, TaskFlags
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -140,7 +140,7 @@ def main(args: list | None = None) -> int:
     print("\n[*] Handing off to Core Engine...")
     
     # --- The Engine Boundary ---
-    from site_health_check.engine import run_engine
+    from engine.engine import run_engine
     results = run_engine(json_payload, workers_count=parsed_args.workers)
 
     # Unified Terminal Output
@@ -149,7 +149,7 @@ def main(args: list | None = None) -> int:
 
     # State Export
     if parsed_args.output and results:
-        from site_health_check.exporter import export_results
+        from engine.exporter import export_results
         saved_path = export_results(results, parsed_args.output)
         print(f"\n[+] Results saved to {saved_path}")
 

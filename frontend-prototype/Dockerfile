@@ -1,18 +1,26 @@
-FROM node:20-slim
+# --- Build Stage ---
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files first to leverage Docker cache
-COPY package.json package-lock.json* ./
-
-# Install dependencies
+# Copy package files first for layer caching
+COPY frontend/package*.json ./
 RUN npm install
 
-# Copy the rest of the source code
-COPY . .
+# Copy the rest of the frontend source
+COPY frontend/ ./
 
-# Expose the Vite default port
-EXPOSE 5173
+# Build the Vite production bundle
+RUN npm run build
 
-# Run the dev server and expose it to the host network
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# --- Serve Stage ---
+FROM nginx:alpine
+
+# Copy the built static assets from the builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Expose port 80 to the host
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

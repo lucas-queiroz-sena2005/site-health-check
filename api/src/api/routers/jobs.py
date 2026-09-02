@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from site_health_check.api.models import Job, JobCreate, JobResponse
-from site_health_check.api.database import SessionDep
+from api.models import Job, JobCreate, JobResponse
+from api.database import SessionDep
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 

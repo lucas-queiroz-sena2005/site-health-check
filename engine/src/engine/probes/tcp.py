@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
 
-from site_health_check.schemas.engine import PortState, TlsCertificate
+from engine.schemas.engine import PortState, TlsCertificate
 
 
 async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = None, timeout: float = 2.0) -> PortState:
