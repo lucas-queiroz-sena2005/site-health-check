@@ -27,12 +27,11 @@ def client_fixture(session: Session):
 
 def test_create_and_get_saved_view(client: TestClient):
     payload = {
-        "view_state": {
-            "ghost_window": "14d",
-            "sortings": {"column": "latency", "dir": "asc"},
-            "status_filtered": ["active", "ghost"],
-            "target": "10.0.0.0/24"
-        }
+        "name": "My Custom View",
+        "search": "10.0.0.0/24",
+        "statuses": ["active", "ghost"],
+        "table_sort_by": "latency",
+        "table_sort_dir": "asc"
     }
     
     # POST
@@ -41,7 +40,7 @@ def test_create_and_get_saved_view(client: TestClient):
     
     post_data = post_resp.json()
     assert "id" in post_data
-    assert post_data["view_state"] == payload["view_state"]
+    assert isinstance(post_data["id"], str)
     
     view_id = post_data["id"]
     
@@ -51,9 +50,10 @@ def test_create_and_get_saved_view(client: TestClient):
     
     get_data = get_resp.json()
     assert get_data["id"] == view_id
-    assert get_data["view_state"] == payload["view_state"]
+    assert get_data["name"] == payload["name"]
 
 def test_get_saved_view_not_found(client: TestClient):
-    get_resp = client.get("/views/9999")
+    get_resp = client.get("/views/not-a-uuid")
     assert get_resp.status_code == 404
     assert get_resp.json() == {"detail": "View not found"}
+

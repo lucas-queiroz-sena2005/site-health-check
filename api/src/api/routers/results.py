@@ -46,7 +46,7 @@ GhostWindowDep = Annotated[timedelta | None, Depends(parse_ghost_window)]
 @router.get("/summary")
 def get_results_summary(
     session: SessionDep,
-    job_id: int | None = None
+    job_id: str | None = None
 ) -> list[TargetSummary]:
     statement = (
         select(
@@ -80,7 +80,7 @@ def get_results_summary(
 def get_results(
     session: SessionDep,
     ghost_window: GhostWindowDep,
-    job_id: int | None = None,
+    job_id: str | None = None,
     ip_address: str | None = None,
     resolved_from: str | None = None,
     status: str | None = None

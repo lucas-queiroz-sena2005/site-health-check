@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from sqlmodel import SQLModel
 
 from api.database import engine
-from api.routers import jobs, results, views
+from api.routers import jobs, results, views, schedules, schemas
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,5 +14,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Site Health Check API", lifespan=lifespan)
 
 app.include_router(jobs.router)
+app.include_router(schedules.router)
+app.include_router(schemas.router)
 app.include_router(results.router)
 app.include_router(views.router)
+

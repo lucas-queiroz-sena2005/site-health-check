@@ -28,7 +28,7 @@ def client_fixture(session: Session):
 
 def test_get_results(client: TestClient, session: Session):
     # Setup Data
-    job = Job(targets=["google.com"], ports=[443], labels={})
+    job = Job(execution_config_snapshot_json={"targets": ["google.com"]}, status="FINISHED")
     session.add(job)
     session.commit()
     session.refresh(job)
@@ -83,3 +83,4 @@ def test_get_results(client: TestClient, session: Session):
     assert "google.com" in port_443["http_routing_checks"]
     http_res = port_443["http_routing_checks"]["google.com"]
     assert http_res["status_code"] == 200
+

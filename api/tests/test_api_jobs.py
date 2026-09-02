@@ -25,26 +25,30 @@ def client_fixture(session: Session):
     yield client
     app.dependency_overrides.clear()
 
-def test_create_job(client: TestClient):
+def test_launch_job(client: TestClient):
     response = client.post(
-        "/jobs/",
+        "/jobs/launch",
         json={
             "targets": ["google.com", "example.com"],
             "ports": [80, 443],
-            "labels": {"team": "sre"}
+            "flags": {"check_http": True, "timeout": 30}
         },
     )
     assert response.status_code == 201
     data = response.json()
     assert "id" in data
-    assert isinstance(data["id"], int)
+    assert isinstance(data["id"], str)
+    assert data["status"] == "PENDING"
 
-def test_create_job_invalid(client: TestClient):
+def test_launch_job_invalid(client: TestClient):
     response = client.post(
-        "/jobs/",
+        "/jobs/launch",
         json={
             "targets": "google.com", # Should be a list
             "ports": [80, 443],
+            "flags": {}
         },
     )
     assert response.status_code == 422
+
+

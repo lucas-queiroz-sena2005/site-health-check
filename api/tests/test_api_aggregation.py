@@ -31,11 +31,11 @@ def test_void_aggregation_and_ghosting(client: TestClient, session: Session):
     now = datetime.now(timezone.utc)
     
     # Create an old job (8 days ago) - outside default 7d window
-    old_job = Job(targets=["10.0.0.0/24"], ports=[80], labels={}, created_at=now - timedelta(days=8))
+    old_job = Job(execution_config_snapshot_json={"targets": ["10.0.0.0/24"], "ports": [80]}, started_at=now - timedelta(days=8), status="FINISHED")
     # Create a recent job (2 days ago) - inside default 7d window
-    recent_job = Job(targets=["10.0.0.0/24"], ports=[80], labels={}, created_at=now - timedelta(days=2))
+    recent_job = Job(execution_config_snapshot_json={"targets": ["10.0.0.0/24"], "ports": [80]}, started_at=now - timedelta(days=2), status="FINISHED")
     # Create current job
-    current_job = Job(targets=["10.0.0.0/24"], ports=[80], labels={}, created_at=now)
+    current_job = Job(execution_config_snapshot_json={"targets": ["10.0.0.0/24"], "ports": [80]}, started_at=now, status="FINISHED")
     
     session.add_all([old_job, recent_job, current_job])
     session.commit()

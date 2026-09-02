@@ -29,4 +29,4 @@ The Frontend UX is defined by the following strict specifications for the MVP re
 
 ### 3. API Interaction Boundaries
 * **GET `/api/jobs/{id}/results`:** Fetches the conflict-free, pre-merged `ip_state_json` tree for the Table.
-* **POST `/api/jobs/launch`:** Triggers On-Demand Scans (sending `policy_id` and `classification_id`).
+* **POST `/api/jobs/launch`:** Triggers On-Demand Scans (sending `targets`, `ports`, and `flags`).
