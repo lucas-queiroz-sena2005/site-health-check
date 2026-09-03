@@ -11,3 +11,4 @@ results.json
 .venv/
 venv/
 env/
+*.db

@@ -28,7 +28,7 @@ def client_fixture(session: Session):
 
 def test_get_results(client: TestClient, session: Session):
     # Setup Data
-    job = Job(execution_config_snapshot_json={"targets": ["google.com"]}, status="FINISHED")
+    job = Job(execution_config_snapshot_json={"targets": ["google.com"]}, status=JobStatus.COMPLETED)
     session.add(job)
     session.commit()
     session.refresh(job)

@@ -4,11 +4,11 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Copy package files first for layer caching
-COPY frontend/package*.json ./
+COPY package*.json ./
 RUN npm install
 
 # Copy the rest of the frontend source
-COPY frontend/ ./
+COPY . ./
 
 # Build the Vite production bundle
 RUN npm run build

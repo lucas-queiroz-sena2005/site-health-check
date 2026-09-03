@@ -1,12 +1,26 @@
 import uuid
+from enum import Enum
 from datetime import datetime, timezone
-from pydantic import BaseModel, ConfigDict, model_serializer
+from pydantic import BaseModel, ConfigDict, Field as PydanticField, model_serializer
 from sqlmodel import Field, SQLModel, Column, JSON, Relationship
 from typing import Any
 
 def generate_uuid() -> str:
     return str(uuid.uuid4())
 
+class JobStatus(str, Enum):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+class ExecutionConfig(BaseModel):
+    targets: list[str] = PydanticField(default_factory=list, title="Targets")
+    ports: list[int] = PydanticField(default_factory=list, title="Ports")
+    check_http: bool = PydanticField(default=True, title="Check HTTP Routing")
+    timeout_seconds: int = PydanticField(default=30, title="Timeout (seconds)")
+    # Additional flags can be added here easily
+    
 class ScheduleClassificationLink(SQLModel, table=True):
     __tablename__: str = "schedule_classifications"  # type: ignore
     schedule_id: str = Field(foreign_key="schedules.id", primary_key=True)
@@ -40,10 +54,10 @@ class Job(SQLModel, table=True):
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     schedule_id: str | None = Field(default=None, foreign_key="schedules.id")
     
-    # Snapshot of what was requested: {"targets": [], "ports": [], "flags": {}}
+    # Snapshot of what was requested
     execution_config_snapshot_json: dict[str, Any] = Field(sa_column=Column(JSON))
     
-    status: str # PENDING, RUNNING, COMPLETED, FAILED
+    status: JobStatus = Field(default=JobStatus.PENDING)
     started_at: datetime | None = None
     finished_at: datetime | None = None
     metrics_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))

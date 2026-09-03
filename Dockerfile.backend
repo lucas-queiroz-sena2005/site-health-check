@@ -1,0 +1,57 @@
+FROM python:3.14-rc-slim
+
+# In case 3.14-rc-slim isn't available, we fallback gracefully or we just adjust poetry configs.
+# But for now, we try to match the user's python version exactly if possible.
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir poetry==1.8.3
+
+# Copy pyproject files first for caching
+COPY api/pyproject.toml  ./api/
+COPY engine/pyproject.toml  ./engine/
+
+# We will install them in a virtualenv inside the container, or directly globally.
+# Poetry by default creates virtualenvs. Let's disable that for docker.
+RUN poetry config virtualenvs.create false
+
+# Modify pyproject.toml to allow older pythons just in case the base image resolves to 3.12 or 3.13
+RUN sed -i 's/\^3.14/>=3.11/g' api/pyproject.toml || true
+RUN sed -i 's/\^3.14/>=3.11/g' engine/pyproject.toml || true
+
+WORKDIR /app/api
+RUN poetry install --no-root --no-interaction --no-ansi --only main 
+
+WORKDIR /app/engine
+RUN poetry install --no-root --no-interaction --no-ansi --only main 
+
+WORKDIR /app
+COPY api/ ./api/
+COPY engine/ ./engine/
+
+# Install the actual packages
+WORKDIR /app/api
+RUN poetry install --no-interaction --no-ansi --only main 
+
+WORKDIR /app/engine
+RUN poetry install --no-interaction --no-ansi --only main 
+
+WORKDIR /app
+
+# Set PYTHONPATH so API can find engine.cli and its own modules
+ENV PYTHONPATH=/app/api/src:/app/engine/src
+
+# We will store the db in /data volume
+VOLUME /data
+
+# Since SQLModel expects the db URL to be configured, let's assume it defaults to local relative path
+# Wait, let's ensure the app can write to the volume.
+# By default we'll just run from /data so the DB is created there
+WORKDIR /data
+
+# But we need access to API and Engine
+ENV PYTHONPATH=/app/api/src:/app/engine/src
+
+# Run the API
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

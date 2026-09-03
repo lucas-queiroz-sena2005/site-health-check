@@ -21,28 +21,16 @@ class SavedViewCreate(BaseModel):
 
 class SavedViewResponse(SavedViewCreate):
     id: str
+    model_config = ConfigDict(from_attributes=True)
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_view(view_in: SavedViewCreate, session: SessionDep) -> SavedViewResponse:
-    db_view = SavedView(
-        name=view_in.name,
-        search=view_in.search,
-        statuses=view_in.statuses,
-        table_sort_by=view_in.table_sort_by,
-        table_sort_dir=view_in.table_sort_dir
-    )
+    db_view = SavedView(**view_in.model_dump())
     session.add(db_view)
     session.commit()
     session.refresh(db_view)
     
-    return SavedViewResponse(
-        id=db_view.id,
-        name=db_view.name,
-        search=db_view.search,
-        statuses=db_view.statuses,
-        table_sort_by=db_view.table_sort_by,
-        table_sort_dir=db_view.table_sort_dir
-    )
+    return SavedViewResponse.model_validate(db_view)
 
 @router.get("/{id}")
 def get_view(id: Annotated[str, Path()], session: SessionDep) -> SavedViewResponse:
@@ -53,12 +41,5 @@ def get_view(id: Annotated[str, Path()], session: SessionDep) -> SavedViewRespon
             detail="View not found"
         )
     
-    return SavedViewResponse(
-        id=db_view.id,
-        name=db_view.name,
-        search=db_view.search,
-        statuses=db_view.statuses,
-        table_sort_by=db_view.table_sort_by,
-        table_sort_dir=db_view.table_sort_dir
-    )
+    return SavedViewResponse.model_validate(db_view)
 

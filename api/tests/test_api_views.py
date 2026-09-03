@@ -35,7 +35,7 @@ def test_create_and_get_saved_view(client: TestClient):
     }
     
     # POST
-    post_resp = client.post("/views", json=payload)
+    post_resp = client.post("/api/views", json=payload)
     assert post_resp.status_code == 201
     
     post_data = post_resp.json()
@@ -45,7 +45,7 @@ def test_create_and_get_saved_view(client: TestClient):
     view_id = post_data["id"]
     
     # GET
-    get_resp = client.get(f"/views/{view_id}")
+    get_resp = client.get(f"/api/views/{view_id}")
     assert get_resp.status_code == 200
     
     get_data = get_resp.json()
@@ -53,7 +53,7 @@ def test_create_and_get_saved_view(client: TestClient):
     assert get_data["name"] == payload["name"]
 
 def test_get_saved_view_not_found(client: TestClient):
-    get_resp = client.get("/views/not-a-uuid")
+    get_resp = client.get("/api/views/not-a-uuid")
     assert get_resp.status_code == 404
     assert get_resp.json() == {"detail": "View not found"}
 

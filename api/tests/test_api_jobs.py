@@ -27,7 +27,7 @@ def client_fixture(session: Session):
 
 def test_launch_job(client: TestClient):
     response = client.post(
-        "/jobs/launch",
+        "/api/jobs/launch",
         json={
             "targets": ["google.com", "example.com"],
             "ports": [80, 443],
@@ -42,7 +42,7 @@ def test_launch_job(client: TestClient):
 
 def test_launch_job_invalid(client: TestClient):
     response = client.post(
-        "/jobs/launch",
+        "/api/jobs/launch",
         json={
             "targets": "google.com", # Should be a list
             "ports": [80, 443],

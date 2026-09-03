@@ -3,26 +3,20 @@ from fastapi import APIRouter, status
 from sqlmodel import select
 from pydantic import BaseModel, ConfigDict
 
-from api.models import Schedule, Classification, ScheduleClassificationLink
+from api.models import Schedule, Classification, ScheduleClassificationLink, ExecutionConfig
 from api.database import SessionDep
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
-class ScheduleCreateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class ScheduleCreateRequest(ExecutionConfig):
     name: str
     cron_expression: str
-    targets: list[str]
-    ports: list[int]
-    flags: dict[str, Any]
 
-class ScheduleResponse(BaseModel):
+class ScheduleResponse(ExecutionConfig):
     id: str
     name: str
     cron_expression: str
     is_active: bool
-    ports: list[int]
-    flags: dict[str, Any]
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_schedule(request: ScheduleCreateRequest, session: SessionDep) -> ScheduleResponse:
@@ -38,7 +32,7 @@ def create_schedule(request: ScheduleCreateRequest, session: SessionDep) -> Sche
         name=request.name,
         cron_expression=request.cron_expression,
         ports_json=request.ports,
-        flags_json=request.flags
+        flags_json=request.model_dump(exclude={"name", "cron_expression", "targets", "ports"})
     )
     session.add(schedule)
     
@@ -58,8 +52,9 @@ def create_schedule(request: ScheduleCreateRequest, session: SessionDep) -> Sche
         name=schedule.name,
         cron_expression=schedule.cron_expression,
         is_active=schedule.is_active,
+        targets=request.targets,
         ports=schedule.ports_json,
-        flags=schedule.flags_json
+        **schedule.flags_json
     )
 
 @router.get("")
@@ -67,13 +62,20 @@ def list_schedules(session: SessionDep) -> list[ScheduleResponse]:
     stmt = select(Schedule).where(Schedule.deleted_at == None)
     schedules = session.exec(stmt).all()
     
-    return [
-        ScheduleResponse(
+    responses = []
+    for s in schedules:
+        # Extract targets from classifications
+        targets = []
+        for c in s.classifications:
+            targets.extend(c.targets_json)
+            
+        responses.append(ScheduleResponse(
             id=s.id,
             name=s.name,
             cron_expression=s.cron_expression,
             is_active=s.is_active,
+            targets=targets,
             ports=s.ports_json,
-            flags=s.flags_json
-        ) for s in schedules
-    ]
+            **s.flags_json
+        ))
+    return responses
