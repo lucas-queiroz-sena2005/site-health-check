@@ -14,7 +14,7 @@
       packages = forAllSystems (system: let
         inherit (poetry2nix.lib.mkPoetry2Nix { pkgs = pkgs.${system}; }) mkPoetryApplication;
       in {
-        default = mkPoetryApplication { projectDir = self; };
+        default = mkPoetryApplication { projectDir = ./api; };
       });
 
       devShells = forAllSystems (system: {

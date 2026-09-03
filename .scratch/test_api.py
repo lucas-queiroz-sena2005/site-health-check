@@ -43,9 +43,6 @@ if job_id:
                     decoded_line = line.decode('utf-8')
                     print(f"Received SSE: {decoded_line}")
                     count += 1
-                    if count >= 10:  # Read a few lines then stop
-                        print("... (stopping stream manually)")
-                        break
         except requests.exceptions.ChunkedEncodingError:
             print("Stream ended.")
             

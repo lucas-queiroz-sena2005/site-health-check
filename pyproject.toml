@@ -5,18 +5,12 @@ description = "Web Health Auditor & Reconnaissance Tool"
 authors = ["Lucas Queiroz <author@example.com>"]
 readme = "README.md"
 license = "MIT"
-packages = [
-  { include = "site_health_check", from = "src" }
-]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.14"
-requests = "^2.31.0"
-cryptography = "^50.0.0"
-aiohttp = "^3.8.0"
-fastapi = {extras = ["standard"], version = "^0.141.1"}
-sqlmodel = "^0.0.42"
-pydantic = "^2.13.5"
+engine = { path = "./engine", develop = true }
+api = { path = "./api", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
@@ -24,10 +18,10 @@ httpx = "^0.28.1"
 pytest-asyncio = "^1.4.0"
 
 [tool.poetry.scripts]
-site-check = "site_health_check.cli:main"
+site-check = "engine.cli:main"
 
 [tool.fastapi]
-entrypoint = "site_health_check.api.main:app"
+entrypoint = "api.main:app"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

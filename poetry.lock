@@ -223,6 +223,29 @@ idna = ">=2.8"
 trio = ["trio (>=0.32.0)"]
 
 [[package]]
+name = "api"
+version = "0.1.0"
+description = "Web Health Auditor & Reconnaissance Tool"
+optional = false
+python-versions = "^3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+aiohttp = "^3.8.0"
+cryptography = "^50.0.0"
+engine = {path = "../engine", develop = true}
+fastapi = {version = "^0.141.1", extras = ["standard"]}
+pydantic = "^2.13.5"
+requests = "^2.31.0"
+sqlmodel = "^0.0.42"
+
+[package.source]
+type = "directory"
+url = "api"
+
+[[package]]
 name = "attrs"
 version = "26.1.0"
 description = "Classes Without Boilerplate"
@@ -677,6 +700,28 @@ files = [
 [package.dependencies]
 dnspython = ">=2.0.0"
 idna = ">=2.0.0"
+
+[[package]]
+name = "engine"
+version = "0.1.0"
+description = "Web Health Auditor & Reconnaissance Tool"
+optional = false
+python-versions = "^3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+aiohttp = "^3.8.0"
+cryptography = "^50.0.0"
+fastapi = {version = "^0.141.1", extras = ["standard"]}
+pydantic = "^2.13.5"
+requests = "^2.31.0"
+sqlmodel = "^0.0.42"
+
+[package.source]
+type = "directory"
+url = "engine"
 
 [[package]]
 name = "fastapi"
@@ -3169,4 +3214,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.14"
-content-hash = "f83bd53faa155110a8702ddde4590f464960257efb14b27696c539e5d5d44005"
+content-hash = "bff77b1e76b338753b39da122b219b2f108f7723fcf38e7a751e454b99233e03"

@@ -4,13 +4,13 @@ version = "0.1.0"
 description = "Web Health Auditor & Reconnaissance Tool"
 authors = ["Lucas Queiroz <author@example.com>"]
 readme = "README.md"
-license = "MIT"
 packages = [
   { include = "api", from = "src" }
 ]
 
 [tool.poetry.dependencies]
 python = "^3.14"
+engine = { path = "../engine", develop = true }
 requests = "^2.31.0"
 cryptography = "^50.0.0"
 aiohttp = "^3.8.0"

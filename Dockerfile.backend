@@ -8,8 +8,8 @@ WORKDIR /app
 RUN pip install --no-cache-dir poetry==1.8.3
 
 # Copy pyproject files first for caching
-COPY api/pyproject.toml  ./api/
-COPY engine/pyproject.toml  ./engine/
+COPY api/pyproject.toml api/README.md* ./api/
+COPY engine/pyproject.toml engine/README.md* ./engine/
 
 # We will install them in a virtualenv inside the container, or directly globally.
 # Poetry by default creates virtualenvs. Let's disable that for docker.
@@ -19,6 +19,8 @@ RUN poetry config virtualenvs.create false
 RUN sed -i 's/\^3.14/>=3.11/g' api/pyproject.toml || true
 RUN sed -i 's/\^3.14/>=3.11/g' engine/pyproject.toml || true
 
+# Create dummy source directories to satisfy Poetry PEP 517 build for path dependencies during dependency caching
+RUN mkdir -p ./engine/src/engine ./api/src/api && touch ./engine/src/engine/__init__.py ./api/src/api/__init__.py
 WORKDIR /app/api
 RUN poetry install --no-root --no-interaction --no-ansi --only main 
 
@@ -28,6 +30,10 @@ RUN poetry install --no-root --no-interaction --no-ansi --only main
 WORKDIR /app
 COPY api/ ./api/
 COPY engine/ ./engine/
+
+# Re-apply the python version sed fix because the COPY commands above overwrote the pyproject.toml files with the host versions
+RUN sed -i 's/\^3.14/>=3.11/g' api/pyproject.toml || true
+RUN sed -i 's/\^3.14/>=3.11/g' engine/pyproject.toml || true
 
 # Install the actual packages
 WORKDIR /app/api

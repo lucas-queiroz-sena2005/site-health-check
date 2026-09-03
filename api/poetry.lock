@@ -679,6 +679,28 @@ dnspython = ">=2.0.0"
 idna = ">=2.0.0"
 
 [[package]]
+name = "engine"
+version = "0.1.0"
+description = "Web Health Auditor & Reconnaissance Tool"
+optional = false
+python-versions = "^3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+aiohttp = "^3.8.0"
+cryptography = "^50.0.0"
+fastapi = {version = "^0.141.1", extras = ["standard"]}
+pydantic = "^2.13.5"
+requests = "^2.31.0"
+sqlmodel = "^0.0.42"
+
+[package.source]
+type = "directory"
+url = "../engine"
+
+[[package]]
 name = "fastapi"
 version = "0.141.1"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
@@ -3169,4 +3191,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.14"
-content-hash = "f83bd53faa155110a8702ddde4590f464960257efb14b27696c539e5d5d44005"
+content-hash = "eeebaa2791abd49574236d6d0136d290d25501b63a191e51a4c22a45a394d66c"
