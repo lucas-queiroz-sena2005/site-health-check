@@ -16,8 +16,10 @@ print("\n--- 2. Launching a Job (POST /api/jobs/launch) ---")
 payload = {
     "targets": ["google.com", "example.com"],
     "ports": [80, 443],
-    "check_http": True,
-    "timeout_seconds": 30
+    "flags": {
+        "check_http": True,
+        "timeout": 30
+    }
 }
 resp = requests.post("http://127.0.0.1:8000/api/jobs/launch", json=payload)
 print(f"Status: {resp.status_code}")

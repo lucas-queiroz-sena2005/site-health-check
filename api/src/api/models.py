@@ -14,12 +14,56 @@ class JobStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
+class ExecutionFlags(BaseModel):
+    check_tcp: bool = PydanticField(
+        default=True, title="Check TCP/TLS", 
+        json_schema_extra={"cli_arg": "--check-tcp", "is_switch": True}
+    )
+    check_http: bool = PydanticField(
+        default=True, title="Check HTTP Routing",
+        json_schema_extra={"cli_arg": "--check-http", "is_switch": True}
+    )
+    recursive_san: bool = PydanticField(
+        default=False, title="Recursive SAN Check",
+        json_schema_extra={"cli_arg": "--recursive-san", "is_switch": True}
+    )
+    out_of_scope_depth: int = PydanticField(
+        default=0, title="Out-of-Scope Depth",
+        json_schema_extra={"cli_arg": "--out-of-scope-depth", "is_switch": False}
+    )
+    check_virtual_hosts: bool = PydanticField(
+        default=True, title="Check Virtual Hosts",
+        json_schema_extra={"cli_arg": "--check-virtual-hosts", "is_switch": True}
+    )
+    spoof_user_agent: bool = PydanticField(
+        default=False, title="Spoof User Agent",
+        json_schema_extra={"cli_arg": "--spoof-user-agent", "is_switch": True}
+    )
+    timeout: int = PydanticField(
+        default=10, title="Timeout (seconds)",
+        json_schema_extra={"cli_arg": "--timeout", "is_switch": False}
+    )
+    expected: list[str] | None = PydanticField(
+        default=None, title="Expected HTML Strings",
+        json_schema_extra={"cli_arg": "-e", "is_switch": False, "is_list": True}
+    )
+    undesired: list[str] | None = PydanticField(
+        default=None, title="Undesired HTML Strings",
+        json_schema_extra={"cli_arg": "-u", "is_switch": False, "is_list": True}
+    )
+    workers: int = PydanticField(
+        default=100, title="Async Workers",
+        json_schema_extra={"cli_arg": "-w", "is_switch": False}
+    )
+    delay: float = PydanticField(
+        default=0.0, title="Worker Delay",
+        json_schema_extra={"cli_arg": "--delay", "is_switch": False}
+    )
+
 class ExecutionConfig(BaseModel):
     targets: list[str] = PydanticField(default_factory=list, title="Targets")
     ports: list[int] = PydanticField(default_factory=list, title="Ports")
-    check_http: bool = PydanticField(default=True, title="Check HTTP Routing")
-    timeout_seconds: int = PydanticField(default=30, title="Timeout (seconds)")
-    # Additional flags can be added here easily
+    flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
     
 class ScheduleClassificationLink(SQLModel, table=True):
     __tablename__: str = "schedule_classifications"  # type: ignore

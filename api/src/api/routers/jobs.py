@@ -20,14 +20,53 @@ class JobResponse(ExecutionConfig):
     finished_at: datetime | None = None
     metrics_json: dict[str, Any] | None = None
 
-async def run_engine_cli(job_id: str, request: Request):
+async def run_engine_cli(job_id: str, snapshot: dict[str, Any], request: Request):
     queue = asyncio.Queue()
     request.app.state.log_subscribers[job_id] = queue
     
     try:
-        # Simulate running the engine CLI for the MVP
+        cmd = ["python", "-m", "engine.cli"]
+        
+        targets = snapshot.get("targets", [])
+        if targets:
+            cmd.append(",".join(targets))
+            
+        ports = snapshot.get("ports", [])
+        if ports:
+            cmd.extend(["-p", ",".join(map(str, ports))])
+            
+        flags = snapshot.get("flags", {})
+        
+        # Import the schema to read the metadata
+        from api.models import ExecutionFlags
+        fields = ExecutionFlags.model_fields
+        
+        for key, value in flags.items():
+            if value is None or key not in fields:
+                continue
+                
+            # Get our custom metadata!
+            extra = fields[key].json_schema_extra or {}
+            cli_arg = extra.get("cli_arg")
+            is_switch = extra.get("is_switch", False)
+            
+            if not cli_arg:
+                continue
+                
+            if is_switch and isinstance(value, bool):
+                if value:
+                    cmd.append(cli_arg)
+                else:
+                    cmd.append(cli_arg.replace("--", "--no-"))
+            elif isinstance(value, list):
+                for item in value:
+                    cmd.extend([cli_arg, str(item)])
+            else:
+                cmd.extend([cli_arg, str(value)])
+                
+        # Run the dynamically built command
         process = await asyncio.create_subprocess_exec(
-            "python", "-m", "engine.cli", "--job-id", str(job_id),
+            *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT
         )
@@ -62,7 +101,7 @@ def launch_job(
     session.commit()
     session.refresh(job)
     
-    background_tasks.add_task(run_engine_cli, job.id, request)
+    background_tasks.add_task(run_engine_cli, job.id, snapshot, request)
     
     return JobResponse(
         id=job.id,
