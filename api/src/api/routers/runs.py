@@ -7,22 +7,22 @@ from fastapi import APIRouter, HTTPException, Query, status, Path, Request, Back
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlmodel import select, desc
 
-from api.models import Job, JobStatus, ExecutionConfig
+from api.models import ScanRun, ScanRunStatus, ExecutionConfig
 from api.database import SessionDep
 
-router = APIRouter(prefix="/jobs", tags=["jobs"])
+router = APIRouter(prefix="/runs", tags=["runs"])
 
-class JobResponse(ExecutionConfig):
+class ScanRunResponse(ExecutionConfig):
     id: str
-    schedule_id: str | None = None
-    status: JobStatus
+    scan_id: str | None = None
+    status: ScanRunStatus
     started_at: datetime | None = None
     finished_at: datetime | None = None
     metrics_json: dict[str, Any] | None = None
 
-async def run_engine_cli(job_id: str, snapshot: dict[str, Any], request: Request):
+async def run_engine_cli(run_id: str, snapshot: dict[str, Any], request: Request):
     queue = asyncio.Queue()
-    request.app.state.log_subscribers[job_id] = queue
+    request.app.state.log_subscribers[run_id] = queue
     
     try:
         cmd = ["python", "-m", "engine.cli"]
@@ -79,87 +79,84 @@ async def run_engine_cli(job_id: str, snapshot: dict[str, Any], request: Request
                 await queue.put(ServerSentEvent(data={"message": line.decode('utf-8').strip()}, event="log"))
                 
         await process.wait()
-        await queue.put(ServerSentEvent(data={"message": f"Job finished with code {process.returncode}"}, event="status"))
+        await queue.put(ServerSentEvent(data={"message": f"Run finished with code {process.returncode}"}, event="status"))
     except Exception as e:
         await queue.put(ServerSentEvent(data={"message": f"Engine error: {str(e)}"}, event="error"))
     finally:
         await queue.put(None) # EOF marker
 
 @router.post("/launch", status_code=status.HTTP_201_CREATED)
-def launch_job(
+def launch_run(
     config: ExecutionConfig, 
     session: SessionDep,
     request: Request,
     background_tasks: BackgroundTasks
-) -> JobResponse:
+) -> ScanRunResponse:
     snapshot = config.model_dump()
-    job = Job(
+    run = ScanRun(
         execution_config_snapshot_json=snapshot,
-        status=JobStatus.PENDING
+        status=ScanRunStatus.PENDING
     )
-    session.add(job)
+    session.add(run)
     session.commit()
-    session.refresh(job)
+    session.refresh(run)
     
-    background_tasks.add_task(run_engine_cli, job.id, snapshot, request)
+    background_tasks.add_task(run_engine_cli, run.id, snapshot, request)
     
-    return JobResponse(
-        id=job.id,
-        schedule_id=job.schedule_id,
-        status=job.status,
-        started_at=job.started_at,
-        finished_at=job.finished_at,
-        metrics_json=job.metrics_json,
+    return ScanRunResponse(
+        id=run.id,
+        scan_id=run.scan_id,
+        status=run.status,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        metrics_json=run.metrics_json,
         **snapshot
     )
 
 @router.get("")
-def list_jobs(
+def list_runs(
     session: SessionDep,
-    schedule_id: Annotated[str | None, Query()] = None,
+    scan_id: Annotated[str | None, Query()] = None,
     source: Annotated[str | None, Query(description="scheduled or ad-hoc")] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0
-) -> list[JobResponse]:
-    stmt = select(Job)
+) -> list[ScanRunResponse]:
+    stmt = select(ScanRun)
     
-    if schedule_id:
-        stmt = stmt.where(Job.schedule_id == schedule_id)
+    if scan_id:
+        stmt = stmt.where(ScanRun.scan_id == scan_id)
         
     if source == "scheduled":
-        stmt = stmt.where(Job.schedule_id != None)
+        stmt = stmt.where(ScanRun.scan_id != None)
     elif source == "ad-hoc":
-        stmt = stmt.where(Job.schedule_id == None)
+        stmt = stmt.where(ScanRun.scan_id == None)
         
-    stmt = stmt.order_by(desc(Job.started_at)).offset(offset).limit(limit)
-    jobs = session.exec(stmt).all()
+    stmt = stmt.order_by(desc(ScanRun.started_at)).offset(offset).limit(limit)
+    runs = session.exec(stmt).all()
     
     return [
-        JobResponse(
-            id=j.id,
-            schedule_id=j.schedule_id,
-            status=j.status,
-            started_at=j.started_at,
-            finished_at=j.finished_at,
-            metrics_json=j.metrics_json,
-            **j.execution_config_snapshot_json
-        ) for j in jobs
+        ScanRunResponse(
+            id=r.id,
+            scan_id=r.scan_id,
+            status=r.status,
+            started_at=r.started_at,
+            finished_at=r.finished_at,
+            metrics_json=r.metrics_json,
+            **r.execution_config_snapshot_json
+        ) for r in runs
     ]
 
 @router.get("/{id}/stream", response_class=EventSourceResponse)
-async def stream_job_logs(
+async def stream_run_logs(
     id: Annotated[str, Path()], 
     request: Request
 ) -> AsyncIterable[ServerSentEvent]:
-    # No blocking DB call here! We just subscribe to the existing queue.
-    # If the queue doesn't exist, it might mean the job is already done or invalid,
-    # but we'll create one just in case the engine is spinning up slowly.
     if id not in request.app.state.log_subscribers:
         request.app.state.log_subscribers[id] = asyncio.Queue()
         
     queue = request.app.state.log_subscribers[id]
     
-    yield ServerSentEvent(data={"message": f"Attached to job {id} log stream"}, event="info")
+    yield ServerSentEvent(data={"message": f"Attached to run {id} log stream"}, event="info")
     while True:
         event = await queue.get()
         if event is None:
@@ -167,23 +164,20 @@ async def stream_job_logs(
         yield event
 
 @router.get("/{id}/results")
-def get_job_results(
+def get_run_results(
     id: Annotated[str, Path()],
     session: SessionDep
 ) -> dict[str, Any]:
-    # Placeholder for the strict ip_state_json tree return (Issue 03)
-    # The actual implementation of results tree is in `/results` router, but this is a specific job tree.
     from sqlmodel import select
-    from api.models import IpState
+    from api.models import HostState
     
-    job = session.get(Job, id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+    run = session.get(ScanRun, id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
         
-    stmt = select(IpState).where(IpState.job_id == id)
-    ips = session.exec(stmt).all()
+    stmt = select(HostState).where(HostState.scan_run_id == id)
+    hosts = session.exec(stmt).all()
     
-    # Return as per spec: a list of serialized IpState models
-    return {"results": ips}
+    return {"results": hosts}
 
 

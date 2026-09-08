@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 import asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from sqlmodel import SQLModel
 
 from api.database import engine
-from api.routers import jobs, results, views, schedules, schemas
+from api.routers import runs, results, views, scans, schemas
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,10 +13,12 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Site Health Check API", lifespan=lifespan)
+api_router = APIRouter(prefix="/api", tags=["api"])
 
-app.include_router(jobs.router, prefix="/api")
-app.include_router(schedules.router, prefix="/api")
-app.include_router(schemas.router, prefix="/api")
-app.include_router(results.router, prefix="/api")
-app.include_router(views.router, prefix="/api")
+api_router.include_router(runs.router)
+api_router.include_router(scans.router)
+api_router.include_router(schemas.router)
+api_router.include_router(results.router)
+api_router.include_router(views.router)
 
+app.include_router(api_router)

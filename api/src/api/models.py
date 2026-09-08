@@ -8,7 +8,7 @@ from typing import Any
 def generate_uuid() -> str:
     return str(uuid.uuid4())
 
-class JobStatus(str, Enum):
+class ScanRunStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -65,25 +65,26 @@ class ExecutionConfig(BaseModel):
     ports: list[int] = PydanticField(default_factory=list, title="Ports")
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
     
-class ScheduleClassificationLink(SQLModel, table=True):
-    __tablename__: str = "schedule_classifications"  # type: ignore
-    schedule_id: str = Field(foreign_key="schedules.id", primary_key=True)
-    classification_id: str = Field(foreign_key="classifications.id", primary_key=True)
+class ScanTargetGroupLink(SQLModel, table=True):
+    __tablename__: str = "scan_target_groups"  # type: ignore
+    scan_id: str = Field(foreign_key="scans.id", primary_key=True)
+    target_group_id: str = Field(foreign_key="target_groups.id", primary_key=True)
 
-class Classification(SQLModel, table=True):
-    __tablename__: str = "classifications"  # type: ignore
+class TargetGroup(SQLModel, table=True):
+    __tablename__: str = "target_groups"  # type: ignore
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     name: str
+    is_ad_hoc: bool = False
     targets_json: list[str] = Field(sa_column=Column(JSON))
     deleted_at: datetime | None = None
     
-    schedules: list["Schedule"] = Relationship(back_populates="classifications", link_model=ScheduleClassificationLink)
+    scans: list["Scan"] = Relationship(back_populates="target_groups", link_model=ScanTargetGroupLink)
 
-class Schedule(SQLModel, table=True):
-    __tablename__: str = "schedules"  # type: ignore
+class Scan(SQLModel, table=True):
+    __tablename__: str = "scans"  # type: ignore
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     name: str
-    cron_expression: str
+    cron_expression: str | None = None
     is_active: bool = True
     
     ports_json: list[int] = Field(sa_column=Column(JSON))
@@ -91,17 +92,17 @@ class Schedule(SQLModel, table=True):
     
     deleted_at: datetime | None = None
     
-    classifications: list[Classification] = Relationship(back_populates="schedules", link_model=ScheduleClassificationLink)
+    target_groups: list[TargetGroup] = Relationship(back_populates="scans", link_model=ScanTargetGroupLink)
 
-class Job(SQLModel, table=True):
-    __tablename__: str = "jobs"  # type: ignore
+class ScanRun(SQLModel, table=True):
+    __tablename__: str = "scan_runs"  # type: ignore
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    schedule_id: str | None = Field(default=None, foreign_key="schedules.id")
+    scan_id: str | None = Field(default=None, foreign_key="scans.id")
     
     # Snapshot of what was requested
     execution_config_snapshot_json: dict[str, Any] = Field(sa_column=Column(JSON))
     
-    status: JobStatus = Field(default=JobStatus.PENDING)
+    status: ScanRunStatus = Field(default=ScanRunStatus.PENDING)
     started_at: datetime | None = None
     finished_at: datetime | None = None
     metrics_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
@@ -145,7 +146,7 @@ class PortState(SQLModel, table=True):
     __tablename__: str = "port_states"  # type: ignore
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    ip_state_id: str = Field(foreign_key="ip_states.id", exclude=True)
+    host_state_id: str = Field(foreign_key="host_states.id", exclude=True)
     
     port_number: int
     tcp_status: str = "closed"
@@ -166,11 +167,11 @@ class PortState(SQLModel, table=True):
             res["tls_certificate"] = None
         return res
 
-class IpState(SQLModel, table=True):
-    __tablename__: str = "ip_states"  # type: ignore
+class HostState(SQLModel, table=True):
+    __tablename__: str = "host_states"  # type: ignore
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    job_id: str = Field(foreign_key="jobs.id")
+    scan_run_id: str = Field(foreign_key="scan_runs.id")
     ip_address: str = Field(index=True)
     
     metadata_resolved_from: str | None = None

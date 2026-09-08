@@ -8,8 +8,8 @@ WORKDIR /app
 RUN pip install --no-cache-dir poetry==1.8.3
 
 # Copy pyproject files first for caching
-COPY api/pyproject.toml api/README.md* ./api/
-COPY engine/pyproject.toml engine/README.md* ./engine/
+COPY api/pyproject.toml api/poetry.lock* api/README.md* ./api/
+COPY engine/pyproject.toml engine/poetry.lock* engine/README.md* ./engine/
 
 # We will install them in a virtualenv inside the container, or directly globally.
 # Poetry by default creates virtualenvs. Let's disable that for docker.

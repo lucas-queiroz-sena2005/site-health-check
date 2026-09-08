@@ -7,7 +7,7 @@ from sqlmodel import Session, select, func, col, and_
 from pydantic import BaseModel
 
 from api.database import get_session
-from api.models import IpState, PortState, Job
+from api.models import HostState, PortState, ScanRun
 from api.config import settings
 from api.services.aggregation import aggregate_void_nodes
 
@@ -46,24 +46,24 @@ GhostWindowDep = Annotated[timedelta | None, Depends(parse_ghost_window)]
 @router.get("/summary")
 def get_results_summary(
     session: SessionDep,
-    job_id: str | None = None
+    run_id: str | None = None
 ) -> list[TargetSummary]:
     statement = (
         select(
-            IpState.metadata_resolved_from,
-            func.count(col(IpState.id).distinct()).label("total_ips"),
+            HostState.metadata_resolved_from,
+            func.count(col(HostState.id).distinct()).label("total_ips"),
             func.count(col(PortState.id).distinct()).label("active_ports")
         )
         .outerjoin(PortState, and_(
-            col(IpState.id) == col(PortState.ip_state_id), 
+            col(HostState.id) == col(PortState.host_state_id), 
             col(PortState.tcp_status) == "open"
         ))
     )
     
-    if job_id is not None:
-        statement = statement.where(IpState.job_id == job_id)
+    if run_id is not None:
+        statement = statement.where(HostState.scan_run_id == run_id)
         
-    statement = statement.group_by(IpState.metadata_resolved_from)
+    statement = statement.group_by(HostState.metadata_resolved_from)
     results = session.exec(statement).all()
     
     summaries = []
@@ -80,18 +80,18 @@ def get_results_summary(
 def get_results(
     session: SessionDep,
     ghost_window: GhostWindowDep,
-    job_id: str | None = None,
+    run_id: str | None = None,
     ip_address: str | None = None,
     resolved_from: str | None = None,
     status: str | None = None
-) -> list[IpState]:
-    statement = select(IpState)
-    if job_id is not None:
-        statement = statement.where(IpState.job_id == job_id)
+) -> list[HostState]:
+    statement = select(HostState)
+    if run_id is not None:
+        statement = statement.where(HostState.scan_run_id == run_id)
     if ip_address is not None:
-        statement = statement.where(IpState.ip_address == ip_address)
+        statement = statement.where(HostState.ip_address == ip_address)
     if resolved_from is not None:
-        statement = statement.where(IpState.metadata_resolved_from == resolved_from)
+        statement = statement.where(HostState.metadata_resolved_from == resolved_from)
         
     if status == "active":
         statement = statement.join(PortState).where(PortState.tcp_status == "open").distinct()
@@ -101,19 +101,19 @@ def get_results(
     historical_active_ips = set()
     if ghost_window is not None:
         cutoff = datetime.now(timezone.utc) - ghost_window
-        # Find all IPs that had an open port in a job created after the cutoff
+        # Find all IPs that had an open port in a run started after the cutoff
         historical_stmt = (
-            select(IpState.ip_address)
-            .join(PortState, col(IpState.id) == col(PortState.ip_state_id))
-            .join(Job, col(IpState.job_id) == col(Job.id))
+            select(HostState.ip_address)
+            .join(PortState, col(HostState.id) == col(PortState.host_state_id))
+            .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
             .where(PortState.tcp_status == "open")
-            .where(Job.created_at >= cutoff)
+            .where(ScanRun.started_at >= cutoff)
             .distinct()
         )
         # We only care about IPs in the current result set
         current_ips = [r.ip_address for r in results]
         if current_ips:
-            historical_stmt = historical_stmt.where(col(IpState.ip_address).in_(current_ips))
+            historical_stmt = historical_stmt.where(col(HostState.ip_address).in_(current_ips))
             historical_active_ips = set(session.exec(historical_stmt).all())
             
     # Apply void aggregation if we are returning a raw list of results (not explicitly filtering to active-only)
