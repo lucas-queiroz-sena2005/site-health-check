@@ -13,13 +13,27 @@
       devShells = forAllSystems (system: {
         default = pkgs.${system}.mkShellNoCC {
           packages = with pkgs.${system}; [
+            # Python / Backend
             poetry
             python311
             pyright
             ruff
+
+            # Nix
             nil
+
+            # Frontend Runtime & Package Managers
+            nodejs_22
+            bun
+
+            # Language Servers (LSP) for Helix / Editor
+            typescript
+            typescript-language-server
+            tailwindcss-language-server
+            vscode-langservers-extracted
           ];
         };
       });
     };
 }
+
