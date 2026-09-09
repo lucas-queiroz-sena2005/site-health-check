@@ -22,10 +22,10 @@ RUN sed -i 's/\^3.14/>=3.11/g' engine/pyproject.toml || true
 # Create dummy source directories to satisfy Poetry PEP 517 build for path dependencies during dependency caching
 RUN mkdir -p ./engine/src/engine ./api/src/api && touch ./engine/src/engine/__init__.py ./api/src/api/__init__.py
 WORKDIR /app/api
-RUN poetry install --no-root --no-interaction --no-ansi --only main 
+RUN poetry lock --no-update && poetry install --no-root --no-interaction --no-ansi --only main 
 
 WORKDIR /app/engine
-RUN poetry install --no-root --no-interaction --no-ansi --only main 
+RUN poetry lock --no-update && poetry install --no-root --no-interaction --no-ansi --only main 
 
 WORKDIR /app
 COPY api/ ./api/
@@ -37,10 +37,10 @@ RUN sed -i 's/\^3.14/>=3.11/g' engine/pyproject.toml || true
 
 # Install the actual packages
 WORKDIR /app/api
-RUN poetry install --no-interaction --no-ansi --only main 
+RUN poetry lock --no-update && poetry install --no-interaction --no-ansi --only main 
 
 WORKDIR /app/engine
-RUN poetry install --no-interaction --no-ansi --only main 
+RUN poetry lock --no-update && poetry install --no-interaction --no-ansi --only main 
 
 WORKDIR /app
 

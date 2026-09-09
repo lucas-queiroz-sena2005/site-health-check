@@ -1,10 +1,10 @@
 from collections import defaultdict
-from api.models import IpState
+from api.models import HostState
 
 def aggregate_void_nodes(
-    ip_states: list[IpState],
+    ip_states: list[HostState],
     historical_active_ips: set[str]
-) -> list[IpState]:
+) -> list[HostState]:
     """
     Groups Void IPs by metadata_resolved_from and replaces them with a single synthetic Void node.
     Void IPs are those that have NO open ports in the current job AND are not in historical_active_ips.
@@ -13,7 +13,7 @@ def aggregate_void_nodes(
     void_counts: dict[str, int] = defaultdict(int)
     
     # Store the non-void (Active/Ghost) IPs to return as-is
-    kept_ips: list[IpState] = []
+    kept_ips: list[HostState] = []
     
     for ip in ip_states:
         # Determine if IP has any open ports in the current job
@@ -33,7 +33,7 @@ def aggregate_void_nodes(
     # Now append the synthetic Void nodes
     for parent, count in void_counts.items():
         if count > 0:
-            synthetic_void = IpState(
+            synthetic_void = HostState(
                 id=None,
                 job_id=None,
                 ip_address=f"Void ({count})",
