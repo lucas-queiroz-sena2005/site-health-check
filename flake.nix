@@ -31,7 +31,12 @@
             typescript-language-server
             tailwindcss-language-server
             vscode-langservers-extracted
+            emmet-ls
           ];
+
+          shellHook = ''
+            unset LD_LIBRARY_PATH
+          '';
         };
       });
     };
