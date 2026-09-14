@@ -15,3 +15,4 @@ export { HierarchicalTable }
 export type { HierarchicalTableProps } from './HierarchicalTable'
 export type { TableRowProps } from './TableRow'
 export type { TableCellProps } from './TableCell'
+export { RenderTreeNode } from './RenderTreeNode'

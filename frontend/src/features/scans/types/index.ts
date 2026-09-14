@@ -23,3 +23,23 @@ export const ScanResultSchema = z.object({
 export type PortState = z.infer<typeof PortStateSchema>
 export type HostState = z.infer<typeof HostStateSchema>
 export type ScanResult = z.infer<typeof ScanResultSchema>
+
+export type TreeNodeStatus = 'success' | 'warning' | 'error' | 'neutral' | 'empty'
+
+export interface TreeNode {
+  id: string
+  type: string
+  label: string
+  status?: TreeNodeStatus
+  latencyMs?: number
+  tlsInfo?: string
+  nodeStats?: {
+    active: number
+    failed: number
+    ghost: number
+    void: number
+  }
+  children: TreeNode[]
+  rawPayload?: any
+  appliedFilter?: string
+}
