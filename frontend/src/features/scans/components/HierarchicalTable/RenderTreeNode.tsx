@@ -52,7 +52,7 @@ const RenderTreeNodeInner = ({
       <HierarchicalTable.Cell width="w-[35%]">
         <div className="flex flex-col overflow-hidden">
           <span className="truncate" title={node.label}>{node.label}</span>
-          {node.appliedFilter && node.appliedFilter !== 'all' && (node.isExplicitFilter || node.children.length > 0) && (
+          {node.appliedFilter && node.appliedFilter !== 'all' && (node.isExplicitFilter || node.children.length > 0 || node.id.includes('->')) && (
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[9px] font-mono text-blue-500 uppercase font-bold">
                 ↳ Filter: {node.appliedFilter}

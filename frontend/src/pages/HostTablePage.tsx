@@ -33,7 +33,9 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string>, 
 
 export function HostTablePage() {
   const { data, isLoading, error } = useScanResults()
-  const [explicitFilters, setExplicitFilters] = useState<Record<string, string>>({})
+  const [explicitFilters, setExplicitFilters] = useState<Record<string, string>>({
+    'global-root-id': 'all'
+  })
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set())
 
   // Build tree
@@ -43,8 +45,10 @@ export function HostTablePage() {
   }, [data])
 
   const filteredTreeData = useMemo(() => {
+    // The rawTree is an array containing [globalRootNode]
     const filtered = filterTree(rawTree, explicitFilters)
-    return filtered.map(compressTreeNodes)
+    // We only want to render the children of the global root, so we map over its children
+    return filtered[0]?.children.map(compressTreeNodes) || []
   }, [rawTree, explicitFilters])
 
   const handleToggleRow = useCallback((id: string) => {
@@ -89,6 +93,28 @@ export function HostTablePage() {
       return next
     })
   }, [rawTree])
+
+  const handleGlobalFilterClick = useCallback((f: string) => {
+    const newFilters = { ...explicitFilters, 'global-root-id': f }
+    setExplicitFilters(newFilters)
+    
+    if (f !== 'all') {
+      const tempFiltered = filterTree(rawTree, newFilters)
+      const compressed = tempFiltered[0]?.children.map(compressTreeNodes) || []
+      
+      const allIds = new Set<string>()
+      const collectIds = (nodes: TreeNode[]) => {
+        for (const n of nodes) {
+          allIds.add(n.id)
+          collectIds(n.children)
+        }
+      }
+      collectIds(compressed)
+      setExpandedRowIds(allIds)
+    } else {
+      setExpandedRowIds(new Set())
+    }
+  }, [rawTree, explicitFilters])
 
   const handleStatusClick = useCallback((nodeId: string, st: string) => {
     let descendantsToClear: string[] = []
@@ -167,23 +193,49 @@ export function HostTablePage() {
   if (isLoading) return <div className="p-8 text-muted-foreground">Loading scans...</div>
   if (error) return <div className="p-8 text-destructive">Error loading scans.</div>
 
-  const isAnyFilterActive = Object.keys(explicitFilters).length > 0
+  const isAnyFilterActive = Object.keys(explicitFilters).some(key => key !== 'global-root-id' && explicitFilters[key] !== 'all') || explicitFilters['global-root-id'] !== 'all'
 
   return (
     <div className="w-full flex-1 flex flex-col h-[calc(100vh-theme(spacing.14))] overflow-hidden bg-background">
       <div className="px-6 py-4 shrink-0 border-b border-border bg-muted/30 flex justify-between items-center">
-        <h1 className="text-xl font-bold tracking-tight">Active Scans</h1>
-        {isAnyFilterActive && (
-          <button 
-            onClick={() => {
-              setExplicitFilters({})
-              setExpandedRowIds(new Set())
-            }}
-            className="text-xs bg-muted border border-border px-3 py-1 rounded font-mono font-bold hover:bg-background transition-colors"
-          >
-            ✕ Clear All Filters
-          </button>
-        )}
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Topology Scan Results</h1>
+          <p className="text-muted-foreground text-xs font-mono">
+            {/* @ts-ignore */}
+            {data?.metadata?.total_targets_scanned || 0} IPs scanned • {data?.metadata?.scan_duration_seconds || 0}s duration
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Top Bar Global Filters directly control the invisible root node's filter state */}
+          <div className="flex bg-muted/30 border border-border p-1 rounded-lg shadow-sm font-mono text-sm">
+            {(['all', 'active', 'failed', 'ghost', 'void']).map((f) => (
+              <button
+                key={f}
+                onClick={() => handleGlobalFilterClick(f)}
+                className={`px-4 py-1.5 rounded-md capitalize transition-all ${
+                  (explicitFilters['global-root-id'] || 'all') === f
+                    ? 'bg-background shadow-sm font-bold text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {isAnyFilterActive && (
+            <button 
+              onClick={() => {
+                setExplicitFilters({ 'global-root-id': 'all' })
+                setExpandedRowIds(new Set())
+              }}
+              className="text-xs bg-muted border border-border px-3 py-1 rounded font-mono font-bold hover:bg-background transition-colors"
+            >
+              ✕ Clear All Filters
+            </button>
+          )}
+        </div>
       </div>
       
       <div className="flex-1 overflow-auto">

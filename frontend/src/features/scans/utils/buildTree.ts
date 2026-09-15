@@ -30,8 +30,8 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
     // Aggregate stats from children
     if (child.type === 'Void') {
       voidCount += (child.nodeStats?.void || 1)
-    } else if (child.type === 'Host') {
-      // CIDR level counting Hosts
+    } else if (child.type === 'Host' || child.type === 'CIDR') {
+      // Parent level counting children stats
       if (child.nodeStats) {
         if (child.nodeStats.active > 0) activeCount += child.nodeStats.active
         if (child.nodeStats.failed > 0) failedCount += child.nodeStats.failed
@@ -46,7 +46,7 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
 
   node.status = worstStatus
   
-  if (node.type === 'Host' || node.type === 'CIDR') {
+  if (node.type === 'Host' || node.type === 'CIDR' || node.type === 'GlobalRoot') {
     if (node.type === 'Host' && !node.label.startsWith('Void')) {
       const hasOpenPort = node.children.some(child => child.rawPayload?.tcp_status === 'open')
       if (!hasOpenPort) {
@@ -70,11 +70,16 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
 
 export function buildTreeData(hosts: any[]): TreeNode[] {
   const cidrGroups = new Map<string, any[]>()
+  const rogueHosts: any[] = []
   
   hosts.forEach(host => {
-    const cidr = host.metadata?.resolved_from || 'Unknown Target'
-    if (!cidrGroups.has(cidr)) cidrGroups.set(cidr, [])
-    cidrGroups.get(cidr)!.push(host)
+    const cidr = host.metadata?.resolved_from
+    if (cidr) {
+      if (!cidrGroups.has(cidr)) cidrGroups.set(cidr, [])
+      cidrGroups.get(cidr)!.push(host)
+    } else {
+      rogueHosts.push(host)
+    }
   })
 
   const rootNodes: TreeNode[] = []
@@ -175,6 +180,101 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
     rootNodes.push(cidrNode)
   }
 
+  // Process rogue hosts (no CIDR) directly into rootNodes
+  rogueHosts.forEach((host, hostIdx) => {
+    const isVoidAgg = host.ip_address?.startsWith('Void')
+    
+    if (isVoidAgg) {
+      const match = host.ip_address.match(/\d+/)
+      const numVoid = match ? parseInt(match[0], 10) : 1
+      rootNodes.push({
+        id: `host-rogue-${hostIdx}-void`,
+        type: 'Void',
+        label: host.ip_address,
+        status: 'neutral',
+        nodeStats: { active: 0, failed: 0, ghost: 0, void: numVoid },
+        children: []
+      })
+      return
+    }
+
+    const ipLabel = host.ip_address || 'Unknown IP'
+    const hostNode: TreeNode = {
+      id: `host-rogue-${host.ip_address}-${hostIdx}`,
+      type: 'Host',
+      label: ipLabel,
+      status: 'neutral',
+      children: [],
+      rawPayload: host
+    }
+
+    const portsArray = host.ports ? Object.entries(host.ports).map(([pn, pData]) => ({ port_number: pn, ...(pData as any) })) : []
+    
+    portsArray.forEach((port: any) => {
+      const portIdStr = `port-${hostNode.id}-${port.port_number}`
+      let portStatus: TreeNodeStatus = port.tcp_status === 'open' ? 'success' : 'error'
+      
+      let tlsInfoStr = undefined
+      if (port.tls_certificate) {
+        tlsInfoStr = port.tls_certificate.valid ? `${port.tls_certificate.expires_in_days}d` : 'Invalid'
+        if (port.tls_certificate.valid === false) {
+          portStatus = 'error'
+        } else if (port.tls_certificate.expires_in_days < 30) {
+          portStatus = 'warning'
+        }
+      }
+
+      const portNode: TreeNode = {
+        id: portIdStr,
+        type: 'Port',
+        label: `${port.port_number}/tcp`,
+        status: portStatus,
+        latencyMs: port.tcp_latency_ms,
+        tlsInfo: tlsInfoStr,
+        children: [],
+        rawPayload: port
+      }
+
+      if (port.http_routing_checks) {
+        Object.entries(port.http_routing_checks).forEach(([domain, http]: [string, any], httpIdx) => {
+          let httpStatus: TreeNodeStatus = 'error'
+          let statusCodeStr = 'Error'
+          
+          if (http.status_code) {
+            statusCodeStr = `HTTP ${http.status_code}`
+            if (http.status_code >= 200 && http.status_code < 300) httpStatus = 'success'
+            else if (http.status_code >= 300 && http.status_code < 400) httpStatus = 'neutral'
+            else httpStatus = 'error'
+          }
+
+          portNode.children.push({
+            id: `http-${portIdStr}-${domain}-${httpIdx}`,
+            type: 'HTTP',
+            label: `${statusCodeStr} (${domain})`,
+            status: httpStatus,
+            latencyMs: http.http_latency_ms,
+            children: [],
+            rawPayload: http
+          })
+        })
+      }
+      hostNode.children.push(portNode)
+    })
+    rootNodes.push(hostNode)
+  })
+
   rootNodes.forEach(propagateStatus)
-  return rootNodes
+  
+  const globalRoot: TreeNode = {
+    id: 'global-root-id',
+    type: 'GlobalRoot',
+    label: 'Global Root',
+    status: 'neutral',
+    children: rootNodes,
+    rawPayload: { total_cidrs: rootNodes.length }
+  }
+  
+  propagateStatus(globalRoot)
+  
+  return [globalRoot]
 }
