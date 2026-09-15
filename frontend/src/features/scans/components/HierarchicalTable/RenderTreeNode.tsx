@@ -13,7 +13,9 @@ function getStatusBadgeClasses(status: TreeNodeStatus) {
   }
 }
 
-export function RenderTreeNode({ 
+import React from 'react'
+
+const RenderTreeNodeInner = ({ 
   node, 
   depth = 0,
   onStatusClick,
@@ -23,7 +25,7 @@ export function RenderTreeNode({
   depth?: number,
   onStatusClick?: (nodeId: string, status: string) => void,
   onClearFilter?: (nodeId: string) => void
-}) {
+}) => {
   const isLeaf = node.children.length === 0
 
   return (
@@ -107,3 +109,5 @@ export function RenderTreeNode({
     </HierarchicalTable.Row>
   )
 }
+
+export const RenderTreeNode = React.memo(RenderTreeNodeInner)

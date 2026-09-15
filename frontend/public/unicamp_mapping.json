@@ -1,0 +1,4599 @@
+{
+  "143.106.7.1": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.1": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.2": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.2": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.3": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.3": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.4": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.4": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.5": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.5": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.6": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.6": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.7": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.7": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.8": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.8": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.9": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.9": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.10": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.10": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.11": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 112,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 30,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "gitlab.ic.unicamp.br",
+            "gitlabci.ic.unicamp.br",
+            "registry.gitlab.ic.unicamp.br",
+            "mmic.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.11": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "gitlab.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "gitlabci.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "registry.gitlab.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "mmic.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.12": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 233,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 162,
+          "issuer": "CN=RNP ICPEdu GR46 OV TLS CA 2025,O=REDE NACIONAL DE ENSINO E PESQUISA - RNP,C=BR",
+          "domains_discovered_sans": [
+            "rio.ic.unicamp.br",
+            "netbox.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.12": {
+            "status_code": 400,
+            "path_checked": "/",
+            "notes": null
+          },
+          "rio.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "netbox.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.13": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 204,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 138,
+          "issuer": "CN=RNP ICPEdu GR46 OV TLS CA 2025,O=REDE NACIONAL DE ENSINO E PESQUISA - RNP,C=BR",
+          "domains_discovered_sans": [
+            "cpg.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.13": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "cpg.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.14": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.14": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.15": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 247,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.15": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorSSLError - Cannot connect to host 143.106.7.15:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1082)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.16": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.16": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.17": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.17": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.18": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.18": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.19": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.19": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.20": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.20": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.21": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.21": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.22": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.22": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.23": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.23": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.24": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.24": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorError - Cannot connect to host 143.106.7.24:443 ssl:default [Connect call failed ('143.106.7.24', 443)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.25": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.25": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.26": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.26": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.27": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 133,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.27": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorSSLError - Cannot connect to host 143.106.7.27:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1082)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.28": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.28": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.29": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.29": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.30": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.30": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.31": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.31": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.32": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.32": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.33": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.33": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.34": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.34": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.35": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.35": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.36": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.36": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.37": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 75,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 17,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "rt.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.37": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "rt.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.38": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.38": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.39": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.39": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.40": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.40": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.41": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.41": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.42": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.42": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.43": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.43": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.44": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 183,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 66,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "webmail2.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.44": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          },
+          "webmail2.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.45": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.45": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.46": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.46": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.47": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 98,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 70,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "flamboyant.ic.unicamp.br",
+            "api-dev.ic.unicamp.br",
+            "intranet-dev-deploy.ic.unicamp.br",
+            "intranet-dev.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.47": {
+            "status_code": 403,
+            "path_checked": "/",
+            "notes": null
+          },
+          "flamboyant.ic.unicamp.br": {
+            "status_code": 403,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.48": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 156,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 66,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "moodle.ic.unicamp.br",
+            "moodle.lab.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.48": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "moodle.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "moodle.lab.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.49": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.49": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.50": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.50": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.51": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.51": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.52": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.52": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.53": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.53": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.54": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 79,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 66,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "www.ic.unicamp.br",
+            "atibaia.ic.unicamp.br",
+            "ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.54": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "atibaia.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "www.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.55": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 76,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 17,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "*.ic.unicamp.br",
+            "ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.55": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.56": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.56": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.57": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.57": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.58": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.58": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.59": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.59": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.60": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.60": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.61": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.61": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.62": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.62": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.63": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.63": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.64": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.64": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.65": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.65": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.66": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.66": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.67": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.67": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.68": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.68": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.69": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 75,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 17,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "*.ic.unicamp.br",
+            "ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.69": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.70": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.70": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.71": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.71": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.72": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.72": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.73": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 99,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 17,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "*.ic.unicamp.br",
+            "ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.73": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.74": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.74": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.75": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.75": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.76": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.76": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.77": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.77": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.78": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.78": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.79": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.79": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.80": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.80": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.81": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.81": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.82": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.82": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.83": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.83": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.84": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.84": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.85": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.85": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.86": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.86": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.87": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.87": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.88": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.88": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.89": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.89": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.90": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 76,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 17,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "*.ic.unicamp.br",
+            "ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.90": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.91": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.91": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.92": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.92": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.93": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.93": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.94": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.94": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.95": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.95": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.96": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.96": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.97": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.97": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.98": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.98": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.99": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.99": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.100": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.100": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.101": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.101": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.102": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.102": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.103": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.103": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.104": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.104": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.105": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 83,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.105": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorSSLError - Cannot connect to host 143.106.7.105:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1082)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.106": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.106": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.107": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.107": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.108": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.108": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.109": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.109": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.110": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.110": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.111": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.111": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.112": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.112": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.113": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.113": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.114": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.114": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.115": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.115": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.116": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.116": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.117": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.117": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.118": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.118": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.119": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.119": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.120": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 86,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.120": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorSSLError - Cannot connect to host 143.106.7.120:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1082)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.121": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.121": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.122": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.122": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.123": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.123": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.124": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.124": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorError - Cannot connect to host 143.106.7.124:443 ssl:default [Connect call failed ('143.106.7.124', 443)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.125": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.125": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.126": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.126": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.127": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.127": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.128": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.128": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.129": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.129": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.130": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.130": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.131": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 91,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 17,
+          "issuer": "CN=GlobalSign RSA OV SSL CA 2018,O=GlobalSign nv-sa,C=BE",
+          "domains_discovered_sans": [
+            "*.ic.unicamp.br",
+            "ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.131": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.132": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.132": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorError - Cannot connect to host 143.106.7.132:443 ssl:default [Connect call failed ('143.106.7.132', 443)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.133": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.133": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.134": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 170,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 188,
+          "issuer": "CN=RNP ICPEdu GR46 OV TLS CA 2025,O=REDE NACIONAL DE ENSINO E PESQUISA - RNP,C=BR",
+          "domains_discovered_sans": [
+            "osh.ic.unicamp.br",
+            "controller.osh.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.134": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "osh.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "controller.osh.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.135": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 82,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 45,
+          "issuer": "CN=YE2,O=Let's Encrypt,C=US",
+          "domains_discovered_sans": [
+            "mirrors.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.135": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "mirrors.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.136": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.136": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.137": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 139,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.137": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorSSLError - Cannot connect to host 143.106.7.137:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1082)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.138": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.138": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.139": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.139": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.140": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.140": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.141": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.141": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.142": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 80,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 82,
+          "issuer": "CN=YR2,O=Let's Encrypt,C=US",
+          "domains_discovered_sans": [
+            "aceite.sigpos.d2d.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.142": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          },
+          "aceite.sigpos.d2d.ic.unicamp.br": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.143": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.143": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.144": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.144": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.145": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.145": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.146": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.146": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.147": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.147": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.148": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.148": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.149": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.149": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.150": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.150": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.151": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 79,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.151": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorSSLError - Cannot connect to host 143.106.7.151:443 ssl:default [[SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1082)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.152": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.152": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.153": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 98,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 55,
+          "issuer": "CN=YE2,O=Let's Encrypt,C=US",
+          "domains_discovered_sans": [
+            "dl2-meidanis.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.153": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "dl2-meidanis.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.154": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.154": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.155": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 95,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.155": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorSSLError - Cannot connect to host 143.106.7.155:443 ssl:default [[SSL: TLSV1_UNRECOGNIZED_NAME] tlsv1 unrecognized name (_ssl.c:1082)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.156": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.156": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.157": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.157": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.158": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.158": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.159": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.159": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.160": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.160": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.161": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.161": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.162": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.162": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.163": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 104,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 166,
+          "issuer": "CN=RNP ICPEdu GR46 OV TLS CA 2025,O=REDE NACIONAL DE ENSINO E PESQUISA - RNP,C=BR",
+          "domains_discovered_sans": [
+            "lrc.ic.unicamp.br",
+            "site.lrc.ic.unicamp.br",
+            "app.lrc.ic.unicamp.br",
+            "webmail.lrc.ic.unicamp.br",
+            "ftp.lrc.ic.unicamp.br",
+            "www.lrc.ic.unicamp.br"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.163": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "site.lrc.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "lrc.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "app.lrc.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "ftp.lrc.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          },
+          "www.lrc.ic.unicamp.br": {
+            "status_code": 200,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.164": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.164": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.165": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.165": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.166": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.166": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.167": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.167": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.168": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.168": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.169": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.169": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.170": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.170": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.171": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 74,
+        "tls_certificate": {
+          "valid": true,
+          "expires_in_days": 352,
+          "issuer": "CN=TRAEFIK DEFAULT CERT",
+          "domains_discovered_sans": [
+            "87cfc97a3d8ea82d8e1564a4213c96f0.1be5d018980b252c806117d6d36871e4.traefik.default"
+          ]
+        },
+        "http_routing_checks": {
+          "143.106.7.171": {
+            "status_code": 404,
+            "path_checked": "/",
+            "notes": null
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.172": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.172": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.173": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.173": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.174": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.174": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.175": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.175": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorError - Cannot connect to host 143.106.7.175:443 ssl:default [Connect call failed ('143.106.7.175', 443)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.176": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.176": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.177": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.177": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.178": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.178": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.179": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.179": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorError - Cannot connect to host 143.106.7.179:443 ssl:default [Connect call failed ('143.106.7.179', 443)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.180": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.180": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Request Failed: ClientConnectorError - Cannot connect to host 143.106.7.180:443 ssl:default [Connect call failed ('143.106.7.180', 443)]"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.181": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.181": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.182": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.182": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.183": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.183": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.184": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.184": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.185": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.185": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.186": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.186": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.187": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.187": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.188": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.188": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.189": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.189": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.190": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.190": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.191": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.191": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.192": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.192": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.193": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.193": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.194": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.194": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.195": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.195": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.196": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.196": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.197": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.197": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.198": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.198": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.199": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.199": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.200": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.200": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.201": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.201": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.202": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.202": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.203": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.203": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.204": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.204": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.205": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.205": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.206": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.206": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.207": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.207": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.208": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.208": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.209": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.209": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.210": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.210": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.211": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.211": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.212": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.212": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.213": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.213": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.214": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.214": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.215": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.215": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.216": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.216": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.217": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.217": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.218": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.218": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.219": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.219": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.220": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.220": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.221": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.221": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.222": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.222": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.223": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.223": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.224": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.224": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.225": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.225": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.226": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.226": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.227": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.227": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.228": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.228": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.229": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.229": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.230": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.230": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.231": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.231": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.232": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.232": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.233": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.233": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.234": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.234": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.235": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.235": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.236": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.236": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.237": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.237": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.238": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.238": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.239": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.239": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.240": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.240": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.241": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.241": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.242": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.242": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.243": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.243": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.244": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.244": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.245": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.245": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.246": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.246": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.247": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.247": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.248": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.248": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.249": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.249": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.250": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.250": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.251": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.251": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.252": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.252": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.253": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.253": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  },
+  "143.106.7.254": {
+    "metadata": {},
+    "ports": {
+      "443": {
+        "tcp_status": "closed",
+        "tcp_latency_ms": null,
+        "tls_certificate": null,
+        "http_routing_checks": {
+          "143.106.7.254": {
+            "status_code": null,
+            "path_checked": "/",
+            "notes": "HTTP Timeout"
+          }
+        }
+      }
+    }
+  }
+}

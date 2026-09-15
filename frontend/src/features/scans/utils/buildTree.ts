@@ -1,7 +1,67 @@
 import type { TreeNode, TreeNodeStatus } from '../types'
 
+const STATUS_PRIORITY: Record<TreeNodeStatus, number> = {
+  error: 4,
+  warning: 3,
+  success: 2,
+  neutral: 1,
+  empty: 0
+}
+
+function propagateStatus(node: TreeNode): TreeNodeStatus {
+  if (!node.children || node.children.length === 0) {
+    return node.status || 'neutral'
+  }
+
+  let worstStatus: TreeNodeStatus = node.status || 'neutral'
+  let activeCount = 0
+  let failedCount = 0
+  let ghostCount = 0
+  let voidCount = 0
+
+  node.children.forEach(child => {
+    const childStatus = propagateStatus(child)
+    
+    // Bubble up worst status
+    if ((STATUS_PRIORITY[childStatus] || 0) > (STATUS_PRIORITY[worstStatus] || 0)) {
+      worstStatus = childStatus
+    }
+
+    // Aggregate stats from children
+    if (child.type === 'Void') {
+      voidCount += (child.nodeStats?.void || 1)
+    } else if (child.type === 'Host') {
+      // CIDR level counting Hosts
+      if (child.nodeStats) {
+        if (child.nodeStats.active > 0) activeCount++
+        else if (child.nodeStats.failed > 0) failedCount++
+        else if (child.nodeStats.ghost > 0) ghostCount++
+      }
+    } else if (child.type === 'Port') {
+      // Host level counting Ports
+      if (childStatus === 'error') failedCount++
+      else if (childStatus === 'success' || childStatus === 'warning') activeCount++
+    }
+  })
+
+  node.status = worstStatus
+  
+  if (node.type === 'Host' || node.type === 'CIDR') {
+    if (node.type === 'Host' && activeCount === 0 && failedCount === 0 && node.children.length === 0) {
+      ghostCount = 1
+    }
+    node.nodeStats = {
+      active: activeCount,
+      failed: failedCount,
+      ghost: ghostCount,
+      void: voidCount
+    }
+  }
+
+  return node.status
+}
+
 export function buildTreeData(hosts: any[]): TreeNode[] {
-  // 1. Group hosts by CIDR (metadata.resolved_from)
   const cidrGroups = new Map<string, any[]>()
   
   hosts.forEach(host => {
@@ -10,27 +70,16 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
     cidrGroups.get(cidr)!.push(host)
   })
 
-  // 2. Build the TreeNode structure
   const rootNodes: TreeNode[] = []
 
   for (const [cidr, groupHosts] of cidrGroups.entries()) {
-    let cidrActive = 0
-    let cidrFailed = 0
-    let cidrGhost = 0
-    let cidrVoid = 0
-
-    // Host Nodes (Level 2)
     const hostNodes: TreeNode[] = []
 
     groupHosts.forEach((host, hostIdx) => {
       const isVoidAgg = host.ip_address?.startsWith('Void')
       
       if (isVoidAgg) {
-        // Extract the number from "Void (252)" or "Void (252 IPs)"
         const match = host.ip_address.match(/\d+/)
-        if (match) cidrVoid += parseInt(match[0], 10)
-        else cidrVoid += 1
-        
         const numVoid = match ? parseInt(match[0], 10) : 1
         hostNodes.push({
           id: `host-${cidr}-${hostIdx}-void`,
@@ -40,49 +89,20 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
           nodeStats: { active: 0, failed: 0, ghost: 0, void: numVoid },
           children: []
         })
-        return // Skip port processing for Void summary nodes
-      }
-
-      // Check ports to determine Host status
-      const portsArray = host.ports ? Object.entries(host.ports).map(([pn, pData]) => ({ port_number: pn, ...(pData as any) })) : []
-      let hostActivePorts = 0
-      let hostFailedPorts = 0
-      
-      portsArray.forEach((p: any) => {
-        if (p.tcp_status === 'open') hostActivePorts++
-        else hostFailedPorts++
-      })
-
-      if (hostActivePorts > 0) {
-        cidrActive++
-      }
-      if (hostFailedPorts > 0) {
-        if (hostActivePorts === 0) {
-          cidrFailed++
-        }
-      }
-      if (hostActivePorts === 0 && hostFailedPorts === 0) {
-        cidrGhost++
+        return
       }
 
       const ipLabel = host.ip_address || 'Unknown IP'
-      const hostLabel = ipLabel
-
       const hostNode: TreeNode = {
         id: `host-${cidr}-${host.ip_address}-${hostIdx}`,
         type: 'Host',
-        label: hostLabel,
+        label: ipLabel,
         status: 'neutral',
-        nodeStats: {
-          active: hostActivePorts,
-          failed: hostFailedPorts,
-          ghost: hostActivePorts === 0 && hostFailedPorts === 0 ? 1 : 0,
-          void: 0
-        },
         children: []
       }
 
-      // Port Nodes (Level 3)
+      const portsArray = host.ports ? Object.entries(host.ports).map(([pn, pData]) => ({ port_number: pn, ...(pData as any) })) : []
+      
       portsArray.forEach((port: any) => {
         const portIdStr = `port-${hostNode.id}-${port.port_number}`
         const portStatus: TreeNodeStatus = port.tcp_status === 'open' ? 'success' : 'error'
@@ -102,7 +122,6 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
           children: []
         }
 
-        // HTTP Checks (Level 4 Leaf)
         if (port.http_routing_checks) {
           Object.entries(port.http_routing_checks).forEach(([domain, http]: [string, any], httpIdx) => {
             let httpStatus: TreeNodeStatus = 'error'
@@ -126,32 +145,21 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
             })
           })
         }
-
         hostNode.children.push(portNode)
       })
-      
       hostNodes.push(hostNode)
     })
 
-    const cidrLabel = cidr
-
-    // CIDR Root Node (Level 1)
     const cidrNode: TreeNode = {
       id: `cidr-${cidr}`,
       type: 'CIDR',
-      label: cidrLabel,
+      label: cidr,
       status: 'neutral',
-      nodeStats: {
-        active: cidrActive,
-        failed: cidrFailed,
-        ghost: cidrGhost,
-        void: cidrVoid
-      },
       children: hostNodes
     }
-
     rootNodes.push(cidrNode)
   }
 
+  rootNodes.forEach(propagateStatus)
   return rootNodes
 }

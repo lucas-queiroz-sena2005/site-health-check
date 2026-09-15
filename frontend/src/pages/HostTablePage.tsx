@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { 
   useScanResults, 
   HierarchicalTable, 
@@ -16,14 +16,10 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string>, 
     if (filterForChildren === 'all') {
       matchesStatus = true
     } else {
-      if (node.nodeStats) {
-        if (filterForChildren === 'active' && (node.nodeStats.active || 0) > 0) matchesStatus = true
-        if (filterForChildren === 'failed' && (node.nodeStats.failed || 0) > 0) matchesStatus = true
-        if (filterForChildren === 'ghost' && (node.nodeStats.ghost || 0) > 0) matchesStatus = true
-      } else {
-        if (filterForChildren === 'active' && node.status === 'success') matchesStatus = true
-        if (filterForChildren === 'failed' && node.status === 'error') matchesStatus = true
-      }
+      if (filterForChildren === 'active' && (node.status === 'success' || node.status === 'warning')) matchesStatus = true
+      if (filterForChildren === 'failed' && node.status === 'error') matchesStatus = true
+      if (filterForChildren === 'ghost' && (node.nodeStats?.ghost || 0) > 0) matchesStatus = true
+      if (filterForChildren === 'void' && node.type === 'Void') matchesStatus = true
     }
 
     const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren)
@@ -40,38 +36,6 @@ export function HostTablePage() {
   const [explicitFilters, setExplicitFilters] = useState<Record<string, string>>({})
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set())
 
-  const handleToggleRow = (id: string) => {
-    setExpandedRowIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-        for (const openId of next) {
-          if (openId.startsWith(`${id}-`)) {
-            next.delete(openId)
-          }
-        }
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
-  const handleStatusClick = (nodeId: string, st: string) => {
-    setExplicitFilters(prev => ({
-      ...prev,
-      [nodeId]: st
-    }))
-  }
-
-  const handleClearFilter = (nodeId: string) => {
-    setExplicitFilters(prev => {
-      const next = { ...prev }
-      delete next[nodeId]
-      return next
-    })
-  }
-
   // Build and compress tree
   const treeData = useMemo(() => {
     if (!data?.hosts) return []
@@ -83,24 +47,118 @@ export function HostTablePage() {
     return filterTree(treeData, explicitFilters)
   }, [treeData, explicitFilters])
 
-  // React to filter changes by auto-expanding matched rows (parents only!)
-  useMemo(() => {
-    if (Object.keys(explicitFilters).length === 0) {
-      setExpandedRowIds(new Set())
-    } else {
-      const newExpanded = new Set<string>()
-      const traverse = (nodes: TreeNode[]) => {
-        for (const node of nodes) {
-          if (node.children.length > 0) {
-            newExpanded.add(node.id) // Only expand nodes that have children, so DetailsPanel won't open!
-            traverse(node.children)
-          }
+  const handleToggleRow = useCallback((id: string) => {
+    let descendantsToClear: string[] = []
+    const findDescendants = (nodes: TreeNode[], isUnder: boolean) => {
+      for (const node of nodes) {
+        const under = isUnder || node.id === id
+        if (under && node.id !== id) {
+          descendantsToClear.push(node.id)
+        }
+        if (node.children.length > 0) {
+          findDescendants(node.children, under)
         }
       }
-      traverse(filteredTreeData)
-      setExpandedRowIds(newExpanded)
     }
-  }, [explicitFilters, filteredTreeData])
+    findDescendants(treeData, false)
+
+    setExpandedRowIds(prev => {
+      const isCollapsing = prev.has(id)
+      const next = new Set(prev)
+      
+      if (isCollapsing) {
+        next.delete(id)
+        descendantsToClear.forEach(dId => next.delete(dId))
+        
+        setTimeout(() => {
+          setExplicitFilters(filtersPrev => {
+            let changed = false
+            const nextFilters = { ...filtersPrev }
+            descendantsToClear.forEach(dId => {
+              if (nextFilters[dId]) {
+                delete nextFilters[dId]
+                changed = true
+              }
+            })
+            return changed ? nextFilters : filtersPrev
+          })
+        }, 0)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [treeData])
+
+  const handleStatusClick = useCallback((nodeId: string, st: string) => {
+    let descendantsToClear: string[] = []
+    const findDescendants = (nodes: TreeNode[], isUnder: boolean) => {
+      for (const node of nodes) {
+        const under = isUnder || node.id === nodeId
+        if (under && node.id !== nodeId) {
+          descendantsToClear.push(node.id)
+        }
+        if (node.children.length > 0) {
+          findDescendants(node.children, under)
+        }
+      }
+    }
+    findDescendants(treeData, false)
+
+    setExplicitFilters(prev => {
+      const next = { ...prev, [nodeId]: st }
+      descendantsToClear.forEach(dId => delete next[dId])
+      return next
+    })
+
+    setExpandedRowIds(prev => {
+      const next = new Set(prev)
+      descendantsToClear.forEach(dId => next.delete(dId))
+      next.add(nodeId)
+      
+      const traverseAndCollect = (nodes: TreeNode[], parentMatches: boolean) => {
+        let anyMatch = false
+        for (const node of nodes) {
+          const isTargetNode = node.id === nodeId
+          const isUnderTarget = parentMatches || isTargetNode
+          
+          let childMatched = false
+          if (node.children && node.children.length > 0) {
+            childMatched = traverseAndCollect(node.children, isUnderTarget)
+          }
+
+          if (isUnderTarget) {
+            let matchesStatus = false
+            if (st === 'active' && (node.status === 'success' || node.status === 'warning')) matchesStatus = true
+            if (st === 'failed' && node.status === 'error') matchesStatus = true
+            if (st === 'ghost' && (node.nodeStats?.ghost || 0) > 0) matchesStatus = true
+            if (st === 'void' && node.type === 'Void') matchesStatus = true
+
+            if (matchesStatus || childMatched) {
+              if (node.children && node.children.length > 0) {
+                next.add(node.id)
+              }
+              anyMatch = true
+            }
+          }
+        }
+        return anyMatch
+      }
+      
+      traverseAndCollect(treeData, false)
+      return next
+    })
+  }, [treeData])
+
+  const handleClearFilter = useCallback((nodeId: string) => {
+    setExplicitFilters(prev => {
+      const next = { ...prev }
+      delete next[nodeId]
+      return next
+    })
+  }, [])
+
+
 
   if (isLoading) return <div className="p-8 text-muted-foreground">Loading scans...</div>
   if (error) return <div className="p-8 text-destructive">Error loading scans.</div>
@@ -113,7 +171,10 @@ export function HostTablePage() {
         <h1 className="text-xl font-bold tracking-tight">Active Scans</h1>
         {isAnyFilterActive && (
           <button 
-            onClick={() => setExplicitFilters({})}
+            onClick={() => {
+              setExplicitFilters({})
+              setExpandedRowIds(new Set())
+            }}
             className="text-xs bg-muted border border-border px-3 py-1 rounded font-mono font-bold hover:bg-background transition-colors"
           >
             ✕ Clear All Filters
