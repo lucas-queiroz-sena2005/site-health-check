@@ -4,8 +4,8 @@ __pycache__/
 src/.ruff_cache/
 
 # Ignore output files
-results.json
-*.json
+/results*.json
+/results/*.json
 
 # Ignore virtual environments if created manually
 .venv/
