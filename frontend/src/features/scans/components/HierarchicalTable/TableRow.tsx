@@ -12,7 +12,7 @@ export interface TableRowProps {
 }
 
 export function TableRow({ id, depth = 0, isLeaf = false, rawPayload, children, subRows }: TableRowProps) {
-  const { expandedRowIds, toggleRow } = useTableContext()
+  const { expandedRowIds, toggleRow, expandedDetailIds } = useTableContext()
   const isExpanded = expandedRowIds.has(id)
   
   // Base padding plus depth-based indentation (e.g. 1.5rem per depth level)
@@ -55,9 +55,9 @@ export function TableRow({ id, depth = 0, isLeaf = false, rawPayload, children, 
         })}
       </tr>
       
-      {/* Exclusive Rendering */}
+      {/* Independent Details and Children */}
+      {expandedDetailIds.has(id) && <DetailsPanel payload={rawPayload} />}
       {isExpanded && !isLeaf && subRows}
-      {isExpanded && isLeaf && <DetailsPanel payload={rawPayload} />}
     </>
   )
 }

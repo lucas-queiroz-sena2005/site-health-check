@@ -20,6 +20,7 @@ export function compressTreeNodes(node: TreeNode): TreeNode {
     
     return {
       id: `${node.id}->${singleChild.id}`,
+      originalNodeId: node.originalNodeId || node.id,
       label: newLabel,
       type: `${node.type} / ${singleChild.type}`,
       status: node.status,

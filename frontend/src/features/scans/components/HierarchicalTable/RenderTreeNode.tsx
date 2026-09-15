@@ -1,4 +1,5 @@
 import { HierarchicalTable } from './index'
+import { useTableContext } from './TableContext'
 import type { TreeNode, TreeNodeStatus } from '../../types'
 
 function getStatusBadgeClasses(status: TreeNodeStatus) {
@@ -23,11 +24,12 @@ const RenderTreeNodeInner = ({
   onClearFilter
 }: { 
   node: TreeNode, 
-  depth?: number,
-  onStatusClick?: (nodeId: string, status: string) => void,
+  depth?: number
+  onStatusClick?: (nodeId: string, status: string) => void
   onClearFilter?: (nodeId: string) => void
 }) => {
-  const isLeaf = node.children.length === 0
+  const { toggleDetail } = useTableContext()
+  const isLeaf = !node.children || node.children.length === 0
 
   return (
     <HierarchicalTable.Row 
@@ -56,8 +58,8 @@ const RenderTreeNodeInner = ({
                 ↳ Filter: {node.appliedFilter}
               </span>
               <button
-                onClick={(e) => { e.stopPropagation(); onClearFilter?.(node.id); }}
-                className="text-[9px] font-bold text-muted-foreground hover:text-destructive uppercase border border-border rounded px-1 bg-muted/30"
+                onClick={(e) => { e.stopPropagation(); onClearFilter?.(node.originalNodeId || node.id); }}
+                className="text-[9px] font-mono text-muted-foreground hover:text-foreground underline decoration-muted-foreground/30 hover:decoration-foreground/50 transition-colors"
               >
                 Clear
               </button>
@@ -81,7 +83,7 @@ const RenderTreeNodeInner = ({
             <>
               {(node.nodeStats.active || 0) > 0 && (
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.id, 'active'); }}
+                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.originalNodeId || node.id, 'active'); }}
                   className="bg-green-500/15 text-green-500 border border-green-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-green-500 transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <span className="w-1.5 h-1.5 rounded-sm bg-green-500" /> {node.nodeStats.active} Active
@@ -89,7 +91,7 @@ const RenderTreeNodeInner = ({
               )}
               {(node.nodeStats.failed || 0) > 0 && (
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.id, 'failed'); }}
+                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.originalNodeId || node.id, 'failed'); }}
                   className="bg-red-500/15 text-red-500 border border-red-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-red-500 transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <span className="w-1.5 h-1.5 rounded-sm bg-red-500" /> {node.nodeStats.failed} Failed
@@ -97,7 +99,7 @@ const RenderTreeNodeInner = ({
               )}
               {(node.nodeStats.ghost || 0) > 0 && (
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.id, 'ghost'); }}
+                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.originalNodeId || node.id, 'ghost'); }}
                   className="bg-red-500/15 text-red-500 border border-red-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-red-500 transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <span className="w-1.5 h-1.5 rounded-sm bg-red-500" /> {node.nodeStats.ghost} Ghost
@@ -105,6 +107,16 @@ const RenderTreeNodeInner = ({
               )}
             </>
           )}
+          
+          <button
+            onClick={(e) => { e.stopPropagation(); toggleDetail(node.id); }}
+            className="ml-auto p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+            title="View Raw JSON Details"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+          </button>
         </div>
       </HierarchicalTable.Cell>
     </HierarchicalTable.Row>

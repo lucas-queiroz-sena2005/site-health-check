@@ -3,6 +3,8 @@ import { createContext, useContext, useState, type ReactNode } from 'react'
 export interface TableContextType {
   expandedRowIds: Set<string>
   toggleRow: (id: string) => void
+  expandedDetailIds: Set<string>
+  toggleDetail: (id: string) => void
 }
 
 const TableContext = createContext<TableContextType | undefined>(undefined)
@@ -15,8 +17,18 @@ export interface TableProviderProps {
 
 export function TableProvider({ children, expandedRowIds: controlledExpanded, onToggleRow: controlledToggle }: TableProviderProps) {
   const [internalExpanded, setInternalExpanded] = useState<Set<string>>(new Set())
+  const [expandedDetailIds, setExpandedDetailIds] = useState<Set<string>>(new Set())
   
   const expandedRowIds = controlledExpanded !== undefined ? controlledExpanded : internalExpanded
+
+  const toggleDetail = (id: string) => {
+    setExpandedDetailIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const toggleRow = (id: string) => {
     if (controlledToggle) {
@@ -41,7 +53,7 @@ export function TableProvider({ children, expandedRowIds: controlledExpanded, on
   }
 
   return (
-    <TableContext.Provider value={{ expandedRowIds, toggleRow }}>
+    <TableContext.Provider value={{ expandedRowIds, toggleRow, expandedDetailIds, toggleDetail }}>
       {children}
     </TableContext.Provider>
   )

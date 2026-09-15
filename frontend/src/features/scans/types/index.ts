@@ -43,4 +43,5 @@ export interface TreeNode {
   rawPayload?: any
   appliedFilter?: string
   isExplicitFilter?: boolean
+  originalNodeId?: string
 }
