@@ -7,7 +7,7 @@ export function useScanResults(runId?: string) {
     queryKey: scanQueryKeys.results({ runId }),
     queryFn: async () => {
       // Mocking fetch from local engine file instead of real API
-      const url = '/results-sca2n.json'
+      const url = '/mock-mid-size-result.json'
       const res = await fetch(url)
       if (!res.ok) {
         throw new Error('Network response was not ok')

@@ -7,6 +7,7 @@ function getStatusBadgeClasses(status: TreeNodeStatus) {
     case 'error': return 'bg-red-500/15 text-red-500 border border-red-500/40'
     case 'warning': return 'bg-yellow-500/15 text-yellow-600 border border-yellow-500/40'
     case 'neutral': return 'bg-slate-500/15 text-slate-500 border border-slate-500/40'
+    case 'ghost': return 'bg-red-500/15 text-red-500 border border-red-500/40'
     case 'empty':
     default:
       return 'bg-muted text-muted-foreground'
@@ -47,9 +48,9 @@ const RenderTreeNodeInner = ({
       }
     >
       <HierarchicalTable.Cell width="w-[35%]">
-        <div className="flex flex-col">
-          <span>{node.label}</span>
-          {node.appliedFilter && node.appliedFilter !== 'all' && (
+        <div className="flex flex-col overflow-hidden">
+          <span className="truncate" title={node.label}>{node.label}</span>
+          {node.appliedFilter && node.appliedFilter !== 'all' && (node.isExplicitFilter || node.children.length > 0) && (
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[9px] font-mono text-blue-500 uppercase font-bold">
                 ↳ Filter: {node.appliedFilter}

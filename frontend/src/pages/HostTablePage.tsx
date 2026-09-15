@@ -18,14 +18,14 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string>, 
     } else {
       if (filterForChildren === 'active' && (node.status === 'success' || node.status === 'warning')) matchesStatus = true
       if (filterForChildren === 'failed' && node.status === 'error') matchesStatus = true
-      if (filterForChildren === 'ghost' && (node.nodeStats?.ghost || 0) > 0) matchesStatus = true
+      if (filterForChildren === 'ghost' && (node.status === 'ghost' || (node.nodeStats?.ghost || 0) > 0)) matchesStatus = true
       if (filterForChildren === 'void' && node.type === 'Void') matchesStatus = true
     }
 
     const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren)
     
     if (matchesStatus || filteredChildren.length > 0) {
-      return { ...node, children: filteredChildren, appliedFilter: filterForChildren } as TreeNode
+      return { ...node, children: filteredChildren, appliedFilter: filterForChildren, isExplicitFilter: !!explicitFilters[node.id] } as TreeNode
     }
     return null
   }).filter((n) => n !== null) as TreeNode[]
@@ -36,16 +36,16 @@ export function HostTablePage() {
   const [explicitFilters, setExplicitFilters] = useState<Record<string, string>>({})
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set())
 
-  // Build and compress tree
-  const treeData = useMemo(() => {
+  // Build tree
+  const rawTree = useMemo(() => {
     if (!data?.hosts) return []
-    const rawTree = buildTreeData(data.hosts)
-    return rawTree.map(compressTreeNodes)
+    return buildTreeData(data.hosts)
   }, [data])
 
   const filteredTreeData = useMemo(() => {
-    return filterTree(treeData, explicitFilters)
-  }, [treeData, explicitFilters])
+    const filtered = filterTree(rawTree, explicitFilters)
+    return filtered.map(compressTreeNodes)
+  }, [rawTree, explicitFilters])
 
   const handleToggleRow = useCallback((id: string) => {
     let descendantsToClear: string[] = []
@@ -60,7 +60,7 @@ export function HostTablePage() {
         }
       }
     }
-    findDescendants(treeData, false)
+    findDescendants(rawTree, false)
 
     setExpandedRowIds(prev => {
       const isCollapsing = prev.has(id)
@@ -88,7 +88,7 @@ export function HostTablePage() {
       }
       return next
     })
-  }, [treeData])
+  }, [rawTree])
 
   const handleStatusClick = useCallback((nodeId: string, st: string) => {
     let descendantsToClear: string[] = []
@@ -103,7 +103,7 @@ export function HostTablePage() {
         }
       }
     }
-    findDescendants(treeData, false)
+    findDescendants(rawTree, false)
 
     setExplicitFilters(prev => {
       const next = { ...prev, [nodeId]: st }
@@ -145,15 +145,19 @@ export function HostTablePage() {
         return anyMatch
       }
       
-      traverseAndCollect(treeData, false)
+      traverseAndCollect(rawTree, false)
       return next
     })
-  }, [treeData])
+  }, [rawTree])
 
   const handleClearFilter = useCallback((nodeId: string) => {
     setExplicitFilters(prev => {
       const next = { ...prev }
-      delete next[nodeId]
+      if (next[nodeId] !== undefined && next[nodeId] !== 'all') {
+        delete next[nodeId]
+      } else {
+        next[nodeId] = 'all'
+      }
       return next
     })
   }, [])

@@ -8,7 +8,7 @@ export function DetailsPanel({ payload }: DetailsPanelProps) {
   return (
     <tr className="bg-muted/50 border-b border-border">
       <td colSpan={5} className="p-4">
-        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-4 text-sm text-muted-foreground">
           {Object.entries(payload).map(([key, value]) => {
             // Basic formatting for arrays/objects
             const displayValue = typeof value === 'object' 
@@ -20,9 +20,9 @@ export function DetailsPanel({ payload }: DetailsPanelProps) {
                 <span className="font-medium text-foreground capitalize">
                   {key.replace(/_/g, ' ')}
                 </span>
-                <span className="break-all bg-background border border-border p-2 rounded-md font-mono text-xs">
+                <pre className="whitespace-pre-wrap break-words bg-background border border-border p-2 rounded-md font-mono text-xs">
                   {displayValue || '-'}
-                </span>
+                </pre>
               </div>
             )
           })}

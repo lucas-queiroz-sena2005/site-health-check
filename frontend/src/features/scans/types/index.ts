@@ -24,7 +24,7 @@ export type PortState = z.infer<typeof PortStateSchema>
 export type HostState = z.infer<typeof HostStateSchema>
 export type ScanResult = z.infer<typeof ScanResultSchema>
 
-export type TreeNodeStatus = 'success' | 'warning' | 'error' | 'neutral' | 'empty'
+export type TreeNodeStatus = 'success' | 'warning' | 'error' | 'neutral' | 'empty' | 'ghost'
 
 export interface TreeNode {
   id: string
@@ -42,4 +42,5 @@ export interface TreeNode {
   children: TreeNode[]
   rawPayload?: any
   appliedFilter?: string
+  isExplicitFilter?: boolean
 }
