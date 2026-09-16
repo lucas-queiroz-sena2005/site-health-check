@@ -39,9 +39,8 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
       }
     } else if (child.type === 'Port') {
       // Host level counting Ports
-      const isOpen = child.rawPayload?.tcp_status === 'open' || child.status === 'success'
-      if (isOpen) activeCount++
-      if (child.status === 'error' || child.status === 'warning' || (!isOpen && child.status !== 'neutral' && child.status !== 'empty')) failedCount++
+      if (child.status === 'success' || child.status === 'warning') activeCount++
+      else if (child.status === 'error') failedCount++
     }
   })
 
@@ -125,7 +124,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         if (port.tls_certificate) {
           tlsInfoStr = port.tls_certificate.valid ? `${port.tls_certificate.expires_in_days}d` : 'Invalid'
           if (port.tls_certificate.valid === false) {
-            portStatus = 'error'
+            portStatus = 'warning'
           } else if (port.tls_certificate.expires_in_days < 30) {
             portStatus = 'warning'
           }
@@ -240,7 +239,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
       if (port.tls_certificate) {
         tlsInfoStr = port.tls_certificate.valid ? `${port.tls_certificate.expires_in_days}d` : 'Invalid'
         if (port.tls_certificate.valid === false) {
-          portStatus = 'error'
+          portStatus = 'warning'
         } else if (port.tls_certificate.expires_in_days < 30) {
           portStatus = 'warning'
         }
