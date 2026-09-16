@@ -42,11 +42,6 @@ const RenderTreeNodeInner = ({
   while (curr.children?.length === 1 && !curr.children[0].isExplicitFilter && curr.type !== 'GlobalRoot') {
     const child = curr.children[0]
     
-    // Stop compressing if the parent and child have conflicting semantic statuses
-    if (curr.status !== child.status && child.status !== 'neutral' && curr.status !== 'neutral') {
-      break
-    }
-    
     // Deduplicate exact matches or prefixed matches
     if (displayLabel !== child.label && !child.label.startsWith(`${displayLabel} ➔`) && !child.label.startsWith(`${displayLabel} `)) {
       displayLabel = `${displayLabel} ➔ ${child.label}`
