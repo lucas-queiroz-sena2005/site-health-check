@@ -1,341 +1,77 @@
 {
   "143.106.1.1": {
-    "metadata": { "resolved_from": "143.106.1.0/24" },
+    "metadata": { "resolved_from": "143.106.1.0/24", "total_hosts": 256 },
     "ports": {
       "80": {
         "tcp_status": "open",
         "tcp_latency_ms": 2,
         "http_routing_checks": {
-          "router.local": {
-            "status_code": 301,
-            "http_latency_ms": 5,
-            "path_checked": "/",
-            "redirects_to_url": "https://router.local",
-            "server_header": "nginx/1.24",
-            "notes": "Redirecting to secure port"
-          }
-        }
-      },
-      "443": {
-        "tcp_status": "open",
-        "tcp_latency_ms": 2,
-        "tls_certificate": {
-          "valid": true,
-          "expires_in_days": 120,
-          "issuer": "CN=Let's Encrypt Authority X3",
-          "protocol_version": "TLSv1.3",
-          "domains_discovered_sans": ["router.local", "*.router.local"]
-        },
-        "http_routing_checks": {
-          "router.local": {
-            "status_code": 200,
-            "http_latency_ms": 10,
-            "path_checked": "/",
-            "server_header": "nginx/1.24"
-          }
+          "router.local": { "status_code": 301, "http_latency_ms": 5, "path_checked": "/" }
         }
       }
     }
   },
-  "143.106.1.5": {
-    "metadata": { "resolved_from": "143.106.1.0/24" },
+  "10.0.0.1": {
+    "metadata": { "resolved_from": "load-balancer.local" },
     "ports": {
-      "80": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 12,
+        "tls_certificate": { "valid": true, "expires_in_days": 45 },
+        "http_routing_checks": {
+          "app.local": { "status_code": 200, "http_latency_ms": 40 }
+        }
+      }
+    }
+  },
+  "10.0.0.2": {
+    "metadata": { "resolved_from": "load-balancer.local" },
+    "ports": {
+      "443": {
         "tcp_status": "open",
         "tcp_latency_ms": 15,
+        "tls_certificate": { "valid": true, "expires_in_days": 45 },
         "http_routing_checks": {
-          "web.unicamp.br": {
-            "status_code": 403,
-            "http_latency_ms": 20,
-            "path_checked": "/admin",
-            "server_header": "Apache/2.4",
-            "notes": "Forbidden access"
-          }
-        }
-      },
-      "443": {
-        "tcp_status": "open",
-        "tcp_latency_ms": 16,
-        "tls_certificate": {
-          "valid": true,
-          "expires_in_days": 45,
-          "issuer": "CN=DigiCert",
-          "protocol_version": "TLSv1.2",
-          "domains_discovered_sans": ["web.unicamp.br", "api.unicamp.br"]
-        },
-        "http_routing_checks": {
-          "web.unicamp.br": {
-            "status_code": 200,
-            "http_latency_ms": 40,
-            "path_checked": "/"
-          },
-          "api.unicamp.br": {
-            "status_code": 200,
-            "http_latency_ms": 50,
-            "path_checked": "/v1/health"
-          }
-        }
-      },
-      "8080": {
-        "tcp_status": "closed",
-        "tcp_latency_ms": null
-      }
-    }
-  },
-  "143.106.1.6": {
-    "metadata": { "resolved_from": "143.106.1.0/24" },
-    "ports": {
-      "443": {
-        "tcp_status": "open",
-        "tcp_latency_ms": 10,
-        "tls_certificate": {
-          "valid": false,
-          "expires_in_days": -5,
-          "issuer": "CN=SelfSigned",
-          "protocol_version": "TLSv1.1",
-          "domains_discovered_sans": ["legacy.unicamp.br"]
-        },
-        "http_routing_checks": {
-          "legacy.unicamp.br": {
-            "status_code": 200,
-            "http_latency_ms": 35,
-            "path_checked": "/"
-          }
+          "app.local": { "status_code": 502, "http_latency_ms": 200 }
         }
       }
     }
   },
-  "143.106.1.10": {
-    "metadata": { "resolved_from": "143.106.1.0/24" },
+  "192.168.10.100": {
+    "metadata": { "resolved_from": "192.168.10.100-192.168.10.105", "total_hosts": 6 },
+    "ports": {
+      "22": { "tcp_status": "open", "tcp_latency_ms": 5 }
+    }
+  },
+  "192.168.10.103": {
+    "metadata": { "resolved_from": "192.168.10.100-192.168.10.105" },
+    "ports": {
+      "3389": { "tcp_status": "open", "tcp_latency_ms": 12 }
+    }
+  },
+  "10.1.1.130": {
+    "metadata": { "resolved_from": "10.1.1.128/25", "total_hosts": 128 },
     "ports": {
       "443": {
         "tcp_status": "open",
-        "tcp_latency_ms": 22,
-        "tls_certificate": {
-          "valid": true,
-          "expires_in_days": 300,
-          "issuer": "CN=GlobalSign",
-          "protocol_version": "TLSv1.3",
-          "domains_discovered_sans": ["broken-app.unicamp.br"]
-        },
+        "tcp_latency_ms": 50,
+        "tls_certificate": { "valid": false, "expires_in_days": -10 },
         "http_routing_checks": {
-          "broken-app.unicamp.br": {
-            "status_code": 500,
-            "http_latency_ms": 120,
-            "path_checked": "/",
-            "server_header": "Express",
-            "notes": "Internal Server Error"
-          }
+          "internal.corp": { "status_code": 200, "http_latency_ms": 30 }
         }
       }
     }
   },
-  "143.106.1.20": {
-    "metadata": { "resolved_from": "143.106.1.0/24" },
+  "10.1.1.131": {
+    "metadata": { "resolved_from": "10.1.1.128/25" },
     "ports": {
-      "80": {
-        "tcp_status": "closed",
-        "tcp_latency_ms": null,
-        "http_routing_checks": {
-          "143.106.1.20": {
-            "notes": "HTTP Timeout"
-          }
-        }
-      },
-      "443": {
-        "tcp_status": "closed",
-        "tcp_latency_ms": null,
-        "http_routing_checks": {
-          "143.106.1.20": {
-            "notes": "HTTP Timeout"
-          }
-        }
-      }
-    }
-  },
-  "Void Space (245 IPs)": {
-    "metadata": { "resolved_from": "143.106.1.0/24" }
-  },
-  "192.168.0.2": {
-    "metadata": { "resolved_from": "192.168.0.0/24" },
-    "ports": {
-      "443": {
-        "tcp_status": "open",
-        "tcp_latency_ms": 1,
-        "tls_certificate": {
-          "valid": true,
-          "expires_in_days": 90,
-          "issuer": "CN=InternalCA",
-          "protocol_version": "TLSv1.3",
-          "domains_discovered_sans": ["internal.local"]
-        },
-        "http_routing_checks": {
-          "internal.local": {
-            "status_code": 200,
-            "http_latency_ms": 2,
-            "path_checked": "/ping"
-          }
-        }
-      }
-    }
-  },
-  "Void Space (250 IPs)": {
-    "metadata": { "resolved_from": "192.168.0.0/24" }
-  },
-  "10.0.0.99": {
-    "metadata": { "resolved_from": "rogue-server.local", "discovered_from": ["untrusted-san.org"] },
-    "ports": {
-      "443": {
-        "tcp_status": "open",
-        "tcp_latency_ms": 5,
-        "tls_certificate": {
-          "valid": false,
-          "expires_in_days": -100,
-          "issuer": "CN=RogueCA",
-          "protocol_version": "TLSv1.0",
-          "domains_discovered_sans": ["malicious-domain.com"]
-        },
-        "http_routing_checks": {
-          "malicious-domain.com": {
-            "status_code": 200,
-            "http_latency_ms": 30,
-            "path_checked": "/"
-          }
-        }
-      }
+      "8080": { "tcp_status": "closed", "tcp_latency_ms": null }
     }
   },
   "8.8.8.8": {
     "metadata": { "resolved_from": "8.8.8.8" },
     "ports": {
-      "53": {
-        "tcp_status": "open",
-        "tcp_latency_ms": 10
-      }
-    }
-  },
-  "8.8.8.8": {
-  "metadata": {
-    "resolved_from": null,
-    "discovered_from": []
-  },
-  "ports": {
-    "80": {
-      "tcp_status": "closed",
-      "tcp_latency_ms": null,
-      "tls_certificate": null,
-      "http_routing_checks": {
-        "8.8.8.8": {
-          "status_code": null,
-          "http_latency_ms": null,
-          "path_checked": "/",
-          "redirects_to_url": null,
-          "server_header": null,
-          "notes": "HTTP Timeout"
-        }
-      }
-    },
-    "88": {
-      "tcp_status": "closed",
-      "tcp_latency_ms": null,
-      "tls_certificate": null,
-      "http_routing_checks": {
-        "8.8.8.8": {
-          "status_code": null,
-          "http_latency_ms": null,
-          "path_checked": "/",
-          "redirects_to_url": null,
-          "server_header": null,
-          "notes": "HTTP Timeout"
-        }
-      }
-    },
-    "443": {
-      "tcp_status": "open",
-      "tcp_latency_ms": 73,
-      "tls_certificate": {
-        "valid": true,
-        "expires_in_days": 46,
-        "issuer": "CN=WR2,O=Google Trust Services,C=US",
-        "protocol_version": "TLSv1.3",
-        "domains_discovered_sans": [
-          "dns.google",
-          "dns.google.com",
-          "*.dns.google.com",
-          "8888.google",
-          "dns64.dns.google"
-        ]
-      },
-      "http_routing_checks": {
-        "8.8.8.8": {
-          "status_code": 200,
-          "http_latency_ms": 137,
-          "path_checked": "/",
-          "redirects_to_url": null,
-          "server_header": "scaffolding on HTTPServer2",
-          "notes": null
-        },
-        "dns.google": {
-          "status_code": 200,
-          "http_latency_ms": 66,
-          "path_checked": "/",
-          "redirects_to_url": null,
-          "server_header": "scaffolding on HTTPServer2",
-          "notes": null
-        },
-        "8888.google": {
-          "status_code": 200,
-          "http_latency_ms": 191,
-          "path_checked": "/",
-          "redirects_to_url": null,
-          "server_header": "scaffolding on HTTPServer2",
-          "notes": null
-        }
-      }
+      "53": { "tcp_status": "open", "tcp_latency_ms": 2 }
     }
   }
-},
-"8.8.4.4": {
-  "metadata": {
-    "resolved_from": "dns.google.com",
-    "discovered_from": []
-  },
-  "ports": {
-    "443": {
-      "tcp_status": "open",
-      "tcp_latency_ms": 74,
-      "tls_certificate": {
-        "valid": true,
-        "expires_in_days": 46,
-        "issuer": "CN=WR2,O=Google Trust Services,C=US",
-        "protocol_version": "TLSv1.3",
-        "domains_discovered_sans": [
-          "dns.google",
-          "dns.google.com",
-          "*.dns.google.com",
-          "8888.google",
-          "dns64.dns.google"
-        ]
-      },
-      "http_routing_checks": {
-        "dns.google.com": {
-          "status_code": 200,
-          "http_latency_ms": 872,
-          "path_checked": "/",
-          "redirects_to_url": null,
-          "server_header": "scaffolding on HTTPServer2",
-          "notes": null
-        },
-        "dns.google": {
-          "status_code": 200,
-          "http_latency_ms": 74,
-          "path_checked": "/",
-          "redirects_to_url": null,
-          "server_header": "scaffolding on HTTPServer2",
-          "notes": null
-        }
-      }
-    }
-  }
-}
 }

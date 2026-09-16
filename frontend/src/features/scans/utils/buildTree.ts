@@ -168,6 +168,20 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
       })
       hostNodes.push(hostNode)
     })
+    const totalPossibleHosts = groupHosts[0]?.metadata?.total_hosts || groupHosts.length
+    const totalVoid = Math.max(0, totalPossibleHosts - groupHosts.length)
+    
+    if (totalVoid > 0) {
+      hostNodes.push({
+        id: `void-${cidr}`,
+        type: 'Void',
+        label: `Void Space (${totalVoid} IPs)`,
+        status: 'neutral',
+        nodeStats: { active: 0, failed: 0, ghost: 0, void: totalVoid },
+        children: [],
+        rawPayload: { description: `${totalVoid} IPs did not respond to the scan.` }
+      })
+    }
 
     const isCidr = cidr.includes('/')
     
@@ -181,7 +195,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         label: cidr,
         status: 'neutral',
         children: hostNodes,
-        rawPayload: { target: cidr, total_hosts: groupHosts.length }
+        rawPayload: { target: cidr, total_hosts: totalPossibleHosts }
       }
       rootNodes.push(targetNode)
     }

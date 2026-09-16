@@ -12,7 +12,7 @@ export interface TableRowProps {
 }
 
 export function TableRow({ id, depth = 0, isLeaf = false, rawPayload, children, subRows }: TableRowProps) {
-  const { expandedRowIds, toggleRow, expandedDetailIds } = useTableContext()
+  const { expandedRowIds, toggleRow, expandedDetailIds, toggleDetail } = useTableContext()
   const isExpanded = expandedRowIds.has(id)
   
   // Base padding plus depth-based indentation (e.g. 1.5rem per depth level)
@@ -21,8 +21,8 @@ export function TableRow({ id, depth = 0, isLeaf = false, rawPayload, children, 
   return (
     <>
       <tr 
-        className="border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
-        onClick={() => toggleRow(id)}
+        className="group border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
+        onClick={() => isLeaf ? toggleDetail(id) : toggleRow(id)}
       >
         {/* Clone the first TableCell to inject indentation and arrow icon */}
         {React.Children.map(children, (child, index) => {

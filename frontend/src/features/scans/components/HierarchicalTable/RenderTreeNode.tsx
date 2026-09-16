@@ -1,5 +1,6 @@
 import { HierarchicalTable } from './index'
 import { useTableContext } from './TableContext'
+import { MarqueeText } from './MarqueeText'
 import type { TreeNode, TreeNodeStatus } from '../../types'
 
 function getStatusBadgeClasses(status: TreeNodeStatus) {
@@ -83,7 +84,7 @@ const RenderTreeNodeInner = ({
     >
       <HierarchicalTable.Cell width="w-[35%]">
         <div className="flex flex-col overflow-hidden">
-          <span className="truncate" title={displayLabel}>{displayLabel}</span>
+          <MarqueeText>{displayLabel}</MarqueeText>
           {node.appliedFilter && node.appliedFilter !== 'all' && (node.isExplicitFilter || curr.children.length > 0 || isCompressed) && (
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[9px] font-mono text-blue-500 uppercase font-bold">
