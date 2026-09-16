@@ -27,9 +27,10 @@ export function TableProvider({ children, expandedRowIds: controlledExpanded, on
 
   const toggleDetail = useCallback((id: string) => {
     setExpandedDetailIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      const next = new Set<string>()
+      if (!prev.has(id)) {
+        next.add(id)
+      }
       return next
     })
   }, [])
