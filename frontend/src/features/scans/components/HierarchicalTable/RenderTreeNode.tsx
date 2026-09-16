@@ -85,10 +85,10 @@ const RenderTreeNodeInner = ({
       <HierarchicalTable.Cell width="w-[35%]">
         <div className="flex flex-col overflow-hidden">
           <MarqueeText>{displayLabel}</MarqueeText>
-          {node.appliedFilter && node.appliedFilter !== 'all' && (node.isExplicitFilter || curr.children.length > 0 || isCompressed) && (
+          {node.appliedFilter && node.appliedFilter.length > 0 && !node.appliedFilter.includes('all') && (node.isExplicitFilter || curr.children.length > 0 || isCompressed) && (
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[9px] font-mono text-blue-500 uppercase font-bold">
-                ↳ Filter: {node.appliedFilter}
+                ↳ Filter: {node.appliedFilter.join(', ')}
               </span>
               <button
                 onClick={(e) => { e.stopPropagation(); onClearFilter?.(node.id); }}
@@ -120,6 +120,14 @@ const RenderTreeNodeInner = ({
                   className="bg-green-500/15 text-green-500 border border-green-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-green-500 transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <span className="w-1.5 h-1.5 rounded-sm bg-green-500" /> {node.nodeStats.active} Active
+                </button>
+              )}
+              {(node.nodeStats.warning || 0) > 0 && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.id, 'warning'); }}
+                  className="bg-yellow-500/15 text-yellow-600 border border-yellow-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-yellow-500 transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                  <span className="w-1.5 h-1.5 rounded-sm bg-yellow-500" /> {node.nodeStats.warning} Warning
                 </button>
               )}
               {(node.nodeStats.failed || 0) > 0 && (

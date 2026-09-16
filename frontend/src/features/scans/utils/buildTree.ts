@@ -1,9 +1,10 @@
 import type { TreeNode, TreeNodeStatus } from '../types'
 
 const STATUS_PRIORITY: Record<TreeNodeStatus, number> = {
-  error: 4,
-  warning: 3,
-  success: 2,
+  error: 5,
+  warning: 4,
+  success: 3,
+  ghost: 2,
   neutral: 1,
   empty: 0
 }
@@ -15,6 +16,7 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
 
   let worstStatus: TreeNodeStatus = node.status || 'neutral'
   let activeCount = 0
+  let warningCount = 0
   let failedCount = 0
   let ghostCount = 0
   let voidCount = 0
@@ -34,12 +36,14 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
       // Parent level counting children stats
       if (child.nodeStats) {
         if (child.nodeStats.active > 0) activeCount += child.nodeStats.active
+        if (child.nodeStats.warning > 0) warningCount += child.nodeStats.warning
         if (child.nodeStats.failed > 0) failedCount += child.nodeStats.failed
         if (child.nodeStats.ghost > 0) ghostCount += child.nodeStats.ghost
       }
     } else if (child.type === 'Port') {
       // Host level counting Ports
-      if (child.status === 'success' || child.status === 'warning') activeCount++
+      if (child.status === 'success') activeCount++
+      else if (child.status === 'warning') warningCount++
       else if (child.status === 'error') failedCount++
     }
   })
@@ -53,12 +57,14 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
         ghostCount = Math.max(1, node.children.length)
         failedCount = 0
         activeCount = 0
+        warningCount = 0
         node.status = 'ghost'
         node.children.forEach(child => { child.status = 'ghost' })
       }
     }
     node.nodeStats = {
       active: activeCount,
+      warning: warningCount,
       failed: failedCount,
       ghost: ghostCount,
       void: voidCount
@@ -98,7 +104,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
           type: 'Void',
           label: host.ip_address,
           status: 'neutral',
-          nodeStats: { active: 0, failed: 0, ghost: 0, void: numVoid },
+          nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: numVoid },
           children: []
         })
         return
@@ -177,7 +183,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         type: 'Void',
         label: `Void Space (${totalVoid} IPs)`,
         status: 'neutral',
-        nodeStats: { active: 0, failed: 0, ghost: 0, void: totalVoid },
+        nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: totalVoid },
         children: [],
         rawPayload: { description: `${totalVoid} IPs did not respond to the scan.` }
       })
@@ -213,7 +219,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         type: 'Void',
         label: host.ip_address,
         status: 'neutral',
-        nodeStats: { active: 0, failed: 0, ghost: 0, void: numVoid },
+        nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: numVoid },
         children: []
       })
       return

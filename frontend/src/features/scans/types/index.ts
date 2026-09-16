@@ -35,13 +35,14 @@ export interface TreeNode {
   tlsInfo?: string
   nodeStats?: {
     active: number
+    warning: number
     failed: number
     ghost: number
     void: number
   }
   children: TreeNode[]
   rawPayload?: any
-  appliedFilter?: string
+  appliedFilter?: string[]
   isExplicitFilter?: boolean
   originalNodeId?: string
 }

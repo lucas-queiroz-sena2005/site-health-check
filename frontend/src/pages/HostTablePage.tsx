@@ -7,25 +7,31 @@ import {
 } from '@/features/scans'
 import type { TreeNode } from '@/features/scans/types'
 
-function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string>, parentFilter: string = 'all'): TreeNode[] {
+function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string[]>, parentFilter: string[] = ['all']): TreeNode[] {
   return nodes.map(node => {
+    // A child doesn't merge with parent. If explicit exists, it overrides completely.
     const filterForChildren = explicitFilters[node.id] || parentFilter
     let matchesStatus = false
     
-    if (filterForChildren === 'all') {
+    if (filterForChildren.includes('all')) {
       matchesStatus = true
     } else {
-      if (filterForChildren === 'active' && (node.status === 'success' || node.status === 'warning' || (node.type === 'HTTP' && node.status === 'neutral'))) matchesStatus = true
-      if (filterForChildren === 'failed' && (node.status === 'error')) matchesStatus = true
-      if (filterForChildren === 'ghost' && node.status === 'ghost') matchesStatus = true
-      if (filterForChildren === 'void' && node.type === 'Void') matchesStatus = true
+      for (const f of filterForChildren) {
+        if (f === 'active' && (node.status === 'success' || (node.type === 'HTTP' && node.status === 'neutral'))) matchesStatus = true
+        if (f === 'warning' && node.status === 'warning') matchesStatus = true
+        if (f === 'failed' && (node.status === 'error')) matchesStatus = true
+        if (f === 'ghost' && node.status === 'ghost') matchesStatus = true
+        if (f === 'void' && node.type === 'Void') matchesStatus = true
+        if (matchesStatus) break
+      }
     }
 
     const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren)
     
     if (matchesStatus || filteredChildren.length > 0) {
       const hasExplicit = explicitFilters[node.id] !== undefined
-      const isRedundant = hasExplicit && explicitFilters[node.id] === parentFilter
+      // check if redundant by comparing arrays
+      const isRedundant = hasExplicit && JSON.stringify(explicitFilters[node.id].sort()) === JSON.stringify(parentFilter.sort())
       return { ...node, children: filteredChildren, appliedFilter: filterForChildren, isExplicitFilter: hasExplicit && !isRedundant } as TreeNode
     }
     return null
@@ -34,8 +40,8 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string>, 
 
 export function HostTablePage() {
   const { data, isLoading, error } = useScanResults()
-  const [explicitFilters, setExplicitFilters] = useState<Record<string, string>>({
-    'global-root-id': 'all'
+  const [explicitFilters, setExplicitFilters] = useState<Record<string, string[]>>({
+    'global-root-id': ['all']
   })
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set())
 
@@ -97,26 +103,53 @@ export function HostTablePage() {
   }, [rawTree, expandedRowIds])
 
   const handleGlobalFilterClick = useCallback((f: string) => {
-    const newFilters = { 'global-root-id': f }
-    setExplicitFilters(newFilters)
-    
-    if (f !== 'all') {
-      const tempFiltered = filterTree(rawTree, newFilters)
-      const visibleNodes = tempFiltered[0]?.children || []
-      
-      const allIds = new Set<string>()
-      const collectIds = (nodes: TreeNode[]) => {
-        for (const n of nodes) {
-          allIds.add(n.id)
-          collectIds(n.children)
+    setExplicitFilters(prev => {
+      const currentGlobal = prev['global-root-id'] || ['all']
+      let newGlobal = [...currentGlobal]
+
+      if (f === 'all') {
+        newGlobal = ['all']
+      } else {
+        if (newGlobal.includes('all')) {
+          newGlobal = [f]
+        } else {
+          if (newGlobal.includes(f)) {
+            newGlobal = newGlobal.filter(item => item !== f)
+            if (newGlobal.length === 0) newGlobal = ['all']
+          } else {
+            newGlobal.push(f)
+            const allPossible = ['active', 'warning', 'failed', 'ghost', 'void']
+            if (allPossible.every(p => newGlobal.includes(p))) {
+              newGlobal = ['all']
+            }
+          }
         }
       }
-      collectIds(visibleNodes)
-      setExpandedRowIds(allIds)
-    } else {
-      setExpandedRowIds(new Set())
-    }
-  }, [rawTree, explicitFilters])
+
+      const newFilters = { 'global-root-id': newGlobal }
+      
+      if (!newGlobal.includes('all')) {
+        setTimeout(() => {
+          setExpandedRowIds(prevIds => {
+            const tempFiltered = filterTree(rawTree, newFilters)
+            const visibleNodes = tempFiltered[0]?.children || []
+            const next = new Set<string>(prevIds)
+            const collectIds = (nodes: TreeNode[]) => {
+              for (const n of nodes) {
+                next.add(n.id)
+                collectIds(n.children)
+              }
+            }
+            collectIds(visibleNodes)
+            return next
+          })
+        }, 0)
+      } else {
+        setTimeout(() => setExpandedRowIds(new Set()), 0)
+      }
+      return newFilters
+    })
+  }, [rawTree])
 
   const handleStatusClick = useCallback((nodeId: string, st: string) => {
     let descendantsToClear: string[] = []
@@ -135,11 +168,25 @@ export function HostTablePage() {
 
     setExplicitFilters(prev => {
       const next = { ...prev }
-      if (next[nodeId] === st) {
+      const current = next[nodeId] || []
+      let updated = [...current]
+
+      if (updated.includes(st)) {
+        updated = updated.filter(i => i !== st)
+      } else {
+        if (updated.includes('all')) {
+          updated = [st]
+        } else {
+          updated.push(st)
+        }
+      }
+
+      if (updated.length === 0) {
         delete next[nodeId]
       } else {
-        next[nodeId] = st
+        next[nodeId] = updated
       }
+
       descendantsToClear.forEach(dId => delete next[dId])
       return next
     })
@@ -162,7 +209,8 @@ export function HostTablePage() {
 
           if (isUnderTarget) {
             let matchesStatus = false
-            if (st === 'active' && (node.status === 'success' || node.status === 'warning')) matchesStatus = true
+            if (st === 'active' && (node.status === 'success' || (node.type === 'HTTP' && node.status === 'neutral'))) matchesStatus = true
+            if (st === 'warning' && node.status === 'warning') matchesStatus = true
             if (st === 'failed' && node.status === 'error') matchesStatus = true
             if (st === 'ghost' && (node.nodeStats?.ghost || 0) > 0) matchesStatus = true
             if (st === 'void' && node.type === 'Void') matchesStatus = true
@@ -186,10 +234,8 @@ export function HostTablePage() {
   const handleClearFilter = useCallback((nodeId: string) => {
     setExplicitFilters(prev => {
       const next = { ...prev }
-      if (next[nodeId] !== undefined && next[nodeId] !== 'all') {
+      if (next[nodeId] !== undefined) {
         delete next[nodeId]
-      } else {
-        next[nodeId] = 'all'
       }
       return next
     })
@@ -200,7 +246,7 @@ export function HostTablePage() {
   if (isLoading) return <div className="p-8 text-muted-foreground">Loading scans...</div>
   if (error) return <div className="p-8 text-destructive">Error loading scans.</div>
 
-  const isAnyFilterActive = Object.keys(explicitFilters).some(key => key !== 'global-root-id' && explicitFilters[key] !== 'all') || explicitFilters['global-root-id'] !== 'all'
+  const isAnyFilterActive = Object.keys(explicitFilters).some(key => key !== 'global-root-id' && !explicitFilters[key].includes('all')) || !explicitFilters['global-root-id']?.includes('all')
 
   return (
     <div className="fixed inset-0 w-full flex flex-col bg-background">
@@ -219,7 +265,7 @@ export function HostTablePage() {
           title="Clear All Filters"
           disabled={!isAnyFilterActive}
           onClick={() => {
-            setExplicitFilters({ 'global-root-id': 'all' })
+            setExplicitFilters({ 'global-root-id': ['all'] })
             setExpandedRowIds(new Set())
           }}
           className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
@@ -233,12 +279,12 @@ export function HostTablePage() {
 
         <span className="text-sm font-semibold text-muted-foreground pl-1">Filters:</span>
         <div className="flex bg-muted/30 border border-border p-1 rounded-lg shadow-sm font-mono text-sm">
-          {(['all', 'active', 'failed', 'ghost', 'void']).map((f) => (
+          {(['all', 'active', 'warning', 'failed', 'ghost', 'void']).map((f) => (
             <button
               key={f}
               onClick={() => handleGlobalFilterClick(f)}
               className={`px-4 py-1.5 rounded-md capitalize transition-all ${
-                (explicitFilters['global-root-id'] || 'all') === f
+                (explicitFilters['global-root-id'] || ['all']).includes(f)
                   ? 'bg-background shadow-sm font-bold text-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`}
