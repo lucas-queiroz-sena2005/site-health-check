@@ -9,7 +9,7 @@ export interface TableCellProps {
 
 export function TableCell({ children, className = '', width = '', style }: TableCellProps) {
   return (
-    <td className={`p-3 break-words ${width} ${className}`} style={style}>
+    <td className={`p-3 break-words border-b border-border ${width} ${className}`} style={style}>
       {children}
     </td>
   )

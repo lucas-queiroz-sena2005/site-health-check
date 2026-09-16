@@ -21,7 +21,7 @@ export function TableRow({ id, depth = 0, isLeaf = false, rawPayload, children, 
   return (
     <>
       <tr 
-        className="group border-b border-border hover:bg-muted/50 cursor-pointer transition-colors"
+        className="group hover:bg-muted/50 cursor-pointer transition-colors"
         onClick={() => isLeaf ? toggleDetail(id) : toggleRow(id)}
       >
         {/* Clone the first TableCell to inject indentation and arrow icon */}
@@ -29,9 +29,10 @@ export function TableRow({ id, depth = 0, isLeaf = false, rawPayload, children, 
           if (!React.isValidElement(child)) return child
           
           if (index === 0) {
-            const element = child as React.ReactElement<{ style?: React.CSSProperties; children?: React.ReactNode }>
+            const element = child as React.ReactElement<{ style?: React.CSSProperties; children?: React.ReactNode; className?: string }>
             return React.cloneElement(element, {
-              style: indentStyle,
+              style: { ...element.props.style, ...indentStyle },
+              className: `${element.props.className || ''} sticky left-0 bg-background z-10 group-hover:bg-muted/50 transition-colors`,
               children: (
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 flex-shrink-0 flex items-center justify-center font-mono font-bold text-border">

@@ -202,7 +202,7 @@ export function HostTablePage() {
   const isAnyFilterActive = Object.keys(explicitFilters).some(key => key !== 'global-root-id' && explicitFilters[key] !== 'all') || explicitFilters['global-root-id'] !== 'all'
 
   return (
-    <div className="w-full flex-1 flex flex-col h-[calc(100vh-theme(spacing.14))] overflow-hidden bg-background">
+    <div className="fixed inset-0 w-full flex flex-col bg-background">
       <div className="px-6 py-4 shrink-0 border-b border-border bg-muted/30 flex justify-between items-center">
         <div>
           <h1 className="text-xl font-bold tracking-tight">Topology Scan Results</h1>
@@ -211,40 +211,44 @@ export function HostTablePage() {
             {data?.metadata?.total_targets_scanned || 0} IPs scanned • {data?.metadata?.scan_duration_seconds || 0}s duration
           </p>
         </div>
-        
-        <div className="flex items-center gap-4">
-          {/* Top Bar Global Filters directly control the invisible root node's filter state */}
-          <div className="flex bg-muted/30 border border-border p-1 rounded-lg shadow-sm font-mono text-sm">
-            {(['all', 'active', 'failed', 'ghost', 'void']).map((f) => (
-              <button
-                key={f}
-                onClick={() => handleGlobalFilterClick(f)}
-                className={`px-4 py-1.5 rounded-md capitalize transition-all ${
-                  (explicitFilters['global-root-id'] || 'all') === f
-                    ? 'bg-background shadow-sm font-bold text-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+      </div>
+      
+      <div className="px-6 py-2 shrink-0 bg-muted/10 flex items-center justify-end gap-3">
+        <button 
+          title="Clear All Filters"
+          disabled={!isAnyFilterActive}
+          onClick={() => {
+            setExplicitFilters({ 'global-root-id': 'all' })
+            setExpandedRowIds(new Set())
+          }}
+          className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
+            isAnyFilterActive
+              ? 'bg-muted border border-border text-foreground hover:bg-background shadow-sm cursor-pointer'
+              : 'bg-transparent border border-transparent text-muted-foreground/40 cursor-not-allowed'
+          }`}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
 
-          {isAnyFilterActive && (
-            <button 
-              onClick={() => {
-                setExplicitFilters({ 'global-root-id': 'all' })
-                setExpandedRowIds(new Set())
-              }}
-              className="text-xs bg-muted border border-border px-3 py-1 rounded font-mono font-bold hover:bg-background transition-colors"
+        <span className="text-sm font-semibold text-muted-foreground pl-1">Filters:</span>
+        <div className="flex bg-muted/30 border border-border p-1 rounded-lg shadow-sm font-mono text-sm">
+          {(['all', 'active', 'failed', 'ghost', 'void']).map((f) => (
+            <button
+              key={f}
+              onClick={() => handleGlobalFilterClick(f)}
+              className={`px-4 py-1.5 rounded-md capitalize transition-all ${
+                (explicitFilters['global-root-id'] || 'all') === f
+                  ? 'bg-background shadow-sm font-bold text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
             >
-              ✕ Clear All Filters
+              {f}
             </button>
-          )}
+          ))}
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         <HierarchicalTable expandedRowIds={expandedRowIds} onToggleRow={handleToggleRow}>
           {filteredTreeData.map(node => (
             <RenderTreeNode 
