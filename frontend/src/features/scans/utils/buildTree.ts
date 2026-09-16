@@ -39,8 +39,9 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
       }
     } else if (child.type === 'Port') {
       // Host level counting Ports
-      if (child.status === 'success') activeCount++
-      else if (child.status === 'error' || child.status === 'warning') failedCount++
+      const isOpen = child.rawPayload?.tcp_status === 'open' || child.status === 'success'
+      if (isOpen) activeCount++
+      if (child.status === 'error' || child.status === 'warning' || (!isOpen && child.status !== 'neutral' && child.status !== 'empty')) failedCount++
     }
   })
 
