@@ -1,13 +1,17 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from 'react'
 
-export interface TableContextType {
+export interface TableStateContextType {
   expandedRowIds: Set<string>
-  toggleRow: (id: string) => void
   expandedDetailIds: Set<string>
+}
+
+export interface TableDispatchContextType {
+  toggleRow: (id: string) => void
   toggleDetail: (id: string) => void
 }
 
-const TableContext = createContext<TableContextType | undefined>(undefined)
+const TableStateContext = createContext<TableStateContextType | undefined>(undefined)
+const TableDispatchContext = createContext<TableDispatchContextType | undefined>(undefined)
 
 export interface TableProviderProps {
   children: ReactNode
@@ -21,16 +25,16 @@ export function TableProvider({ children, expandedRowIds: controlledExpanded, on
   
   const expandedRowIds = controlledExpanded !== undefined ? controlledExpanded : internalExpanded
 
-  const toggleDetail = (id: string) => {
+  const toggleDetail = useCallback((id: string) => {
     setExpandedDetailIds(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
-  }
+  }, [])
 
-  const toggleRow = (id: string) => {
+  const toggleRow = useCallback((id: string) => {
     if (controlledToggle) {
       controlledToggle(id)
       return
@@ -50,19 +54,39 @@ export function TableProvider({ children, expandedRowIds: controlledExpanded, on
       }
       return next
     })
-  }
+  }, [controlledToggle])
+
+  const stateValue = useMemo(() => ({
+    expandedRowIds,
+    expandedDetailIds
+  }), [expandedRowIds, expandedDetailIds])
+
+  const dispatchValue = useMemo(() => ({
+    toggleRow,
+    toggleDetail
+  }), [toggleRow, toggleDetail])
 
   return (
-    <TableContext.Provider value={{ expandedRowIds, toggleRow, expandedDetailIds, toggleDetail }}>
-      {children}
-    </TableContext.Provider>
+    <TableStateContext.Provider value={stateValue}>
+      <TableDispatchContext.Provider value={dispatchValue}>
+        {children}
+      </TableDispatchContext.Provider>
+    </TableStateContext.Provider>
   )
 }
 
-export function useTableContext() {
-  const context = useContext(TableContext)
+export function useTableStateContext() {
+  const context = useContext(TableStateContext)
   if (!context) {
-    throw new Error('useTableContext must be used within a TableProvider')
+    throw new Error('useTableStateContext must be used within a TableProvider')
+  }
+  return context
+}
+
+export function useTableDispatchContext() {
+  const context = useContext(TableDispatchContext)
+  if (!context) {
+    throw new Error('useTableDispatchContext must be used within a TableProvider')
   }
   return context
 }

@@ -53,6 +53,8 @@ export function HostTablePage() {
   }, [rawTree, explicitFilters])
 
   const handleToggleRow = useCallback((id: string) => {
+    const isCollapsing = expandedRowIds.has(id)
+    
     let descendantsToClear: string[] = []
     const findDescendants = (nodes: TreeNode[], isUnder: boolean) => {
       for (const node of nodes) {
@@ -68,32 +70,31 @@ export function HostTablePage() {
     findDescendants(rawTree, false)
 
     setExpandedRowIds(prev => {
-      const isCollapsing = prev.has(id)
       const next = new Set(prev)
       
       if (isCollapsing) {
         next.delete(id)
         descendantsToClear.forEach(dId => next.delete(dId))
-        
-        setTimeout(() => {
-          setExplicitFilters(filtersPrev => {
-            let changed = false
-            const nextFilters = { ...filtersPrev }
-            descendantsToClear.forEach(dId => {
-              if (nextFilters[dId]) {
-                delete nextFilters[dId]
-                changed = true
-              }
-            })
-            return changed ? nextFilters : filtersPrev
-          })
-        }, 0)
       } else {
         next.add(id)
       }
       return next
     })
-  }, [rawTree])
+
+    if (isCollapsing && descendantsToClear.length > 0) {
+      setExplicitFilters(filtersPrev => {
+        let changed = false
+        const nextFilters = { ...filtersPrev }
+        descendantsToClear.forEach(dId => {
+          if (nextFilters[dId]) {
+            delete nextFilters[dId]
+            changed = true
+          }
+        })
+        return changed ? nextFilters : filtersPrev
+      })
+    }
+  }, [rawTree, expandedRowIds])
 
   const handleGlobalFilterClick = useCallback((f: string) => {
     const newFilters = { ...explicitFilters, 'global-root-id': f }

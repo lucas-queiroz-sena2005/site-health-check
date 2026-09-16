@@ -1,5 +1,5 @@
 import { HierarchicalTable } from './index'
-import { useTableContext } from './TableContext'
+import { useTableDispatchContext } from './TableContext'
 import { MarqueeText } from './MarqueeText'
 import type { TreeNode, TreeNodeStatus } from '../../types'
 
@@ -29,7 +29,7 @@ const RenderTreeNodeInner = ({
   onStatusClick?: (nodeId: string, status: string) => void
   onClearFilter?: (nodeId: string) => void
 }) => {
-  const { toggleDetail } = useTableContext()
+  const { toggleDetail } = useTableDispatchContext()
   // Reactive Visual Compression logic
   let displayLabel = node.label
   let displayType = node.type

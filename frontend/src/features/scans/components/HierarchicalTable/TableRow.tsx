@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react'
-import { useTableContext } from './TableContext'
+import { useTableStateContext, useTableDispatchContext } from './TableContext'
 import { DetailsPanel } from './DetailsPanel'
 
 export interface TableRowProps {
@@ -12,7 +12,8 @@ export interface TableRowProps {
 }
 
 export function TableRow({ id, depth = 0, isLeaf = false, rawPayload, children, subRows }: TableRowProps) {
-  const { expandedRowIds, toggleRow, expandedDetailIds, toggleDetail } = useTableContext()
+  const { expandedRowIds, expandedDetailIds } = useTableStateContext()
+  const { toggleRow, toggleDetail } = useTableDispatchContext()
   const isExpanded = expandedRowIds.has(id)
   
   // Base padding plus depth-based indentation (e.g. 1.5rem per depth level)
