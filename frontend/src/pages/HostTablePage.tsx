@@ -2,7 +2,6 @@ import { useMemo, useState, useCallback } from 'react'
 import { 
   useScanResults, 
   HierarchicalTable, 
-  compressTreeNodes,
   buildTreeData,
   RenderTreeNode
 } from '@/features/scans'
@@ -49,8 +48,8 @@ export function HostTablePage() {
   const filteredTreeData = useMemo(() => {
     // The rawTree is an array containing [globalRootNode]
     const filtered = filterTree(rawTree, explicitFilters)
-    // We only want to render the children of the global root, so we map over its children
-    return filtered[0]?.children.map(compressTreeNodes) || []
+    // We only want to render the children of the global root
+    return filtered[0]?.children || []
   }, [rawTree, explicitFilters])
 
   const handleToggleRow = useCallback((id: string) => {
@@ -102,7 +101,7 @@ export function HostTablePage() {
     
     if (f !== 'all') {
       const tempFiltered = filterTree(rawTree, newFilters)
-      const compressed = tempFiltered[0]?.children.map(compressTreeNodes) || []
+      const visibleNodes = tempFiltered[0]?.children || []
       
       const allIds = new Set<string>()
       const collectIds = (nodes: TreeNode[]) => {
@@ -111,7 +110,7 @@ export function HostTablePage() {
           collectIds(n.children)
         }
       }
-      collectIds(compressed)
+      collectIds(visibleNodes)
       setExpandedRowIds(allIds)
     } else {
       setExpandedRowIds(new Set())

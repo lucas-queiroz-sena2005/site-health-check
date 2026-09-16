@@ -213,5 +213,129 @@
         "tcp_latency_ms": 10
       }
     }
+  },
+  "8.8.8.8": {
+  "metadata": {
+    "resolved_from": null,
+    "discovered_from": []
+  },
+  "ports": {
+    "80": {
+      "tcp_status": "closed",
+      "tcp_latency_ms": null,
+      "tls_certificate": null,
+      "http_routing_checks": {
+        "8.8.8.8": {
+          "status_code": null,
+          "http_latency_ms": null,
+          "path_checked": "/",
+          "redirects_to_url": null,
+          "server_header": null,
+          "notes": "HTTP Timeout"
+        }
+      }
+    },
+    "88": {
+      "tcp_status": "closed",
+      "tcp_latency_ms": null,
+      "tls_certificate": null,
+      "http_routing_checks": {
+        "8.8.8.8": {
+          "status_code": null,
+          "http_latency_ms": null,
+          "path_checked": "/",
+          "redirects_to_url": null,
+          "server_header": null,
+          "notes": "HTTP Timeout"
+        }
+      }
+    },
+    "443": {
+      "tcp_status": "open",
+      "tcp_latency_ms": 73,
+      "tls_certificate": {
+        "valid": true,
+        "expires_in_days": 46,
+        "issuer": "CN=WR2,O=Google Trust Services,C=US",
+        "protocol_version": "TLSv1.3",
+        "domains_discovered_sans": [
+          "dns.google",
+          "dns.google.com",
+          "*.dns.google.com",
+          "8888.google",
+          "dns64.dns.google"
+        ]
+      },
+      "http_routing_checks": {
+        "8.8.8.8": {
+          "status_code": 200,
+          "http_latency_ms": 137,
+          "path_checked": "/",
+          "redirects_to_url": null,
+          "server_header": "scaffolding on HTTPServer2",
+          "notes": null
+        },
+        "dns.google": {
+          "status_code": 200,
+          "http_latency_ms": 66,
+          "path_checked": "/",
+          "redirects_to_url": null,
+          "server_header": "scaffolding on HTTPServer2",
+          "notes": null
+        },
+        "8888.google": {
+          "status_code": 200,
+          "http_latency_ms": 191,
+          "path_checked": "/",
+          "redirects_to_url": null,
+          "server_header": "scaffolding on HTTPServer2",
+          "notes": null
+        }
+      }
+    }
   }
+},
+"8.8.4.4": {
+  "metadata": {
+    "resolved_from": "dns.google.com",
+    "discovered_from": []
+  },
+  "ports": {
+    "443": {
+      "tcp_status": "open",
+      "tcp_latency_ms": 74,
+      "tls_certificate": {
+        "valid": true,
+        "expires_in_days": 46,
+        "issuer": "CN=WR2,O=Google Trust Services,C=US",
+        "protocol_version": "TLSv1.3",
+        "domains_discovered_sans": [
+          "dns.google",
+          "dns.google.com",
+          "*.dns.google.com",
+          "8888.google",
+          "dns64.dns.google"
+        ]
+      },
+      "http_routing_checks": {
+        "dns.google.com": {
+          "status_code": 200,
+          "http_latency_ms": 872,
+          "path_checked": "/",
+          "redirects_to_url": null,
+          "server_header": "scaffolding on HTTPServer2",
+          "notes": null
+        },
+        "dns.google": {
+          "status_code": 200,
+          "http_latency_ms": 74,
+          "path_checked": "/",
+          "redirects_to_url": null,
+          "server_header": "scaffolding on HTTPServer2",
+          "notes": null
+        }
+      }
+    }
+  }
+}
 }

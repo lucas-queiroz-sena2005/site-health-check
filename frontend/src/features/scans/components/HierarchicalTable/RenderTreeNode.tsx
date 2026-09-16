@@ -29,16 +29,48 @@ const RenderTreeNodeInner = ({
   onClearFilter?: (nodeId: string) => void
 }) => {
   const { toggleDetail } = useTableContext()
-  const isLeaf = !node.children || node.children.length === 0
+  // Reactive Visual Compression logic
+  let displayLabel = node.label
+  let displayType = node.type
+  let displayLatency = node.latencyMs
+  let displayTls = node.tlsInfo
+  let displayPayload = node.rawPayload ? { ...node.rawPayload } : undefined
+  let curr = node
+  let isCompressed = false
+  
+  while (curr.children?.length === 1 && !curr.children[0].isExplicitFilter && curr.type !== 'GlobalRoot') {
+    const child = curr.children[0]
+    
+    // Deduplicate exact matches or prefixed matches
+    if (displayLabel !== child.label && !child.label.startsWith(`${displayLabel} ➔`) && !child.label.startsWith(`${displayLabel} `)) {
+      displayLabel = `${displayLabel} ➔ ${child.label}`
+    } else {
+      displayLabel = child.label // if it matches or prefixes, we just adopt the child's label
+    }
+    
+    displayType = `${displayType} / ${child.type}`
+    displayLatency = child.latencyMs !== undefined ? child.latencyMs : displayLatency
+    displayTls = child.tlsInfo || displayTls
+    
+    if (child.rawPayload) {
+      displayPayload = displayPayload || {}
+      displayPayload[`${child.type.toLowerCase()}_details`] = child.rawPayload
+    }
+    
+    curr = child
+    isCompressed = true
+  }
+
+  const isLeaf = !curr.children || curr.children.length === 0
 
   return (
     <HierarchicalTable.Row 
       id={node.id} 
       depth={depth} 
       isLeaf={isLeaf} 
-      rawPayload={node.rawPayload}
+      rawPayload={displayPayload}
       subRows={
-        !isLeaf ? node.children.map(child => (
+        !isLeaf ? curr.children.map(child => (
           <RenderTreeNode 
             key={child.id} 
             node={child} 
@@ -51,14 +83,14 @@ const RenderTreeNodeInner = ({
     >
       <HierarchicalTable.Cell width="w-[35%]">
         <div className="flex flex-col overflow-hidden">
-          <span className="truncate" title={node.label}>{node.label}</span>
-          {node.appliedFilter && node.appliedFilter !== 'all' && (node.isExplicitFilter || node.children.length > 0 || node.id.includes('->')) && (
+          <span className="truncate" title={displayLabel}>{displayLabel}</span>
+          {node.appliedFilter && node.appliedFilter !== 'all' && (node.isExplicitFilter || curr.children.length > 0 || isCompressed) && (
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[9px] font-mono text-blue-500 uppercase font-bold">
                 ↳ Filter: {node.appliedFilter}
               </span>
               <button
-                onClick={(e) => { e.stopPropagation(); onClearFilter?.(node.originalNodeId || node.id); }}
+                onClick={(e) => { e.stopPropagation(); onClearFilter?.(node.id); }}
                 className="text-[9px] font-mono text-muted-foreground hover:text-foreground underline decoration-muted-foreground/30 hover:decoration-foreground/50 transition-colors"
               >
                 Clear
@@ -68,10 +100,10 @@ const RenderTreeNodeInner = ({
         </div>
       </HierarchicalTable.Cell>
       <HierarchicalTable.Cell width="w-[15%]">
-        <span className="bg-muted px-2 py-1 rounded text-[10px] uppercase font-bold text-muted-foreground">{node.type}</span>
+        <span className="bg-muted px-2 py-1 rounded text-[10px] uppercase font-bold text-muted-foreground">{displayType}</span>
       </HierarchicalTable.Cell>
-      <HierarchicalTable.Cell width="w-[15%]">{node.tlsInfo || '-'}</HierarchicalTable.Cell>
-      <HierarchicalTable.Cell width="w-[15%]">{node.latencyMs ? `${node.latencyMs}ms` : '-'}</HierarchicalTable.Cell>
+      <HierarchicalTable.Cell width="w-[15%]">{displayTls || '-'}</HierarchicalTable.Cell>
+      <HierarchicalTable.Cell width="w-[15%]">{displayLatency ? `${displayLatency}ms` : '-'}</HierarchicalTable.Cell>
       <HierarchicalTable.Cell width="w-[20%]">
         <div className="flex flex-wrap gap-1.5 items-center">
           {node.status && node.status !== 'empty' && node.status !== 'neutral' && !node.nodeStats && (
@@ -83,7 +115,7 @@ const RenderTreeNodeInner = ({
             <>
               {(node.nodeStats.active || 0) > 0 && (
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.originalNodeId || node.id, 'active'); }}
+                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.id, 'active'); }}
                   className="bg-green-500/15 text-green-500 border border-green-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-green-500 transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <span className="w-1.5 h-1.5 rounded-sm bg-green-500" /> {node.nodeStats.active} Active
@@ -91,7 +123,7 @@ const RenderTreeNodeInner = ({
               )}
               {(node.nodeStats.failed || 0) > 0 && (
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.originalNodeId || node.id, 'failed'); }}
+                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.id, 'failed'); }}
                   className="bg-red-500/15 text-red-500 border border-red-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-red-500 transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <span className="w-1.5 h-1.5 rounded-sm bg-red-500" /> {node.nodeStats.failed} Failed
@@ -99,7 +131,7 @@ const RenderTreeNodeInner = ({
               )}
               {(node.nodeStats.ghost || 0) > 0 && (
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.originalNodeId || node.id, 'ghost'); }}
+                  onClick={(e) => { e.stopPropagation(); onStatusClick?.(node.id, 'ghost'); }}
                   className="bg-red-500/15 text-red-500 border border-red-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase hover:border-red-500 transition-colors flex items-center gap-1.5 shrink-0"
                 >
                   <span className="w-1.5 h-1.5 rounded-sm bg-red-500" /> {node.nodeStats.ghost} Ghost
