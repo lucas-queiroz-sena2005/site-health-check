@@ -7,7 +7,13 @@ import {
 } from '@/features/scans'
 import type { TreeNode } from '@/features/scans/types'
 
-function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string[]>, parentFilter: string[] = ['all']): TreeNode[] {
+function filterTree(
+  nodes: TreeNode[], 
+  explicitFilters: Record<string, string[]>, 
+  parentFilter: string[] = ['all'],
+  globalSearch: string = '',
+  parentMatchesSearch: boolean = false
+): TreeNode[] {
   return nodes.map(node => {
     // A child doesn't merge with parent. If explicit exists, it overrides completely.
     const filterForChildren = explicitFilters[node.id] || parentFilter
@@ -26,9 +32,18 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string[]>
       }
     }
 
-    const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren)
+    let matchesSearch = parentMatchesSearch
+    if (!matchesSearch && globalSearch) {
+      const searchLower = globalSearch.toLowerCase()
+      const searchStr = `${node.label} ${node.tlsInfo || ''} ${node.rawPayload ? JSON.stringify(node.rawPayload) : ''}`.toLowerCase()
+      matchesSearch = searchStr.includes(searchLower)
+    } else if (!globalSearch) {
+      matchesSearch = true
+    }
+
+    const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren, globalSearch, matchesSearch)
     
-    if (matchesStatus || filteredChildren.length > 0) {
+    if ((matchesStatus && matchesSearch) || filteredChildren.length > 0) {
       const hasExplicit = explicitFilters[node.id] !== undefined
       // check if redundant by comparing arrays
       const isRedundant = hasExplicit && JSON.stringify(explicitFilters[node.id].sort()) === JSON.stringify(parentFilter.sort())
@@ -38,12 +53,46 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string[]>
   }).filter((n) => n !== null) as TreeNode[]
 }
 
+function sortTree(nodes: TreeNode[], sortBy: string | null, sortDir: 'asc' | 'desc'): TreeNode[] {
+  if (!sortBy) return nodes
+  
+  return [...nodes].sort((a, b) => {
+    let valA: any = null
+    let valB: any = null
+    
+    if (sortBy === 'label') {
+      valA = a.label
+      valB = b.label
+    } else if (sortBy === 'latency') {
+      valA = a.latencyMs ?? (sortDir === 'asc' ? Infinity : -1)
+      valB = b.latencyMs ?? (sortDir === 'asc' ? Infinity : -1)
+    } else if (sortBy === 'status') {
+      const STATUS_PRIORITY: Record<string, number> = { error: 5, warning: 4, success: 3, ghost: 2, neutral: 1, empty: 0 }
+      valA = STATUS_PRIORITY[a.status || 'empty'] || 0
+      valB = STATUS_PRIORITY[b.status || 'empty'] || 0
+    } else if (sortBy === 'tls') {
+      valA = a.rawPayload?.tls_certificate?.expires_in_days ?? (sortDir === 'asc' ? 999999 : -1)
+      valB = b.rawPayload?.tls_certificate?.expires_in_days ?? (sortDir === 'asc' ? 999999 : -1)
+    }
+
+    if (valA < valB) return sortDir === 'asc' ? -1 : 1
+    if (valA > valB) return sortDir === 'asc' ? 1 : -1
+    return 0
+  }).map(node => ({
+    ...node,
+    children: sortTree(node.children, sortBy, sortDir)
+  }))
+}
+
 export function HostTablePage() {
   const { data, isLoading, error } = useScanResults()
   const [explicitFilters, setExplicitFilters] = useState<Record<string, string[]>>({
     'global-root-id': ['all']
   })
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set())
+  const [globalSearch, setGlobalSearch] = useState<string>('')
+  const [sortBy, setSortBy] = useState<'label' | 'latency' | 'status' | 'tls' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Build tree
   const rawTree = useMemo(() => {
@@ -52,11 +101,13 @@ export function HostTablePage() {
   }, [data])
 
   const filteredTreeData = useMemo(() => {
-    // The rawTree is an array containing [globalRootNode]
-    const filtered = filterTree(rawTree, explicitFilters)
-    // We only want to render the children of the global root
-    return filtered[0]?.children || []
-  }, [rawTree, explicitFilters])
+    const filtered = filterTree(rawTree, explicitFilters, ['all'], globalSearch)
+    let visibleNodes = filtered[0]?.children || []
+    if (sortBy) {
+      visibleNodes = sortTree(visibleNodes, sortBy, sortDir)
+    }
+    return visibleNodes
+  }, [rawTree, explicitFilters, globalSearch, sortBy, sortDir])
 
   const handleToggleRow = useCallback((id: string) => {
     const isCollapsing = expandedRowIds.has(id)
@@ -131,7 +182,7 @@ export function HostTablePage() {
       if (!newGlobal.includes('all')) {
         setTimeout(() => {
           setExpandedRowIds(prevIds => {
-            const tempFiltered = filterTree(rawTree, newFilters)
+            const tempFiltered = filterTree(rawTree, newFilters, ['all'], globalSearch)
             const visibleNodes = tempFiltered[0]?.children || []
             const next = new Set<string>(prevIds)
             const collectIds = (nodes: TreeNode[]) => {
@@ -260,7 +311,41 @@ export function HostTablePage() {
         </div>
       </div>
       
-      <div className="px-6 py-2 shrink-0 bg-muted/10 flex items-center justify-end gap-3">
+      <div className="px-6 py-2 shrink-0 bg-muted/10 flex items-center justify-end gap-3 flex-wrap">
+        <div className="flex-1 flex items-center gap-2 min-w-[200px] max-w-sm">
+          <input 
+            type="text"
+            placeholder="Search IP, Domain, Headers..."
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            className="w-full bg-background border border-border px-3 py-1.5 rounded-md text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+
+        <div className="flex items-center gap-1 mr-2">
+          <span className="text-sm font-semibold text-muted-foreground mr-1">Sort:</span>
+          <select 
+            value={sortBy || ''} 
+            onChange={(e) => setSortBy(e.target.value ? (e.target.value as any) : null)}
+            className="bg-background border border-border px-2 py-1.5 rounded-md text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="">Default</option>
+            <option value="label">Label</option>
+            <option value="latency">Latency</option>
+            <option value="status">Status</option>
+            <option value="tls">TLS Exp</option>
+          </select>
+          {sortBy && (
+            <button
+              onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="px-2 py-1.5 border border-border rounded-md bg-background hover:bg-muted text-sm shadow-sm font-mono w-8"
+              title="Toggle Sort Direction"
+            >
+              {sortDir === 'asc' ? '↑' : '↓'}
+            </button>
+          )}
+        </div>
+
         <button 
           title="Clear All Filters"
           disabled={!isAnyFilterActive}

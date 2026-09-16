@@ -12,7 +12,13 @@ const mockHosts = Object.entries(rawMap).map(([ip, data]: [string, any]) => ({
 
 const tree = buildTreeData(mockHosts);
 
-function filterTree(nodes: any[], explicitFilters: Record<string, string[]>, parentFilter: string[] = ['all']): any[] {
+function filterTree(
+  nodes: any[], 
+  explicitFilters: Record<string, string[]>, 
+  parentFilter: string[] = ['all'],
+  globalSearch: string = '',
+  parentMatchesSearch: boolean = false
+): any[] {
   return nodes.map(node => {
     const filterForChildren = explicitFilters[node.id] || parentFilter
     let matchesStatus = false
@@ -30,9 +36,18 @@ function filterTree(nodes: any[], explicitFilters: Record<string, string[]>, par
       }
     }
 
-    const filteredChildren = filterTree(node.children || [], explicitFilters, filterForChildren)
+    let matchesSearch = parentMatchesSearch
+    if (!matchesSearch && globalSearch) {
+      const searchLower = globalSearch.toLowerCase()
+      const searchStr = `${node.label} ${node.tlsInfo || ''} ${node.rawPayload ? JSON.stringify(node.rawPayload) : ''}`.toLowerCase()
+      matchesSearch = searchStr.includes(searchLower)
+    } else if (!globalSearch) {
+      matchesSearch = true
+    }
+
+    const filteredChildren = filterTree(node.children || [], explicitFilters, filterForChildren, globalSearch, matchesSearch)
     
-    if (matchesStatus || filteredChildren.length > 0) {
+    if ((matchesStatus && matchesSearch) || filteredChildren.length > 0) {
       const hasExplicit = explicitFilters[node.id] !== undefined
       const isRedundant = hasExplicit && JSON.stringify(explicitFilters[node.id].sort()) === JSON.stringify(parentFilter.sort())
       return { ...node, children: filteredChildren, appliedFilter: filterForChildren, isExplicitFilter: hasExplicit && !isRedundant }
@@ -42,7 +57,7 @@ function filterTree(nodes: any[], explicitFilters: Record<string, string[]>, par
 }
 
 // Global root is tree[0]
-const ghostFiltered = filterTree(tree, { [tree[0].id]: ['ghost'] });
+const ghostFiltered = filterTree(tree, { [tree[0].id]: ['ghost'] }, ['all'], '');
 
 function printTree(nodes: any[], indent = '') {
   for (const n of nodes) {
