@@ -9,16 +9,15 @@ export function compressTreeNodes(node: TreeNode): TreeNode {
   // Recursively compress children first
   const compressedChildren = node.children.map(compressTreeNodes)
 
-  // Enforce ADR 0007 Rule 3: Root structural groupings are strictly prohibited from path compression
-  const isProtectedStructure = ['CIDR', 'Pool', 'Classification', 'GlobalRoot'].includes(node.type)
+  // ADR 0011: Strict structural path compression protection is deprecated.
+  // The Filter Immunity mechanic (!node.isExplicitFilter) handles protection now.
+  // We still protect GlobalRoot so the invisible top-level container doesn't compress.
+  const isProtectedStructure = node.type === 'GlobalRoot'
 
   // If exactly 1 child and neither has an explicit filter, merge this node with its child
   if (!isProtectedStructure && compressedChildren.length === 1 && !node.isExplicitFilter && !compressedChildren[0].isExplicitFilter) {
     const singleChild = compressedChildren[0]
     
-    // If we are merging a Port with an HTTP/TLS leaf, the leaf label is usually 
-    // a redundant IP address. In this case, we just keep the parent's label (e.g. "80/tcp")
-    // For other merges (like Target ➔ Host), we concatenate them.
     const newLabel = `${node.label} ➔ ${singleChild.label}`
     
     return {

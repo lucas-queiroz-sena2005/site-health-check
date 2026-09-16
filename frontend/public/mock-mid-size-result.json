@@ -181,5 +181,37 @@
   },
   "Void Space (250 IPs)": {
     "metadata": { "resolved_from": "192.168.0.0/24" }
+  },
+  "10.0.0.99": {
+    "metadata": { "resolved_from": "rogue-server.local", "discovered_from": ["untrusted-san.org"] },
+    "ports": {
+      "443": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 5,
+        "tls_certificate": {
+          "valid": false,
+          "expires_in_days": -100,
+          "issuer": "CN=RogueCA",
+          "protocol_version": "TLSv1.0",
+          "domains_discovered_sans": ["malicious-domain.com"]
+        },
+        "http_routing_checks": {
+          "malicious-domain.com": {
+            "status_code": 200,
+            "http_latency_ms": 30,
+            "path_checked": "/"
+          }
+        }
+      }
+    }
+  },
+  "8.8.8.8": {
+    "metadata": { "resolved_from": "8.8.8.8" },
+    "ports": {
+      "53": {
+        "tcp_status": "open",
+        "tcp_latency_ms": 10
+      }
+    }
   }
 }

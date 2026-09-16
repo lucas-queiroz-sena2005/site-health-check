@@ -25,7 +25,9 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string>, 
     const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren)
     
     if (matchesStatus || filteredChildren.length > 0) {
-      return { ...node, children: filteredChildren, appliedFilter: filterForChildren, isExplicitFilter: !!explicitFilters[node.id] } as TreeNode
+      const hasExplicit = explicitFilters[node.id] !== undefined
+      const isRedundant = hasExplicit && explicitFilters[node.id] === parentFilter
+      return { ...node, children: filteredChildren, appliedFilter: filterForChildren, isExplicitFilter: hasExplicit && !isRedundant } as TreeNode
     }
     return null
   }).filter((n) => n !== null) as TreeNode[]
@@ -132,7 +134,12 @@ export function HostTablePage() {
     findDescendants(rawTree, false)
 
     setExplicitFilters(prev => {
-      const next = { ...prev, [nodeId]: st }
+      const next = { ...prev }
+      if (next[nodeId] === st) {
+        delete next[nodeId]
+      } else {
+        next[nodeId] = st
+      }
       descendantsToClear.forEach(dId => delete next[dId])
       return next
     })

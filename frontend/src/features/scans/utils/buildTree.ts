@@ -30,7 +30,7 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
     // Aggregate stats from children
     if (child.type === 'Void') {
       voidCount += (child.nodeStats?.void || 1)
-    } else if (child.type === 'Host' || child.type === 'CIDR') {
+    } else if (child.type === 'Host' || child.type === 'CIDR' || child.type === 'Target' || child.type === 'CIDR Target') {
       // Parent level counting children stats
       if (child.nodeStats) {
         if (child.nodeStats.active > 0) activeCount += child.nodeStats.active
@@ -46,7 +46,7 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
 
   node.status = worstStatus
   
-  if (node.type === 'Host' || node.type === 'CIDR' || node.type === 'GlobalRoot') {
+  if (node.type === 'Host' || node.type === 'CIDR' || node.type === 'GlobalRoot' || node.type === 'Target' || node.type === 'CIDR Target') {
     if (node.type === 'Host' && !node.label.startsWith('Void')) {
       const hasOpenPort = node.children.some(child => child.rawPayload?.tcp_status === 'open')
       if (!hasOpenPort) {
@@ -169,15 +169,22 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
       hostNodes.push(hostNode)
     })
 
-    const cidrNode: TreeNode = {
-      id: `cidr-${cidr}`,
-      type: 'CIDR',
-      label: cidr,
-      status: 'neutral',
-      children: hostNodes,
-      rawPayload: { cidr, total_hosts: groupHosts.length }
+    const isCidr = cidr.includes('/')
+    
+    if (!isCidr && hostNodes.length === 1 && hostNodes[0].label === cidr) {
+      rootNodes.push(hostNodes[0])
+    } else {
+      const targetType = isCidr ? 'CIDR Target' : 'Target'
+      const targetNode: TreeNode = {
+        id: `target-${cidr}`,
+        type: targetType,
+        label: cidr,
+        status: 'neutral',
+        children: hostNodes,
+        rawPayload: { target: cidr, total_hosts: groupHosts.length }
+      }
+      rootNodes.push(targetNode)
     }
-    rootNodes.push(cidrNode)
   }
 
   // Process rogue hosts (no CIDR) directly into rootNodes
