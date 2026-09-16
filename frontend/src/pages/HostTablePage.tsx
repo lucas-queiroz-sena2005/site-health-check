@@ -15,8 +15,8 @@ function filterTree(nodes: TreeNode[], explicitFilters: Record<string, string>, 
     if (filterForChildren === 'all') {
       matchesStatus = true
     } else {
-      if (filterForChildren === 'active' && (node.status === 'success' || node.status === 'warning' || node.type === 'HTTP')) matchesStatus = true
-      if (filterForChildren === 'failed' && (node.status === 'error' || node.type === 'HTTP')) matchesStatus = true
+      if (filterForChildren === 'active' && (node.status === 'success' || node.status === 'warning' || (node.type === 'HTTP' && node.status === 'neutral'))) matchesStatus = true
+      if (filterForChildren === 'failed' && (node.status === 'error')) matchesStatus = true
       if (filterForChildren === 'ghost' && (node.status === 'ghost' || (node.nodeStats?.ghost || 0) > 0)) matchesStatus = true
       if (filterForChildren === 'void' && node.type === 'Void') matchesStatus = true
     }
