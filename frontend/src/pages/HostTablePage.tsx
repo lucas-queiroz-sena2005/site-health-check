@@ -97,7 +97,7 @@ export function HostTablePage() {
   }, [rawTree, expandedRowIds])
 
   const handleGlobalFilterClick = useCallback((f: string) => {
-    const newFilters = { ...explicitFilters, 'global-root-id': f }
+    const newFilters = { 'global-root-id': f }
     setExplicitFilters(newFilters)
     
     if (f !== 'all') {
