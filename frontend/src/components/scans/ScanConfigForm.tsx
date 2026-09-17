@@ -3,6 +3,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 export type FieldSchema = {
   name: string
@@ -33,22 +44,23 @@ export const DEFAULT_NEW_SCAN = {
   flags: { check_tcp: true, check_http: true, check_virtual_hosts: true, timeout: 10, workers: 100, delay: 0 },
 }
 
-export function ScanConfigForm({
-  initialData,
-  onSave,
-  onCancel,
-  mode = 'schedule',
+export function ScanConfigForm({ 
+  initialData = DEFAULT_NEW_SCAN, 
+  onSave, 
+  onCancel, 
+  mode = 'schedule', 
   isCreating = false,
-  isScanning = false,
-}: {
-  initialData: any
-  onSave: (data: any) => void
-  onCancel?: () => void
-  mode?: 'schedule' | 'live'
-  isCreating?: boolean
+  isScanning = false
+}: { 
+  initialData?: any, 
+  onSave: (data: any) => void, 
+  onCancel?: () => void,
+  mode?: 'schedule' | 'live',
+  isCreating?: boolean,
   isScanning?: boolean
 }) {
   const [form, setForm] = useState(initialData)
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
 
   const handleFlagChange = (name: string, value: any) => {
     setForm((prev: any) => ({
@@ -213,9 +225,35 @@ export function ScanConfigForm({
             Cancel
           </Button>
         )}
-        <Button size="lg" className="px-8 font-semibold shadow-sm" onClick={() => onSave(form)} disabled={isScanning}>
-          {mode === 'live' ? (isScanning ? 'Scanning...' : '▶ Launch Live Scan') : (isCreating ? 'Create Schedule' : 'Save Changes')}
-        </Button>
+        
+        {mode === 'live' ? (
+          <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+            <AlertDialogTrigger 
+              render={
+                <Button size="lg" className="px-8 font-semibold shadow-sm" disabled={isScanning}>
+                  {isScanning ? 'Scanning...' : '▶ Launch Live Scan'}
+                </Button>
+              } 
+            />
+            <AlertDialogContent className="border-2 border-border shadow-xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-xl font-extrabold tracking-tight text-primary">Confirm Live Scan</AlertDialogTitle>
+                <AlertDialogDescription className="text-sm mt-2 font-medium">
+                  You are about to launch an ad-hoc live scan against <strong className="text-foreground">{form?.targets?.length || 0}</strong> targets.
+                  This will consume engine workers and generate immediate network traffic. Proceed?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel className="border-2 font-bold">Cancel</AlertDialogCancel>
+                <AlertDialogAction className="font-bold" onClick={() => { setIsAlertOpen(false); onSave(form); }}>Launch Scan</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <Button size="lg" className="px-8 font-semibold shadow-sm" onClick={() => onSave(form)}>
+            {isCreating ? 'Create Schedule' : 'Save Changes'}
+          </Button>
+        )}
       </div>
     </div>
   )

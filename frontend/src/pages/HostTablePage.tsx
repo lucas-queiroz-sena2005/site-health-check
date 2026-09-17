@@ -3,7 +3,8 @@ import {
   useScanResults, 
   HierarchicalTable, 
   buildTreeData,
-  RenderTreeNode
+  RenderTreeNode,
+  RunHistorySheet
 } from '@/features/scans'
 import type { TreeNode } from '@/features/scans/types'
 
@@ -110,7 +111,25 @@ function sortTree(nodes: TreeNode[], sortBy: string | null, sortDir: 'asc' | 'de
 }
 
 export function HostTablePage() {
-  const { data, isLoading, error } = useScanResults()
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    return urlParams.get('run') || null
+  })
+
+  useEffect(() => {
+    if (!selectedRunId) {
+      // TODO: When backend DB is populated, use: fetch('/api/runs?limit=1')
+      // For now, default to the latest mock run to fulfill ADR-0013
+      const latestRunId = 'mock-run-0'
+      setSelectedRunId(latestRunId)
+      
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.set('run', latestRunId)
+      window.history.replaceState({}, '', newUrl)
+    }
+  }, [selectedRunId])
+
+  const { data, isLoading, error } = useScanResults(selectedRunId || undefined)
   const [explicitFilters, setExplicitFilters] = useState<Record<string, string[]>>({
     'global-root-id': ['all']
   })
@@ -142,7 +161,7 @@ export function HostTablePage() {
           const id = data.id
           setSavedViews(prev => {
             if (!prev.find(v => v.id === id)) {
-               return [...prev, { id, name: `🔗 ${data.name}`, search: data.search || '', statuses: data.statuses || ['all'], tableSortBy: data.table_sort_by || null, tableSortDir: data.table_sort_dir || 'asc' }]
+               return [...prev, { id, name: data.name, search: data.search || '', statuses: data.statuses || ['all'], tableSortBy: data.table_sort_by || null, tableSortDir: data.table_sort_dir || 'asc' }]
             }
             return prev
           })
@@ -457,10 +476,25 @@ export function HostTablePage() {
     <div className="w-full flex-1 flex flex-col bg-background">
       <div className="px-6 py-4 shrink-0 border-b border-border bg-muted/30 flex justify-between items-center">
         <div>
-          <p className="text-muted-foreground text-sm font-mono">
+          <p className="text-muted-foreground text-sm font-mono font-semibold">
             {/* @ts-ignore */}
-            {data?.metadata?.total_targets_scanned || 0} IPs scanned • {data?.metadata?.scan_duration_seconds || 0}s duration
+            <span className="text-foreground">{data?.metadata?.total_targets_scanned || 0}</span> IPs scanned • <span className="text-foreground">{data?.metadata?.scan_duration_seconds || 0}s</span> duration
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <RunHistorySheet 
+            selectedRunId={selectedRunId} 
+            onSelectRun={(id) => {
+              setSelectedRunId(id)
+              const newUrl = new URL(window.location.href)
+              if (id) {
+                newUrl.searchParams.set('run', id)
+              } else {
+                newUrl.searchParams.delete('run')
+              }
+              window.history.pushState({}, '', newUrl)
+            }} 
+          />
         </div>
       </div>
       

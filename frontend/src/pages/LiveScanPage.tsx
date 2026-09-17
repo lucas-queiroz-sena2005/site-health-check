@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ScanConfigForm, DEFAULT_NEW_SCAN } from '@/components/scans/ScanConfigForm'
+import { Button } from '@/components/ui/button'
 
 export function LiveScanPage() {
   const [logs, setLogs] = useState<string[]>([])
   const [isScanning, setIsScanning] = useState(false)
+  const [isFinished, setIsFinished] = useState(false)
   const terminalContainerRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   // Auto-scroll to bottom when logs change without forcing main window to scroll
   useEffect(() => {
@@ -21,6 +25,7 @@ export function LiveScanPage() {
 
   const handleLaunch = (data: any) => {
     setIsScanning(true)
+    setIsFinished(false)
     setLogs([`[INFO] Scanner initialized. Targeting: ${data.targets.length > 0 ? data.targets.join(', ') : 'None'}`])
     
     // Generate ~150 lines of mock logs
@@ -73,6 +78,7 @@ export function LiveScanPage() {
         step += burstSize
       } else {
         setIsScanning(false)
+        setIsFinished(true)
         clearInterval(interval)
       }
     }, 40) // Fast interval for ~150 lines
@@ -80,6 +86,7 @@ export function LiveScanPage() {
 
   const handleCancel = () => {
     setLogs([])
+    setIsFinished(false)
   }
 
   return (
@@ -89,7 +96,7 @@ export function LiveScanPage() {
         <p className="text-muted-foreground mt-1">Run ad-hoc scans and watch the engine output in real-time.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 items-start relative">
         {/* Left Column: Form */}
         <div className="flex flex-col lg:col-span-5 xl:col-span-4">
           <ScanConfigForm
@@ -102,10 +109,10 @@ export function LiveScanPage() {
         </div>
 
         {/* Right Column: Terminal Visual */}
-        <div className="lg:col-span-7 xl:col-span-8 bg-[#0a0a0a] rounded-sm border-2 border-[#333] overflow-hidden flex flex-col shadow-2xl h-[85vh] min-h-[700px] sticky top-8">
+        <div className="lg:col-span-7 xl:col-span-8 bg-[#0a0a0a] rounded-sm border-2 border-[#333] overflow-hidden flex flex-col shadow-2xl h-[85vh] min-h-[700px] sticky top-8 relative">
           <div 
             ref={terminalContainerRef}
-            className="p-6 font-mono text-[13px] text-[#00ff00] overflow-y-auto flex-1 pb-16"
+            className="p-6 font-mono text-[13px] text-[#00ff00] overflow-y-auto flex-1 pb-24"
           >
             {logs.length === 0 ? (
               <span className="text-[#00ff00]/50 italic">Waiting for input...</span>
@@ -124,6 +131,19 @@ export function LiveScanPage() {
               ))
             )}
           </div>
+          
+          {/* Post-Scan Action */}
+          {isFinished && (
+            <div className="absolute bottom-6 right-6 flex items-center justify-end z-10">
+              <Button 
+                size="lg" 
+                className="font-bold shadow-2xl border-2 border-primary/50 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                onClick={() => navigate('/?run=mock-run-id')}
+              >
+                View Results in Dashboard →
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

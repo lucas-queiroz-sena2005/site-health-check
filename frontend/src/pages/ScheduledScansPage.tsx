@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -29,6 +30,8 @@ import {
 import { ScanConfigForm, EXECUTION_FLAGS_SCHEMA, DEFAULT_NEW_SCAN } from '@/components/scans/ScanConfigForm'
 
 export function ScheduledScansPage() {
+  const navigate = useNavigate()
+  const [scanNowId, setScanNowId] = useState<number | null>(null)
   const [scans, setScans] = useState([
     {
       id: 1,
@@ -259,9 +262,30 @@ export function ScheduledScansPage() {
                                 </div>
                               </div>
                               <div className="flex flex-col gap-3 shrink-0 min-w-[140px]">
-                                <Button variant="outline" className="text-primary border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/40 font-bold justify-start px-4">
-                                  ▶ Scan Now
-                                </Button>
+                                <AlertDialog open={scanNowId === scan.id} onOpenChange={(open) => !open && setScanNowId(null)}>
+                                  <AlertDialogTrigger render={
+                                    <Button 
+                                      variant="outline" 
+                                      className="text-primary border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/40 font-bold justify-start px-4"
+                                      onClick={() => setScanNowId(scan.id)}
+                                    >
+                                      ▶ Scan Now
+                                    </Button>
+                                  } />
+                                  <AlertDialogContent className="border-2 border-border shadow-xl">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="text-xl font-extrabold tracking-tight text-primary">Force Scheduled Scan</AlertDialogTitle>
+                                      <AlertDialogDescription className="text-sm mt-2 font-medium">
+                                        You are about to force an immediate run of the <strong className="text-foreground">{scan.name}</strong> schedule.
+                                        This will scan <strong className="text-foreground">{scan.targets.length}</strong> targets right now, consuming engine workers and generating network traffic. Proceed?
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="mt-4">
+                                      <AlertDialogCancel className="border-2 font-bold">Cancel</AlertDialogCancel>
+                                      <AlertDialogAction className="font-bold" onClick={() => { setScanNowId(null); navigate('/scan') }}>Launch Scan</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                                 <Button variant="outline" className="border-2 border-border font-bold justify-start px-4" onClick={() => setEditingScanId(scan.id)}>
                                   ✎ Edit Schedule
                                 </Button>

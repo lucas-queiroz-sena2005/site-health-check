@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, status, Path, Request, Back
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlmodel import select, desc
 
-from api.models import ScanRun, ScanRunStatus, ExecutionConfig
+from api.models import ScanRun, ScanRunStatus, ExecutionConfig, Scan
 from api.database import SessionDep
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -15,6 +15,7 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 class ScanRunResponse(ExecutionConfig):
     id: str
     scan_id: str | None = None
+    scan_name: str | None = None
     status: ScanRunStatus
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -121,7 +122,7 @@ def list_runs(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0
 ) -> list[ScanRunResponse]:
-    stmt = select(ScanRun)
+    stmt = select(ScanRun, Scan.name).outerjoin(Scan, ScanRun.scan_id == Scan.id)
     
     if scan_id:
         stmt = stmt.where(ScanRun.scan_id == scan_id)
@@ -132,18 +133,19 @@ def list_runs(
         stmt = stmt.where(ScanRun.scan_id == None)
         
     stmt = stmt.order_by(desc(ScanRun.started_at)).offset(offset).limit(limit)
-    runs = session.exec(stmt).all()
+    results = session.exec(stmt).all()
     
     return [
         ScanRunResponse(
-            id=r.id,
-            scan_id=r.scan_id,
-            status=r.status,
-            started_at=r.started_at,
-            finished_at=r.finished_at,
-            metrics_json=r.metrics_json,
-            **r.execution_config_snapshot_json
-        ) for r in runs
+            id=r.ScanRun.id,
+            scan_id=r.ScanRun.scan_id,
+            scan_name=r.name,
+            status=r.ScanRun.status,
+            started_at=r.ScanRun.started_at,
+            finished_at=r.ScanRun.finished_at,
+            metrics_json=r.ScanRun.metrics_json,
+            **r.ScanRun.execution_config_snapshot_json
+        ) for r in results
     ]
 
 @router.get("/{id}/stream", response_class=EventSourceResponse)
