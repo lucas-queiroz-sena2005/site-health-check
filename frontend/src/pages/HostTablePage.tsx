@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { 
   useScanResults, 
   HierarchicalTable, 
@@ -12,7 +12,8 @@ function filterTree(
   explicitFilters: Record<string, string[]>, 
   parentFilter: string[] = ['all'],
   globalSearch: string = '',
-  parentMatchesSearch: boolean = false
+  parentMatchesSearch: boolean = false,
+  parentMatchesStatus: boolean = false
 ): TreeNode[] {
   return nodes.map(node => {
     // A child doesn't merge with parent. If explicit exists, it overrides completely.
@@ -22,13 +23,17 @@ function filterTree(
     if (filterForChildren.includes('all')) {
       matchesStatus = true
     } else {
-      for (const f of filterForChildren) {
-        if (f === 'active' && (node.status === 'success' || (node.type === 'HTTP' && node.status === 'neutral'))) matchesStatus = true
-        if (f === 'warning' && node.status === 'warning') matchesStatus = true
-        if (f === 'failed' && (node.status === 'error')) matchesStatus = true
-        if (f === 'ghost' && node.status === 'ghost') matchesStatus = true
-        if (f === 'void' && node.type === 'Void') matchesStatus = true
-        if (matchesStatus) break
+      if (node.type === 'HTTP' || node.type === 'SAN') {
+        matchesStatus = parentMatchesStatus
+      } else {
+        for (const f of filterForChildren) {
+          if (f === 'active' && node.status === 'success') matchesStatus = true
+          if (f === 'warning' && node.status === 'warning') matchesStatus = true
+          if (f === 'failed' && node.status === 'error') matchesStatus = true
+          if (f === 'ghost' && node.status === 'ghost') matchesStatus = true
+          if (f === 'void' && node.type === 'Void') matchesStatus = true
+          if (matchesStatus) break
+        }
       }
     }
 
@@ -41,7 +46,7 @@ function filterTree(
       matchesSearch = true
     }
 
-    const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren, globalSearch, matchesSearch)
+    const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren, globalSearch, matchesSearch, matchesStatus)
     
     if ((matchesStatus && matchesSearch) || filteredChildren.length > 0) {
       const hasExplicit = explicitFilters[node.id] !== undefined
@@ -113,6 +118,117 @@ export function HostTablePage() {
   const [globalSearch, setGlobalSearch] = useState<string>('')
   const [sortBy, setSortBy] = useState<'latency' | 'tls' | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const [savedViews, setSavedViews] = useState([
+    { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' },
+    { id: 'view-ghosts', name: 'Critical Outages & Ghosts', search: '', statuses: ['ghost', 'failed'], tableSortBy: 'status', tableSortDir: 'desc' },
+    { id: 'view-active-ghost', name: 'Active & Ghost Outages', search: '', statuses: ['active', 'ghost'], tableSortBy: null, tableSortDir: 'asc' },
+    { id: 'view-datacenter', name: 'Datacenter Core Infrastructure', search: 'datacenter_core', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
+  ])
+  const [activeViewId, setActiveViewId] = useState('view-default')
+  const [isSavingView, setIsSavingView] = useState(false)
+  const [newViewName, setNewViewName] = useState('')
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const viewId = urlParams.get('view')
+    if (viewId) {
+      fetch(`/api/views/${viewId}`)
+        .then(res => {
+          if (res.ok) return res.json()
+          throw new Error('View not found')
+        })
+        .then(data => {
+          const id = data.id
+          setSavedViews(prev => {
+            if (!prev.find(v => v.id === id)) {
+               return [...prev, { id, name: `🔗 ${data.name}`, search: data.search || '', statuses: data.statuses || ['all'], tableSortBy: data.table_sort_by || null, tableSortDir: data.table_sort_dir || 'asc' }]
+            }
+            return prev
+          })
+          setActiveViewId(id)
+          setGlobalSearch(data.search || '')
+          setExplicitFilters({ 'global-root-id': data.statuses || ['all'] })
+          setSortBy((data.table_sort_by as any) || null)
+          setSortDir((data.table_sort_dir as any) || 'asc')
+        })
+        .catch(err => {
+          console.error("Failed to load view from URL:", err)
+        })
+    }
+  }, [])
+
+  const handleSelectSavedView = useCallback((viewId: string) => {
+    setActiveViewId(viewId)
+    if (viewId === 'custom-new') {
+      setIsSavingView(true)
+      return
+    }
+    const view = savedViews.find((v) => v.id === viewId)
+    if (view) {
+      setGlobalSearch(view.search)
+      setExplicitFilters({ 'global-root-id': view.statuses || ['all'] })
+      setSortBy((view.tableSortBy as any) || null)
+      setSortDir((view.tableSortDir as any) || 'asc')
+
+      const newUrl = new URL(window.location.href)
+      if (!viewId.startsWith('view-') && viewId !== 'custom' && viewId !== 'custom-new') {
+         newUrl.searchParams.set('view', viewId)
+      } else {
+         newUrl.searchParams.delete('view')
+      }
+      window.history.pushState({}, '', newUrl)
+    }
+  }, [savedViews])
+
+  const handleDeleteView = useCallback(() => {
+     if (activeViewId && activeViewId !== 'view-default' && activeViewId !== 'custom' && activeViewId !== 'custom-new') {
+        setSavedViews(prev => prev.filter(v => v.id !== activeViewId))
+        handleSelectSavedView('view-default')
+     }
+  }, [activeViewId, handleSelectSavedView])
+
+  const handleSaveViewSubmit = useCallback(async () => {
+    if (newViewName.trim()) {
+      try {
+        const payload = {
+          name: newViewName.trim(),
+          search: globalSearch,
+          statuses: explicitFilters['global-root-id'] || ['all'],
+          table_sort_by: sortBy,
+          table_sort_dir: sortDir
+        }
+        const response = await fetch('/api/views', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          const id = data.id
+          setSavedViews((prev) => [...prev, { id, name: data.name, search: data.search, statuses: data.statuses, tableSortBy: data.table_sort_by, tableSortDir: data.table_sort_dir }])
+          setActiveViewId(id)
+          
+          const newUrl = new URL(window.location.href)
+          newUrl.searchParams.set('view', id)
+          window.history.pushState({}, '', newUrl)
+        } else {
+          console.error("Failed to save view via API, falling back to local storage")
+          const id = `view-${Date.now()}`
+          setSavedViews((prev) => [...prev, { id, name: newViewName.trim(), search: globalSearch, statuses: explicitFilters['global-root-id'] || ['all'], tableSortBy: sortBy, tableSortDir: sortDir }])
+          setActiveViewId(id)
+        }
+      } catch (err) {
+        console.error(err)
+        const id = `view-${Date.now()}`
+        setSavedViews((prev) => [...prev, { id, name: newViewName.trim(), search: globalSearch, statuses: explicitFilters['global-root-id'] || ['all'], tableSortBy: sortBy, tableSortDir: sortDir }])
+        setActiveViewId(id)
+      }
+    }
+    setIsSavingView(false)
+    setNewViewName('')
+  }, [newViewName, globalSearch, explicitFilters, sortBy, sortDir])
 
   // Build tree
   const rawTree = useMemo(() => {
@@ -349,8 +465,60 @@ export function HostTablePage() {
         </div>
       </div>
       
-      <div className="px-6 py-2 shrink-0 bg-muted/10 flex items-center justify-end gap-3 flex-wrap">
-        <div className="flex-1 flex items-center gap-2 min-w-[200px] max-w-sm">
+      <div className="px-6 py-2 shrink-0 bg-muted/10 flex items-center gap-3 flex-wrap border-b border-border shadow-sm">
+        <div className="flex items-center gap-4 shrink-0">
+          {isSavingView ? (
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-semibold">Save View:</span>
+              <input
+                type="text"
+                placeholder="View name..."
+                autoFocus
+                value={newViewName}
+                onChange={(e) => setNewViewName(e.target.value)}
+                className="bg-background text-foreground border border-border rounded px-3 py-1 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-ring w-48"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveViewSubmit()
+                  if (e.key === 'Escape') setIsSavingView(false)
+                }}
+              />
+              <button onClick={handleSaveViewSubmit} className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs hover:bg-primary/90 font-semibold">✓ Save</button>
+              <button onClick={() => {setIsSavingView(false); setActiveViewId('view-default');}} className="bg-background text-foreground px-2 py-1 rounded text-xs border border-border hover:bg-muted font-semibold">✕ Cancel</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-semibold">Global View:</span>
+              <select
+                value={activeViewId}
+                onChange={(e) => handleSelectSavedView(e.target.value)}
+                className="bg-background text-foreground border border-border rounded px-3 py-1 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer max-w-[220px]"
+              >
+                {savedViews.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setIsSavingView(true)}
+                className="bg-background text-foreground px-2 py-1 rounded text-xs border border-border hover:bg-muted font-semibold"
+                title="Save Current View"
+              >
+                + Create
+              </button>
+              <button
+                onClick={handleDeleteView}
+                disabled={!activeViewId || activeViewId === 'view-default' || activeViewId === 'custom' || activeViewId === 'custom-new'}
+                className="bg-background text-destructive px-2 py-1 rounded text-xs border border-border hover:bg-muted font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Delete this view locally"
+              >
+                ✕ Delete
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 min-w-[200px] max-w-sm ml-auto">
           <input 
             type="text"
             placeholder="Search IP, Domain, Headers..."
