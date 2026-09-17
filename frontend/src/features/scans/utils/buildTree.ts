@@ -117,7 +117,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         label: ipLabel,
         status: 'neutral',
         children: [],
-        rawPayload: host
+        rawPayload: { ...host, ports: undefined }
       }
 
       const portsArray = host.ports ? Object.entries(host.ports).map(([pn, pData]) => ({ port_number: pn, ...(pData as any) })) : []
@@ -144,7 +144,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
           latencyMs: port.tcp_latency_ms,
           tlsInfo: tlsInfoStr,
           children: [],
-          rawPayload: port
+          rawPayload: { ...port, http_routing_checks: undefined }
         }
 
         if (port.http_routing_checks) {
@@ -232,7 +232,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
       label: ipLabel,
       status: 'neutral',
       children: [],
-      rawPayload: host
+      rawPayload: { ...host, ports: undefined }
     }
 
     const portsArray = host.ports ? Object.entries(host.ports).map(([pn, pData]) => ({ port_number: pn, ...(pData as any) })) : []
@@ -259,7 +259,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         latencyMs: port.tcp_latency_ms,
         tlsInfo: tlsInfoStr,
         children: [],
-        rawPayload: port
+        rawPayload: { ...port, http_routing_checks: undefined }
       }
 
       if (port.http_routing_checks) {

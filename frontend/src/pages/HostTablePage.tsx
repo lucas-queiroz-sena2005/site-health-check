@@ -53,30 +53,50 @@ function filterTree(
   }).filter((n) => n !== null) as TreeNode[]
 }
 
+function getSortValue(node: TreeNode, sortBy: string, sortDir: 'asc' | 'desc'): number | null {
+  if (sortBy === 'latency') {
+    let bestVal: number | null = node.latencyMs !== undefined && node.latencyMs !== null ? node.latencyMs : null
+    if (node.children && node.children.length > 0) {
+      const vals = node.children.map(c => getSortValue(c, sortBy, sortDir)).filter((v): v is number => v !== null)
+      if (vals.length > 0) {
+        const childBest = sortDir === 'asc' ? Math.min(...vals) : Math.max(...vals)
+        bestVal = bestVal !== null ? (sortDir === 'asc' ? Math.min(bestVal, childBest) : Math.max(bestVal, childBest)) : childBest
+      }
+    }
+    return bestVal
+  }
+  if (sortBy === 'tls') {
+    let bestVal: number | null = node.rawPayload?.tls_certificate?.expires_in_days ?? null
+    
+    if (node.rawPayload?.tls_certificate && node.rawPayload.tls_certificate.valid === false) {
+       bestVal = -1
+    }
+
+    if (node.children && node.children.length > 0) {
+      const vals = node.children.map(c => getSortValue(c, sortBy, sortDir)).filter((v): v is number => v !== null)
+      if (vals.length > 0) {
+        const childBest = sortDir === 'asc' ? Math.min(...vals) : Math.max(...vals)
+        bestVal = bestVal !== null ? (sortDir === 'asc' ? Math.min(bestVal, childBest) : Math.max(bestVal, childBest)) : childBest
+      }
+    }
+    return bestVal
+  }
+  return null
+}
+
 function sortTree(nodes: TreeNode[], sortBy: string | null, sortDir: 'asc' | 'desc'): TreeNode[] {
   if (!sortBy) return nodes
   
   return [...nodes].sort((a, b) => {
-    let valA: any = null
-    let valB: any = null
-    
-    if (sortBy === 'label') {
-      valA = a.label
-      valB = b.label
-    } else if (sortBy === 'latency') {
-      valA = a.latencyMs ?? (sortDir === 'asc' ? Infinity : -1)
-      valB = b.latencyMs ?? (sortDir === 'asc' ? Infinity : -1)
-    } else if (sortBy === 'status') {
-      const STATUS_PRIORITY: Record<string, number> = { error: 5, warning: 4, success: 3, ghost: 2, neutral: 1, empty: 0 }
-      valA = STATUS_PRIORITY[a.status || 'empty'] || 0
-      valB = STATUS_PRIORITY[b.status || 'empty'] || 0
-    } else if (sortBy === 'tls') {
-      valA = a.rawPayload?.tls_certificate?.expires_in_days ?? (sortDir === 'asc' ? 999999 : -1)
-      valB = b.rawPayload?.tls_certificate?.expires_in_days ?? (sortDir === 'asc' ? 999999 : -1)
-    }
+    const valA = getSortValue(a, sortBy, sortDir)
+    const valB = getSortValue(b, sortBy, sortDir)
 
-    if (valA < valB) return sortDir === 'asc' ? -1 : 1
-    if (valA > valB) return sortDir === 'asc' ? 1 : -1
+    if (valA === null && valB !== null) return 1
+    if (valA !== null && valB === null) return -1
+    if (valA === null && valB === null) return 0
+
+    if (valA! < valB!) return sortDir === 'asc' ? -1 : 1
+    if (valA! > valB!) return sortDir === 'asc' ? 1 : -1
     return 0
   }).map(node => ({
     ...node,
@@ -91,7 +111,7 @@ export function HostTablePage() {
   })
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set())
   const [globalSearch, setGlobalSearch] = useState<string>('')
-  const [sortBy, setSortBy] = useState<'label' | 'latency' | 'status' | 'tls' | null>(null)
+  const [sortBy, setSortBy] = useState<'latency' | 'tls' | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   // Build tree
@@ -282,6 +302,24 @@ export function HostTablePage() {
     })
   }, [rawTree])
 
+  const handleExpandAll = useCallback(() => {
+    const allIds = new Set<string>()
+    const traverse = (nodes: TreeNode[]) => {
+      for (const node of nodes) {
+        if (node.children && node.children.length > 0) {
+          allIds.add(node.id)
+          traverse(node.children)
+        }
+      }
+    }
+    traverse(filteredTreeData)
+    setExpandedRowIds(allIds)
+  }, [filteredTreeData])
+
+  const handleCollapseAll = useCallback(() => {
+    setExpandedRowIds(new Set())
+  }, [])
+
   const handleClearFilter = useCallback((nodeId: string) => {
     setExplicitFilters(prev => {
       const next = { ...prev }
@@ -322,28 +360,19 @@ export function HostTablePage() {
           />
         </div>
 
-        <div className="flex items-center gap-1 mr-2">
-          <span className="text-sm font-semibold text-muted-foreground mr-1">Sort:</span>
-          <select 
-            value={sortBy || ''} 
-            onChange={(e) => setSortBy(e.target.value ? (e.target.value as any) : null)}
-            className="bg-background border border-border px-2 py-1.5 rounded-md text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        <div className="flex items-center gap-2 mr-2">
+          <button 
+            onClick={handleExpandAll}
+            className="text-xs font-semibold px-2 py-1.5 rounded-md bg-background border border-border hover:bg-muted text-muted-foreground transition-colors shadow-sm"
           >
-            <option value="">Default</option>
-            <option value="label">Label</option>
-            <option value="latency">Latency</option>
-            <option value="status">Status</option>
-            <option value="tls">TLS Exp</option>
-          </select>
-          {sortBy && (
-            <button
-              onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="px-2 py-1.5 border border-border rounded-md bg-background hover:bg-muted text-sm shadow-sm font-mono w-8"
-              title="Toggle Sort Direction"
-            >
-              {sortDir === 'asc' ? '↑' : '↓'}
-            </button>
-          )}
+            Expand All
+          </button>
+          <button 
+            onClick={handleCollapseAll}
+            className="text-xs font-semibold px-2 py-1.5 rounded-md bg-background border border-border hover:bg-muted text-muted-foreground transition-colors shadow-sm"
+          >
+            Collapse All
+          </button>
         </div>
 
         <button 
@@ -351,7 +380,6 @@ export function HostTablePage() {
           disabled={!isAnyFilterActive}
           onClick={() => {
             setExplicitFilters({ 'global-root-id': ['all'] })
-            setExpandedRowIds(new Set())
           }}
           className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
             isAnyFilterActive
@@ -381,7 +409,16 @@ export function HostTablePage() {
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <HierarchicalTable expandedRowIds={expandedRowIds} onToggleRow={handleToggleRow}>
+        <HierarchicalTable 
+          expandedRowIds={expandedRowIds} 
+          onToggleRow={handleToggleRow}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSortChange={(by, dir) => {
+            setSortBy(by)
+            setSortDir(dir)
+          }}
+        >
           {filteredTreeData.map(node => (
             <RenderTreeNode 
               key={node.id} 
