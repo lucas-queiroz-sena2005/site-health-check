@@ -1155,6 +1155,35 @@ export default function App() {
   const [isSavingView, setIsSavingView] = useState(false);
   const [newViewName, setNewViewName] = useState('');
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewId = urlParams.get('view');
+    if (viewId) {
+      fetch(`/api/views/${viewId}`)
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('View not found');
+        })
+        .then(data => {
+          const id = data.id;
+          setSavedViews(prev => {
+            if (!prev.find(v => v.id === id)) {
+               return [...prev, { id, name: `🔗 ${data.name}`, search: data.search || '', statuses: data.statuses || ['all'], tableSortBy: data.table_sort_by || 'none', tableSortDir: data.table_sort_dir || 'asc' }];
+            }
+            return prev;
+          });
+          setActiveViewId(id);
+          setGlobalSearch(data.search || '');
+          setGlobalStatuses(data.statuses || ['all']);
+          setTableSortBy(data.table_sort_by || 'none');
+          setTableSortDir(data.table_sort_dir || 'asc');
+        })
+        .catch(err => {
+          console.error("Failed to load view from URL:", err);
+        });
+    }
+  }, []);
+
   const handleSelectSavedView = (viewId) => {
     setActiveViewId(viewId);
     if (viewId === 'custom-new') {
@@ -1168,14 +1197,61 @@ export default function App() {
       setTableSortBy(view.tableSortBy || 'none');
       setTableSortDir(view.tableSortDir || 'asc');
       setExplicitFilters({});
+
+      const newUrl = new URL(window.location);
+      if (!viewId.startsWith('view-') && viewId !== 'custom' && viewId !== 'custom-new') {
+         newUrl.searchParams.set('view', viewId);
+      } else {
+         newUrl.searchParams.delete('view');
+      }
+      window.history.pushState({}, '', newUrl);
     }
   };
   
-  const handleSaveViewSubmit = () => {
+  const handleDeleteView = () => {
+     if (activeViewId && !activeViewId.startsWith('view-') && activeViewId !== 'custom' && activeViewId !== 'custom-new') {
+        setSavedViews(prev => prev.filter(v => v.id !== activeViewId));
+        handleSelectSavedView('view-default');
+     }
+  };
+  
+  const handleSaveViewSubmit = async () => {
     if (newViewName.trim()) {
-      const id = `view-${Date.now()}`;
-      setSavedViews((prev) => [...prev, { id, name: `⭐ ${newViewName.trim()}`, search: globalSearch, statuses: globalStatuses, tableSortBy, tableSortDir }]);
-      setActiveViewId(id);
+      try {
+        const payload = {
+          name: newViewName.trim(),
+          search: globalSearch,
+          statuses: globalStatuses,
+          table_sort_by: tableSortBy,
+          table_sort_dir: tableSortDir
+        };
+        const response = await fetch('/api/views', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const id = data.id;
+          setSavedViews((prev) => [...prev, { id, name: `⭐ ${data.name}`, search: data.search, statuses: data.statuses, tableSortBy: data.table_sort_by, tableSortDir: data.table_sort_dir }]);
+          setActiveViewId(id);
+          
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.set('view', id);
+          window.history.pushState({}, '', newUrl);
+        } else {
+          console.error("Failed to save view via API, falling back to local storage");
+          const id = `view-${Date.now()}`;
+          setSavedViews((prev) => [...prev, { id, name: `⭐ ${newViewName.trim()}`, search: globalSearch, statuses: globalStatuses, tableSortBy, tableSortDir }]);
+          setActiveViewId(id);
+        }
+      } catch (err) {
+        console.error(err);
+        const id = `view-${Date.now()}`;
+        setSavedViews((prev) => [...prev, { id, name: `⭐ ${newViewName.trim()}`, search: globalSearch, statuses: globalStatuses, tableSortBy, tableSortDir }]);
+        setActiveViewId(id);
+      }
     }
     setIsSavingView(false);
     setNewViewName('');
@@ -1367,19 +1443,30 @@ export default function App() {
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-[var(--text-muted)] font-semibold">Global View:</span>
-                <select
-                  value={activeViewId}
-                  onChange={(e) => handleSelectSavedView(e.target.value)}
-                  className="bg-[var(--bg-main)] text-[var(--color-blue)] border border-[var(--border-color)] rounded px-3 py-1 text-xs font-mono font-semibold focus:outline-none focus:border-[var(--color-blue)] cursor-pointer"
-                >
-                  {savedViews.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                  <option disabled>──────────</option>
-                  <option value="custom-new">➕ Save current view...</option>
-                </select>
+                <div className="flex items-center">
+                  <select
+                    value={activeViewId}
+                    onChange={(e) => handleSelectSavedView(e.target.value)}
+                    className="bg-[var(--bg-main)] text-[var(--color-blue)] border border-[var(--border-color)] rounded-l px-3 py-1 text-xs font-mono font-semibold focus:outline-none focus:border-[var(--color-blue)] cursor-pointer"
+                  >
+                    {savedViews.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
+                      </option>
+                    ))}
+                    <option disabled>──────────</option>
+                    <option value="custom-new">➕ Save current view...</option>
+                  </select>
+                  {activeViewId && !activeViewId.startsWith('view-') && activeViewId !== 'custom' && activeViewId !== 'custom-new' && (
+                    <button
+                      onClick={handleDeleteView}
+                      className="bg-[var(--bg-elevated)] text-[#ef4444] hover:bg-[#ef4444] hover:text-white border border-l-0 border-[var(--border-color)] rounded-r px-2 py-1 text-xs font-bold transition-colors"
+                      title="Delete this view"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

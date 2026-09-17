@@ -454,18 +454,17 @@ export function HostTablePage() {
   const isAnyFilterActive = Object.keys(explicitFilters).some(key => key !== 'global-root-id' && !explicitFilters[key].includes('all')) || !explicitFilters['global-root-id']?.includes('all')
 
   return (
-    <div className="fixed inset-0 w-full flex flex-col bg-background">
+    <div className="w-full flex-1 flex flex-col bg-background">
       <div className="px-6 py-4 shrink-0 border-b border-border bg-muted/30 flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Topology Scan Results</h1>
-          <p className="text-muted-foreground text-xs font-mono">
+          <p className="text-muted-foreground text-sm font-mono">
             {/* @ts-ignore */}
             {data?.metadata?.total_targets_scanned || 0} IPs scanned • {data?.metadata?.scan_duration_seconds || 0}s duration
           </p>
         </div>
       </div>
       
-      <div className="px-6 py-2 shrink-0 bg-muted/10 flex items-center gap-3 flex-wrap border-b border-border shadow-sm">
+      <div className="px-6 py-4 shrink-0 bg-muted/20 flex items-center gap-4 flex-wrap border-b border-border shadow-md">
         <div className="flex items-center gap-4 shrink-0">
           {isSavingView ? (
             <div className="flex items-center gap-2">
@@ -476,7 +475,7 @@ export function HostTablePage() {
                 autoFocus
                 value={newViewName}
                 onChange={(e) => setNewViewName(e.target.value)}
-                className="bg-background text-foreground border border-border rounded px-3 py-1 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-ring w-48"
+                className="bg-background text-foreground border-2 border-primary/20 shadow-sm rounded px-3 py-1.5 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-primary w-48"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveViewSubmit()
                   if (e.key === 'Escape') setIsSavingView(false)
@@ -491,7 +490,7 @@ export function HostTablePage() {
               <select
                 value={activeViewId}
                 onChange={(e) => handleSelectSavedView(e.target.value)}
-                className="bg-background text-foreground border border-border rounded px-3 py-1 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer max-w-[220px]"
+                className="bg-background text-foreground border-2 border-primary/20 shadow-sm rounded px-3 py-1.5 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[220px]"
               >
                 {savedViews.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -524,7 +523,7 @@ export function HostTablePage() {
             placeholder="Search IP, Domain, Headers..."
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
-            className="w-full bg-background border border-border px-3 py-1.5 rounded-md text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full bg-background border-2 border-primary/20 px-3 py-1.5 rounded-md text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 

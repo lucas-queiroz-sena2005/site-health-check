@@ -1,16 +1,17 @@
 import { useTheme } from '@/components/theme-provider'
-import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
 
 export function ThemeSwitch() {
   const { resolvedTheme, setTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
 
   return (
-    <Switch
-      checked={isDark}
-      onCheckedChange={(checked: boolean) =>
-        setTheme(checked ? 'dark' : 'light')
-      }
-    />
+    <Button
+      variant="secondary"
+      size="lg"
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+    >
+      {isDark ? 'Light Mode' : 'Dark Mode'}
+    </Button>
   )
 }
