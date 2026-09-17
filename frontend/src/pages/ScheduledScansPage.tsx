@@ -82,38 +82,44 @@ function ScheduleForm({
     }))
   }
 
+  // Common wrapper class for form fields to improve contrast in light mode
+  const fieldWrapperClass = "flex flex-col gap-2 rounded-lg border-2 border-black/10 dark:border-border p-4 shadow-sm bg-black/[0.03] dark:bg-card/50"
+  const switchWrapperClass = "flex flex-row items-center justify-between rounded-lg border-2 border-black/10 dark:border-border p-4 shadow-sm bg-black/[0.03] dark:bg-card/50"
+
   return (
-    <div className={`space-y-6 bg-background rounded-lg ${isCreating ? '' : 'p-6 border shadow-sm max-w-4xl'}`}>
-      <div className="grid grid-cols-2 gap-4">
+    <div className={`space-y-8 ${isCreating ? '' : 'bg-background p-6 rounded-lg border shadow-sm max-w-4xl'}`}>
+      <div className="grid grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name" className="text-sm font-semibold">Scan Name</Label>
           <Input
             id="name"
             value={form?.name || ''}
+            className="border-2 border-black/15 dark:border-white/10 bg-background shadow-sm h-11"
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="schedule">Cron Schedule</Label>
+          <Label htmlFor="schedule" className="text-sm font-semibold">Cron Schedule</Label>
           <Input
             id="schedule"
             value={form?.schedule || ''}
             onChange={(e) => setForm({ ...form, schedule: e.target.value })}
-            className="font-mono text-primary"
+            className="font-mono text-primary border-2 border-black/15 dark:border-white/10 bg-background shadow-sm h-11"
           />
         </div>
       </div>
 
       <div className="space-y-4">
-        <h4 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider border-b pb-2">
+        <h4 className="text-sm font-bold uppercase text-primary tracking-wider border-b-2 border-border/50 pb-2">
           Execution Config
         </h4>
         <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-          <div className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm bg-card">
-            <Label className="text-sm">Targets (comma-separated)</Label>
+          <div className={fieldWrapperClass}>
+            <Label className="text-sm font-semibold">Targets (comma-separated)</Label>
             <Input
               type="text"
               value={form?.targets?.join(', ') || ''}
+              className="bg-background border-black/15 dark:border-white/10"
               placeholder="e.g. 192.168.1.0/24, 10.0.0.1-50, github.com"
               onChange={(e) => {
                 const arr = e.target.value
@@ -124,11 +130,12 @@ function ScheduleForm({
               }}
             />
           </div>
-          <div className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm bg-card">
-            <Label className="text-sm">Ports (comma-separated)</Label>
+          <div className={fieldWrapperClass}>
+            <Label className="text-sm font-semibold">Ports (comma-separated)</Label>
             <Input
               type="text"
               value={form?.ports?.join(', ') || ''}
+              className="bg-background border-black/15 dark:border-white/10"
               placeholder="e.g. 80, 443"
               onChange={(e) => {
                 const arr = e.target.value
@@ -143,18 +150,18 @@ function ScheduleForm({
       </div>
 
       <div className="space-y-4">
-        <h4 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider border-b pb-2">
+        <h4 className="text-sm font-bold uppercase text-primary tracking-wider border-b-2 border-border/50 pb-2">
           Engine Flags
         </h4>
-        <div className={`grid grid-cols-2 gap-x-8 gap-y-4 ${isCreating ? 'max-h-[30vh] overflow-y-auto p-1' : ''}`}>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
           {EXECUTION_FLAGS_SCHEMA.map((field) => {
             const val = form?.flags[field.name] !== undefined ? form.flags[field.name] : field.default
 
             if (field.type === 'boolean') {
               return (
-                <div key={field.name} className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-card">
+                <div key={field.name} className={switchWrapperClass}>
                   <div className="space-y-0.5">
-                    <Label className="text-sm">{field.title}</Label>
+                    <Label className="text-sm font-semibold">{field.title}</Label>
                   </div>
                   <Switch checked={val} onCheckedChange={(c) => handleFlagChange(field.name, c)} />
                 </div>
@@ -163,13 +170,13 @@ function ScheduleForm({
 
             if (field.type === 'number') {
               return (
-                <div key={field.name} className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm bg-card">
-                  <Label className="text-sm">{field.title}</Label>
-                  <div className="flex items-center gap-1">
+                <div key={field.name} className={fieldWrapperClass}>
+                  <Label className="text-sm font-semibold">{field.title}</Label>
+                  <div className="flex items-center gap-1 mt-1">
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-9 w-9 shrink-0"
+                      className="h-10 w-10 shrink-0 border-2"
                       onClick={() => handleFlagChange(field.name, Number(val) - 1)}
                     >
                       -
@@ -177,13 +184,13 @@ function ScheduleForm({
                     <Input
                       type="number"
                       value={val}
-                      className="text-center font-mono"
+                      className="text-center font-mono border-2 border-black/15 dark:border-white/10 bg-background h-10"
                       onChange={(e) => handleFlagChange(field.name, Number(e.target.value))}
                     />
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-9 w-9 shrink-0"
+                      className="h-10 w-10 shrink-0 border-2"
                       onClick={() => handleFlagChange(field.name, Number(val) + 1)}
                     >
                       +
@@ -196,11 +203,12 @@ function ScheduleForm({
             if (field.type === 'list') {
               const strVal = Array.isArray(val) ? val.join(', ') : val || ''
               return (
-                <div key={field.name} className="flex flex-col gap-2 rounded-lg border p-3 shadow-sm bg-card col-span-2">
-                  <Label className="text-sm">{field.title} (comma-separated)</Label>
+                <div key={field.name} className={`${fieldWrapperClass} col-span-2`}>
+                  <Label className="text-sm font-semibold">{field.title} (comma-separated)</Label>
                   <Input
                     type="text"
                     value={strVal}
+                    className="bg-background border-black/15 dark:border-white/10"
                     placeholder="e.g. login, dashboard"
                     onChange={(e) => {
                       const arr = e.target.value
@@ -219,11 +227,11 @@ function ScheduleForm({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-        <Button variant="ghost" onClick={onCancel}>
+      <div className="flex justify-end gap-3 pt-6 border-t-2 border-border/50">
+        <Button variant="ghost" className="hover:bg-muted" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSave(form)}>
+        <Button size="lg" className="px-8 font-semibold shadow-sm" onClick={() => onSave(form)}>
           {isCreating ? 'Create Schedule' : 'Save Changes'}
         </Button>
       </div>
@@ -325,12 +333,12 @@ export function ScheduledScansPage() {
         </div>
         
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger render={<Button>+ Create New Schedule</Button>} />
-          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Create New Scheduled Scan</DialogTitle>
+          <DialogTrigger render={<Button size="lg" className="font-semibold shadow-sm">+ Create New Schedule</Button>} />
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-8 border-2 border-border shadow-xl">
+            <DialogHeader className="text-center pb-6 border-b-2 border-border/50 mb-6">
+              <DialogTitle className="text-3xl font-extrabold tracking-tight">Create New Scheduled Scan</DialogTitle>
             </DialogHeader>
-            <div className="mt-4">
+            <div className="mt-2">
               <ScheduleForm
                 initialData={DEFAULT_NEW_SCAN}
                 onSave={handleCreate}
@@ -342,21 +350,21 @@ export function ScheduledScansPage() {
         </Dialog>
       </div>
 
-      <div className="rounded-md border bg-card text-card-foreground shadow">
+      <div className="rounded-xl border-2 border-border bg-card text-card-foreground shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead className="w-[30px]"></TableHead>
-              <TableHead>Scan Name</TableHead>
-              <TableHead>Cron Schedule</TableHead>
-              <TableHead>Last Run</TableHead>
-              <TableHead>Next Run</TableHead>
+          <TableHeader className="bg-muted/40">
+            <TableRow className="border-b-2 border-border/50">
+              <TableHead className="w-[40px]"></TableHead>
+              <TableHead className="font-bold text-foreground">Scan Name</TableHead>
+              <TableHead className="font-bold text-foreground">Cron Schedule</TableHead>
+              <TableHead className="font-bold text-foreground">Last Run</TableHead>
+              <TableHead className="font-bold text-foreground">Next Run</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {scans.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground font-medium">
                   No scheduled scans found.
                 </TableCell>
               </TableRow>
@@ -364,16 +372,16 @@ export function ScheduledScansPage() {
               scans.map((scan) => (
                 <React.Fragment key={scan.id}>
                   <TableRow
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-muted/30 transition-colors border-b-2 border-border/40 last:border-0"
                     onClick={() => {
                       setExpandedScanId(expandedScanId === scan.id ? null : scan.id)
                       if (editingScanId === scan.id) setEditingScanId(null)
                     }}
                   >
-                    <TableCell className="p-4">
+                    <TableCell className="p-4 pl-6">
                       <svg
-                        className={`w-4 h-4 transform transition-transform text-muted-foreground duration-200 ${
-                          expandedScanId === scan.id ? 'rotate-90 text-foreground' : ''
+                        className={`w-5 h-5 transform transition-transform text-muted-foreground duration-300 ${
+                          expandedScanId === scan.id ? 'rotate-90 text-primary' : ''
                         }`}
                         fill="none"
                         stroke="currentColor"
@@ -382,15 +390,15 @@ export function ScheduledScansPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                       </svg>
                     </TableCell>
-                    <TableCell className="font-semibold">{scan.name}</TableCell>
-                    <TableCell className="font-mono text-primary font-bold">{scan.schedule}</TableCell>
-                    <TableCell className="text-muted-foreground">{scan.lastRun}</TableCell>
-                    <TableCell className="font-semibold text-green-600 dark:text-green-500">{scan.nextRun}</TableCell>
+                    <TableCell className="font-bold text-[15px]">{scan.name}</TableCell>
+                    <TableCell className="font-mono text-primary font-bold bg-primary/5 px-3 py-1 rounded-md inline-block mt-3 mb-2 border border-primary/20">{scan.schedule}</TableCell>
+                    <TableCell className="text-muted-foreground font-medium">{scan.lastRun}</TableCell>
+                    <TableCell className="font-bold text-green-600 dark:text-green-500">{scan.nextRun}</TableCell>
                   </TableRow>
                   {expandedScanId === scan.id && (
-                    <TableRow className="bg-muted/10 hover:bg-muted/10">
+                    <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-2 border-border/40">
                       <TableCell colSpan={5} className="p-0">
-                        <div className="p-6 border-b">
+                        <div className="p-8 border-t-2 border-primary/10 shadow-inner">
                           {editingScanId === scan.id ? (
                             <ScheduleForm
                               initialData={scan}
@@ -399,56 +407,56 @@ export function ScheduledScansPage() {
                             />
                           ) : (
                             <div className="flex items-start justify-between">
-                              <div className="space-y-6 w-full pr-8">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Targets & Ports</div>
-                                    <div className="flex flex-col gap-2">
-                                      <div className="bg-background border px-3 py-1.5 rounded-md text-xs shadow-sm flex items-start gap-2">
-                                        <span className="text-muted-foreground mt-0.5">Targets:</span>
-                                        <span className="font-bold text-foreground font-mono whitespace-pre-wrap break-all">
+                              <div className="space-y-8 w-full pr-12">
+                                <div className="grid grid-cols-2 gap-8">
+                                  <div className="space-y-4">
+                                    <div className="text-sm font-extrabold text-primary uppercase tracking-widest border-b-2 border-border/50 pb-2">Targets & Ports</div>
+                                    <div className="flex flex-col gap-3">
+                                      <div className="bg-background border-2 border-border p-3 rounded-lg shadow-sm flex flex-col gap-1.5">
+                                        <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Targets</span>
+                                        <span className="font-bold text-foreground font-mono whitespace-pre-wrap break-all text-sm">
                                           {scan.targets.length > 0 ? scan.targets.join(', ') : 'None specified'}
                                         </span>
                                       </div>
-                                      <div className="bg-background border px-3 py-1.5 rounded-md text-xs shadow-sm flex items-start gap-2">
-                                        <span className="text-muted-foreground mt-0.5">Ports:</span>
-                                        <span className="font-bold text-foreground font-mono">
+                                      <div className="bg-background border-2 border-border p-3 rounded-lg shadow-sm flex flex-col gap-1.5">
+                                        <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Ports</span>
+                                        <span className="font-bold text-foreground font-mono text-sm">
                                           {scan.ports.length > 0 ? scan.ports.join(', ') : 'None specified'}
                                         </span>
                                       </div>
                                     </div>
                                   </div>
-                                  <div>
-                                    <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Latest Run Metrics</div>
-                                    <div className="bg-muted/50 px-4 py-3 rounded-lg text-sm text-foreground font-mono border max-w-3xl leading-relaxed">
+                                  <div className="space-y-4">
+                                    <div className="text-sm font-extrabold text-primary uppercase tracking-widest border-b-2 border-border/50 pb-2">Latest Run Metrics</div>
+                                    <div className="bg-muted/40 p-5 rounded-lg text-sm text-foreground font-mono border-2 border-border shadow-sm leading-relaxed h-full">
                                       {scan.metrics ? (
-                                        <div className="flex flex-col gap-1">
-                                          <div><span className="text-muted-foreground">Scanned Targets:</span> {scan.metrics.total_targets_scanned}</div>
-                                          <div><span className="text-muted-foreground">Duration:</span> {scan.metrics.scan_duration_seconds}s</div>
-                                          <div className={scan.metrics.anomalies_found > 0 ? 'text-destructive font-bold' : 'text-green-600 dark:text-green-400 font-bold'}>
-                                            <span className="text-muted-foreground font-normal">Anomalies:</span> {scan.metrics.anomalies_found}
+                                        <div className="flex flex-col gap-3">
+                                          <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground font-semibold">Scanned Targets:</span> <span className="font-bold">{scan.metrics.total_targets_scanned}</span></div>
+                                          <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground font-semibold">Duration:</span> <span className="font-bold">{scan.metrics.scan_duration_seconds}s</span></div>
+                                          <div className={`flex justify-between ${scan.metrics.anomalies_found > 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+                                            <span className="font-semibold text-muted-foreground">Anomalies:</span> <span className="font-extrabold">{scan.metrics.anomalies_found}</span>
                                           </div>
                                         </div>
                                       ) : (
-                                        <span className="text-muted-foreground italic">No metrics available yet.</span>
+                                        <div className="h-full flex items-center justify-center text-muted-foreground italic">No metrics available yet.</div>
                                       )}
                                     </div>
                                   </div>
                                 </div>
                                 
-                                <div>
-                                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Engine Flags</div>
-                                  <div className="flex flex-wrap gap-2">
+                                <div className="space-y-4">
+                                  <div className="text-sm font-extrabold text-primary uppercase tracking-widest border-b-2 border-border/50 pb-2">Engine Flags</div>
+                                  <div className="flex flex-wrap gap-3">
                                     {Object.entries(scan.flags).length === 0 ? (
-                                      <span className="text-sm text-muted-foreground italic">Using system defaults</span>
+                                      <span className="text-sm text-muted-foreground italic px-2">Using system defaults</span>
                                     ) : (
                                       Object.entries(scan.flags).map(([key, value]) => {
                                         const schema = EXECUTION_FLAGS_SCHEMA.find(s => s.name === key)
                                         const title = schema ? schema.title : key
                                         return (
-                                          <div key={key} className="bg-background border px-3 py-1.5 rounded-md text-xs font-mono shadow-sm flex items-center gap-2">
-                                            <span className="text-muted-foreground">{title}:</span>
-                                            <span className="font-bold text-foreground">
+                                          <div key={key} className="bg-background border-2 border-border px-3 py-2 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2">
+                                            <span className="text-muted-foreground font-semibold">{title}:</span>
+                                            <span className="font-bold text-foreground text-sm">
                                               {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : 
                                                Array.isArray(value) ? value.join(', ') : String(value)}
                                             </span>
@@ -459,32 +467,32 @@ export function ScheduledScansPage() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex flex-col gap-2 shrink-0">
-                                <Button variant="outline" className="text-primary border-primary/30 hover:bg-primary/10">
+                              <div className="flex flex-col gap-3 shrink-0 min-w-[140px]">
+                                <Button variant="outline" className="text-primary border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/40 font-bold justify-start px-4">
                                   ▶ Scan Now
                                 </Button>
-                                <Button variant="outline" onClick={() => setEditingScanId(scan.id)}>
+                                <Button variant="outline" className="border-2 border-border font-bold justify-start px-4" onClick={() => setEditingScanId(scan.id)}>
                                   ✎ Edit Schedule
                                 </Button>
                                 <AlertDialog>
                                   <AlertDialogTrigger render={
                                     <Button
                                       variant="outline"
-                                      className="text-destructive hover:bg-destructive/10 hover:text-destructive border-border"
+                                      className="text-destructive hover:bg-destructive/10 hover:text-destructive border-2 border-destructive/20 hover:border-destructive/40 font-bold justify-start px-4"
                                     >
                                       ✕ Delete
                                     </Button>
                                   } />
-                                  <AlertDialogContent>
+                                  <AlertDialogContent className="border-2 border-border shadow-xl">
                                     <AlertDialogHeader>
-                                      <AlertDialogTitle><span className="text-destructive">Are you absolutely sure?</span></AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        This will permanently delete the "{scan.name}" scheduled scan.
+                                      <AlertDialogTitle className="text-xl"><span className="text-destructive font-extrabold tracking-tight">Are you absolutely sure?</span></AlertDialogTitle>
+                                      <AlertDialogDescription className="text-sm mt-2">
+                                        This will permanently delete the <strong className="text-foreground">{scan.name}</strong> scheduled scan and clear its history.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDelete(scan.id)}>Delete</AlertDialogAction>
+                                    <AlertDialogFooter className="mt-4">
+                                      <AlertDialogCancel className="border-2 font-bold">Cancel</AlertDialogCancel>
+                                      <AlertDialogAction className="font-bold" onClick={() => handleDelete(scan.id)}>Delete</AlertDialogAction>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
