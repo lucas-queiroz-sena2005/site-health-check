@@ -74,9 +74,10 @@ export function LiveScanPage() {
         eventSource.close()
       })
       
-      eventSource.addEventListener('error', (e) => {
-        if (e.data) {
-          const payload = JSON.parse(e.data)
+      eventSource.addEventListener('error', (e: Event) => {
+        const msgEvent = e as MessageEvent
+        if (msgEvent.data) {
+          const payload = JSON.parse(msgEvent.data)
           setLogs(prev => [...prev, `[ERROR] ${payload.message}`])
         } else {
           setLogs(prev => [...prev, `[ERROR] Connection to log stream lost.`])

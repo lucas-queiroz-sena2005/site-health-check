@@ -146,7 +146,8 @@ export function HostTablePage() {
   const [sortBy, setSortBy] = useState<'latency' | 'tls' | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
-  const [savedViews, setSavedViews] = useState([
+  type SavedViewType = { id: string, name: string, search: string, statuses: string[], tableSortBy: 'latency' | 'tls' | null, tableSortDir: 'asc' | 'desc' }
+  const [savedViews, setSavedViews] = useState<SavedViewType[]>([
     { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
   ])
   const [activeViewId, setActiveViewId] = useState('view-default')

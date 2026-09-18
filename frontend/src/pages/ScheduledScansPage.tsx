@@ -150,7 +150,7 @@ export function ScheduledScansPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              scans.map((scan) => (
+              scans.map((scan: any) => (
                 <React.Fragment key={scan.id}>
                   <TableRow
                     className="cursor-pointer hover:bg-muted/30 transition-colors border-b-2 border-border/40 last:border-0"
