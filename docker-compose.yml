@@ -2,10 +2,12 @@ version: '3.8'
 
 services:
   frontend:
-    build: ./frontend-prototype
-    container_name: site-health-check-prototype
+    build: ./frontend
+    container_name: site-health-check-frontend
     ports:
       - "8080:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
   backend:

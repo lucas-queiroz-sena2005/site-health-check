@@ -10,7 +10,8 @@ When scanning massive CIDR blocks (e.g., `/16`), the vast majority of IPs will n
 2. **Parameterized Ghost Aging**:
    The definition of a "Ghost" is not hardcoded. The React frontend will pass a time window parameter (e.g., `?ghost_window=14d`). If an IP hasn't responded within that window, FastAPI downgrades it from a Ghost back into Void Space.
 3. **Dynamic Void Node Aggregation**:
-   FastAPI will not return individual dead IPs. For any contiguous block of 10 or more dead/unassigned IPs, FastAPI will squash them into a single aggregate "Void Node" in the JSON response (e.g., `10.0.0.50-10.0.0.200 (Void)`). This preserves bandwidth and browser rendering performance while still accurately representing the fragmented subnet topology.
+   FastAPI will not return individual dead IPs. Instead, the backend aggregation groups all dead/unassigned IPs under a parent domain/CIDR into `Void (<count>)`. 
+   *(Amended: Finding contiguous blocks of 10+ IPs was dropped in favor of simple target-based grouping on the backend, while the frontend dynamically computes visual Void space padding via `total_hosts - hostNodes.length` as defined in ADR 0012).*
 
 ## Consequences
 - **Pros**: The Python Scanner remains incredibly fast and simple. The UI gains a "time machine" slider (by adjusting `ghost_window`) to dynamically resurrect old Ghosts.

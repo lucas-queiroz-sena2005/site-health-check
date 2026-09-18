@@ -4,7 +4,7 @@ Date: 2026-08-27
 
 ## Status
 
-Accepted
+Partially Superseded / Amended (Sections 2, 3, and 7 have been superseded by newer ADRs).
 
 ## Context
 
@@ -17,11 +17,13 @@ Instead of assigning a single generalized "Status" (e.g., Red/Green) to structur
 * **Deep Filtering:** Clicking a specific status badge on a parent instantly applies an inline recursive filter, expanding the node while aggressively pruning out all siblings that do not match the selected status category.
 
 ### 2. DAG Cross-Linking in Topology Views
+*(Superseded: React Flow was completely dropped in favor of the Hierarchical Tree Table, see ADR 0014)*
 Topology graphs must represent real-world infrastructure sharing (e.g., load balancers serving multiple backend IPs resolving to the same domain).
 * When building the layout tree, structural nodes are tracked globally. If multiple parents converge on a shared domain/SAN, the domain node is drawn exactly once (under the first expanded parent).
 * Subsequent expansions of sibling parents that share the node render a dashed, animated **cross-link arrow** pointing back to the existing shared node instead of duplicating the node in the layout or clustering edges chaotically.
 
 ### 3. Structural Path Compression Protection
+*(Superseded: Explicitly overridden by ADR 0011 and ADR 0012, which permit structural nodes to compress dynamically if they reduce to a single child)*
 Path compression optimizes deep, sparse trees by merging single-child chains (e.g., `IP ➔ Port ➔ SAN`).
 * **Rule:** Root structural groupings (`CIDR Target`, `Pool`, `Classification`) are strictly prohibited from participating in path compression. This ensures the foundational semantic structure is never lost (e.g., preventing a confusing merged node like `Ghost Pool ➔ Unreachable ➔ Failed IP`).
 
@@ -39,6 +41,7 @@ To avoid modal fatigue, operational views like Scheduled Scans utilize compact t
 * Triggering `Edit` seamlessly transitions the expanded details panel into an inline editable form without breaking context.
 
 ### 7. Smart Heuristic Classifications
+*(Superseded: Discarded for MVP by ADR 0010)*
 Rather than relying solely on manual DB tags, the frontend automatically categorizes unassigned IPs by running heuristic scans across discovered TLS SANs and HTTP Routing domains (e.g., domains containing `gitlab` fall into `source_control`, `fw`/`vpn` into `network_security`).
 
 ## Consequences

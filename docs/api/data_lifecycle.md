@@ -29,12 +29,12 @@ React sends a unified JSON envelope to trigger a scan.
 ```
 
 ## 2. FastAPI writes to Database
-FastAPI receives the request and creates a `Job` row in SQLite using **SQLModel** to track the execution.
+FastAPI receives the request and creates a `ScanRun` row in SQLite using **SQLModel** to track the execution.
 
-**Entity:** `Job`
+**Entity:** `ScanRun`
 **Schema:**
 ```python
-class Job(SQLModel, table=True):
+class ScanRun(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     status: str = "RUNNING" # PENDING, RUNNING, COMPLETED, FAILED
     started_at: datetime = Field(default_factory=datetime.utcnow)
@@ -67,7 +67,7 @@ data: {"level": "info", "message": "[Worker W-1] Processing 10.0.0.5 on ports [4
 ```
 
 ## 5. Engine Outputs Final State
-When the engine finishes, it dumps the final `IpState` dictionary as a JSON string to `stdout`.
+When the engine finishes, it dumps the final `HostState` dictionary as a JSON string to `stdout`.
 
 **Engine Output Schema:**
 ```json
@@ -113,5 +113,5 @@ session.add(result)
 ## 7. React fetches the Unified Target View
 When the user goes to the History Table and clicks the completed job, React fetches the processed results.
 
-**Path:** `GET /api/jobs/{id}/results`
-**Schema:** (Returns the identical `IpState` JSON dictionary generated in Step 5, which React feeds directly into its Hierarchical Table component).
+**Path:** `GET /api/runs/{id}/results`
+**Schema:** (Returns the identical `HostState` JSON dictionary generated in Step 5, which React feeds directly into its Hierarchical Table component).

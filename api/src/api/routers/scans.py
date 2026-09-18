@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from typing import Any, Annotated
-from fastapi import APIRouter, status, HTTPException, Path
+from fastapi import APIRouter, status, HTTPException, Path, Request, BackgroundTasks
 from sqlmodel import select
 import croniter
 from pydantic import BaseModel, ConfigDict
 
-from api.models import Scan, TargetGroup, ScanTargetGroupLink, ExecutionConfig, ScanRun
+from api.models import Scan, TargetGroup, ScanTargetGroupLink, ExecutionConfig, ScanRun, ScanRunStatus
 from api.database import SessionDep
+from api.routers.runs import run_engine_cli, ScanRunResponse
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
@@ -185,4 +186,50 @@ def delete_scan(id: Annotated[str, Path()], session: SessionDep):
     scan.is_active = False
     session.add(scan)
     session.commit()
+
+@router.post("/{id}/launch", status_code=status.HTTP_201_CREATED)
+def launch_scheduled_scan(
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    request: Request,
+    background_tasks: BackgroundTasks
+) -> ScanRunResponse:
+    scan = session.get(Scan, id)
+    if not scan or scan.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Scan not found")
+        
+    targets = []
+    for tg in scan.target_groups:
+        targets.extend(tg.targets_json)
+        
+    snapshot = {
+        "targets": targets,
+        "ports": scan.ports_json or [80, 443],
+        "flags": scan.flags_json or {}
+    }
+    
+    run = ScanRun(
+        scan_id=scan.id,
+        execution_config_snapshot_json=snapshot,
+        status=ScanRunStatus.PENDING,
+        started_at=datetime.now(timezone.utc)
+    )
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+    
+    background_tasks.add_task(run_engine_cli, run.id, snapshot, request.app.state)
+    
+    return ScanRunResponse(
+        id=run.id,
+        scan_id=run.scan_id,
+        scan_name=scan.name,
+        status=run.status,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        metrics_json=run.metrics_json,
+        targets=targets,
+        ports=scan.ports_json or [80, 443],
+        flags=scan.flags_json or {}
+    )
 

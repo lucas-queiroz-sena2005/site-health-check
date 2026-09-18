@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { ScanConfigForm, DEFAULT_NEW_SCAN } from '@/components/scans/ScanConfigForm'
 import { Button } from '@/components/ui/button'
 
@@ -8,9 +9,14 @@ export function LiveScanPage() {
   const [isScanning, setIsScanning] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
   const [currentRunId, setCurrentRunId] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState<number | null>(null)
   const terminalContainerRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const runIdParam = searchParams.get('run')
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     return () => {
@@ -27,16 +33,110 @@ export function LiveScanPage() {
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150
       
       if (isNearBottom || logs.length < 5) {
-        // Manipulate scrollTop directly to prevent the browser window from scrolling down
         container.scrollTop = container.scrollHeight
       }
     }
   }, [logs])
 
+  const connectToStream = (runId: string) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+    }
+    setCurrentRunId(runId)
+    setIsScanning(true)
+    setIsFinished(false)
+    setCountdown(null)
+
+    const eventSource = new EventSource(`/api/runs/${runId}/stream`)
+    eventSourceRef.current = eventSource
+
+    eventSource.addEventListener('info', (e) => {
+      try {
+        const payload = JSON.parse(e.data)
+        setLogs(prev => [...prev, `[INFO] ${payload.message}`])
+      } catch {
+        setLogs(prev => [...prev, `[INFO] ${e.data}`])
+      }
+    })
+
+    eventSource.addEventListener('log', (e) => {
+      try {
+        const payload = JSON.parse(e.data)
+        setLogs(prev => [...prev, payload.message])
+      } catch {
+        setLogs(prev => [...prev, e.data])
+      }
+    })
+
+    eventSource.addEventListener('status', (e) => {
+      try {
+        const payload = JSON.parse(e.data)
+        setLogs(prev => [...prev, `[STATUS] ${payload.message}`])
+      } catch {
+        setLogs(prev => [...prev, `[STATUS] ${e.data}`])
+      }
+      setIsScanning(false)
+      setIsFinished(true)
+      eventSource.close()
+      queryClient.invalidateQueries({ queryKey: ['runs'] })
+    })
+
+    eventSource.addEventListener('error', (e: Event) => {
+      const msgEvent = e as MessageEvent
+      if (msgEvent.data) {
+        try {
+          const payload = JSON.parse(msgEvent.data)
+          setLogs(prev => [...prev, `[ERROR] ${payload.message}`])
+        } catch {
+          setLogs(prev => [...prev, `[ERROR] ${msgEvent.data}`])
+        }
+      } else {
+        setLogs(prev => [...prev, `[ERROR] Connection to log stream lost.`])
+      }
+      setIsScanning(false)
+      setIsFinished(true)
+      eventSource.close()
+      queryClient.invalidateQueries({ queryKey: ['runs'] })
+    })
+  }
+
+  // Connect automatically if runIdParam is present in URL
+  useEffect(() => {
+    if (runIdParam && runIdParam !== currentRunId) {
+      setLogs([`[INFO] Attached to run ${runIdParam}...`])
+      connectToStream(runIdParam)
+    }
+  }, [runIdParam])
+
+  // Countdown timer for automatic redirection to dashboard
+  useEffect(() => {
+    if (isFinished && currentRunId) {
+      setCountdown(3)
+    }
+  }, [isFinished, currentRunId])
+
+  useEffect(() => {
+    if (countdown === null) return
+
+    if (countdown <= 0) {
+      if (currentRunId) {
+        navigate(`/?run=${currentRunId}`)
+      }
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown(prev => (prev !== null ? prev - 1 : null))
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [countdown, currentRunId, navigate])
+
   const handleLaunch = async (data: any) => {
     setIsScanning(true)
     setIsFinished(false)
     setCurrentRunId(null)
+    setCountdown(null)
     setLogs([`[INFO] Scanner initialized. Targeting: ${data.targets.length > 0 ? data.targets.join(', ') : 'None'}`])
     
     try {
@@ -51,42 +151,7 @@ export function LiveScanPage() {
       }
       
       const run = await response.json()
-      setCurrentRunId(run.id)
-      
-      const eventSource = new EventSource(`/api/runs/${run.id}/stream`)
-      eventSourceRef.current = eventSource
-      
-      eventSource.addEventListener('info', (e) => {
-        const payload = JSON.parse(e.data)
-        setLogs(prev => [...prev, `[INFO] ${payload.message}`])
-      })
-      
-      eventSource.addEventListener('log', (e) => {
-        const payload = JSON.parse(e.data)
-        setLogs(prev => [...prev, payload.message])
-      })
-      
-      eventSource.addEventListener('status', (e) => {
-        const payload = JSON.parse(e.data)
-        setLogs(prev => [...prev, `[STATUS] ${payload.message}`])
-        setIsScanning(false)
-        setIsFinished(true)
-        eventSource.close()
-      })
-      
-      eventSource.addEventListener('error', (e: Event) => {
-        const msgEvent = e as MessageEvent
-        if (msgEvent.data) {
-          const payload = JSON.parse(msgEvent.data)
-          setLogs(prev => [...prev, `[ERROR] ${payload.message}`])
-        } else {
-          setLogs(prev => [...prev, `[ERROR] Connection to log stream lost.`])
-        }
-        setIsScanning(false)
-        setIsFinished(true)
-        eventSource.close()
-      })
-      
+      connectToStream(run.id)
     } catch (err: any) {
       setLogs(prev => [...prev, `[ERROR] ${err.message}`])
       setIsScanning(false)
@@ -101,6 +166,7 @@ export function LiveScanPage() {
     }
     setLogs([])
     setIsFinished(false)
+    setCountdown(null)
   }
 
   return (
@@ -146,14 +212,32 @@ export function LiveScanPage() {
             )}
           </div>
           
-          {/* Post-Scan Action */}
-          {isFinished && (
-            <div className="absolute bottom-6 right-6 flex items-center justify-end z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Post-Scan Redirection & Action */}
+          {isFinished && currentRunId && (
+            <div className="absolute bottom-6 right-6 flex items-center gap-3 z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card/95 backdrop-blur-md p-3.5 rounded-lg border-2 border-primary/30 shadow-2xl">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                {countdown !== null && countdown > 0 
+                  ? `Redirecting to dashboard in ${countdown}s...`
+                  : 'Redirecting to dashboard...'}
+              </span>
               <Button 
-                size="lg" 
-                onClick={() => navigate(`/?run=${currentRunId}`)}
+                size="default" 
+                className="font-bold shadow-sm"
+                onClick={() => {
+                  setCountdown(null)
+                  navigate(`/?run=${currentRunId}`)
+                }}
               >
-                View Results in Dashboard →
+                View Results Now →
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setCountdown(null)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Stay here
               </Button>
             </div>
           )}

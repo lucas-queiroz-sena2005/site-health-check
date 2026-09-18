@@ -1,5 +1,9 @@
 # Unified Target Merging & Data Hierarchy Invalidation
 
+## Status
+
+Superseded by ADR 0013 (Abandon Unified Global View).
+
 FastAPI will merge the latest `ip_state_json` across multiple policies for the same target to build a "Unified Target View", but it will enforce strict "Data Hierarchy Invalidation" where recent foundational failures (e.g., Port Closed) actively hide older dependent data (e.g., HTTP 200 OK) to prevent misinformation.
 
 ## Context

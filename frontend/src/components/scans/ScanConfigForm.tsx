@@ -27,21 +27,21 @@ export const EXECUTION_FLAGS_SCHEMA: FieldSchema[] = [
   { name: 'check_http', title: 'Check HTTP Routing', type: 'boolean', default: true },
   { name: 'recursive_san', title: 'Recursive SAN Check', type: 'boolean', default: false },
   { name: 'out_of_scope_depth', title: 'Out-of-Scope Depth', type: 'number', default: 0 },
-  { name: 'check_virtual_hosts', title: 'Check Virtual Hosts', type: 'boolean', default: true },
+  { name: 'check_virtual_hosts', title: 'Check Virtual Hosts', type: 'boolean', default: false },
   { name: 'spoof_user_agent', title: 'Spoof User Agent', type: 'boolean', default: false },
   { name: 'timeout', title: 'Timeout (seconds)', type: 'number', default: 10 },
   { name: 'expected', title: 'Expected HTML Strings', type: 'list', default: null },
   { name: 'undesired', title: 'Undesired HTML Strings', type: 'list', default: null },
-  { name: 'workers', title: 'Async Workers', type: 'number', default: 100 },
+  { name: 'workers', title: 'Workers', type: 'number', default: 100 },
   { name: 'delay', title: 'Worker Delay', type: 'number', default: 0.0 },
 ]
 
 export const DEFAULT_NEW_SCAN = {
   name: 'New Scheduled Scan',
-  schedule: '0 0 * * *',
+  cron_expression: '0 0 * * *',
   targets: [],
   ports: [80, 443],
-  flags: { check_tcp: true, check_http: true, check_virtual_hosts: true, timeout: 10, workers: 100, delay: 0 },
+  flags: { check_tcp: true, check_http: true, check_virtual_hosts: false, timeout: 10, workers: 100, delay: 0 },
 }
 
 export function ScanConfigForm({ 
@@ -93,8 +93,8 @@ export function ScanConfigForm({
             <Label htmlFor="schedule" className="text-sm font-semibold">Cron Schedule</Label>
             <Input
               id="schedule"
-              value={form?.schedule || ''}
-              onChange={(e) => setForm({ ...form, schedule: e.target.value })}
+              value={form?.cron_expression || ''}
+              onChange={(e) => setForm({ ...form, cron_expression: e.target.value })}
               className="font-mono text-primary border-2 border-black/15 dark:border-white/10 bg-background shadow-sm h-11"
             />
           </div>
@@ -110,7 +110,7 @@ export function ScanConfigForm({
             <Label className="text-sm font-semibold">Targets (comma-separated)</Label>
             <Input
               type="text"
-              value={form?.targets?.join(', ') || ''}
+              defaultValue={initialData?.targets?.join(', ') || ''}
               className="bg-background border-black/15 dark:border-white/10"
               placeholder="e.g. 192.168.1.0/24, 10.0.0.1-50, github.com"
               onChange={(e) => {
@@ -126,7 +126,7 @@ export function ScanConfigForm({
             <Label className="text-sm font-semibold">Ports (comma-separated)</Label>
             <Input
               type="text"
-              value={form?.ports?.join(', ') || ''}
+              defaultValue={initialData?.ports?.join(', ') || ''}
               className="bg-background border-black/15 dark:border-white/10"
               placeholder="e.g. 80, 443"
               onChange={(e) => {
@@ -169,7 +169,7 @@ export function ScanConfigForm({
                       variant="outline"
                       size="icon"
                       className="h-10 w-10 shrink-0 border-2"
-                      onClick={() => handleFlagChange(field.name, Number(val) - 1)}
+                      onClick={() => handleFlagChange(field.name, field.name === 'workers' ? Math.max(1, Number(val) - 1) : Number(val) - 1)}
                     >
                       -
                     </Button>
@@ -177,7 +177,7 @@ export function ScanConfigForm({
                       type="number"
                       value={val}
                       className="text-center font-mono border-2 border-black/15 dark:border-white/10 bg-background h-10"
-                      onChange={(e) => handleFlagChange(field.name, Number(e.target.value))}
+                      onChange={(e) => handleFlagChange(field.name, field.name === 'workers' ? Math.max(1, Number(e.target.value)) : Number(e.target.value))}
                     />
                     <Button
                       variant="outline"
@@ -199,7 +199,7 @@ export function ScanConfigForm({
                   <Label className="text-sm font-semibold">{field.title} (comma-separated)</Label>
                   <Input
                     type="text"
-                    value={strVal}
+                    defaultValue={strVal}
                     className="bg-background border-black/15 dark:border-white/10"
                     placeholder="e.g. login, dashboard"
                     onChange={(e) => {

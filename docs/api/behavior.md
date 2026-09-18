@@ -1,6 +1,8 @@
-# FastAPI Backend: Architectural Behavior & Internal Logic
+# [LEGACY] FastAPI Backend: Architectural Behavior & Internal Logic
 
-This document exhaustively defines the internal behavior, state machines, concurrency models, and structural design patterns of the FastAPI backend for the Site Health Check tool. It serves as the definitive reference for how the API operates underneath the hood.
+> **Warning:** This document describes a speculative "Deep Module" architecture (`ScanOperations` with Ports/Adapters) that was never fully implemented. It remains here as historical context.
+
+This document originally defined the internal behavior, state machines, concurrency models, and structural design patterns of the FastAPI backend for the Site Health Check tool.
 
 ---
 

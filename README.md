@@ -1,6 +1,6 @@
 # Site Health Check
 
-This project consists of an interactive frontend prototype and a FastAPI backend API for the Site Health Check dashboard.
+This project consists of an interactive frontend and a FastAPI backend API for the Site Health Check dashboard.
 
 ## Requirements
 - Docker
@@ -15,7 +15,7 @@ This project consists of an interactive frontend prototype and a FastAPI backend
    # or: docker compose up --build -d
    ```
 3. Open your web browser and navigate to: 
-   - **Frontend Prototype**: http://localhost:8080
+   - **Frontend**: http://localhost:8080
    - **Backend API**: http://localhost:8000
 
 ## API Documentation (FastAPI)
@@ -33,7 +33,7 @@ From the Swagger UI (`/docs`), you can view all available endpoints, their expec
 
 ## Starting the Backend Only
 
-If you only want to work on the backend API without spinning up the frontend prototype, run:
+If you only want to work on the backend API without spinning up the frontend, run:
 ```bash
 podman compose up backend --build -d
 # or: docker compose up backend --build -d

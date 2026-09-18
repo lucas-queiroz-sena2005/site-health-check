@@ -4,7 +4,7 @@ Date: 2026-08-26
 
 ## Status
 
-Accepted
+Superseded (Replaced by out-of-process subprocess execution and SSE streaming).
 
 ## Context
 

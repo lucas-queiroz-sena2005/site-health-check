@@ -92,6 +92,20 @@ export function ScheduledScansPage() {
     }
   })
 
+  const forceScanMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/scans/${id}/launch`, { method: 'POST' })
+      if (!res.ok) throw new Error('Failed to launch scan')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['scans'] })
+      queryClient.invalidateQueries({ queryKey: ['runs'] })
+      setScanNowId(null)
+      navigate(`/scan?run=${data.id}`)
+    }
+  })
+
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id)
   }
@@ -229,10 +243,10 @@ export function ScheduledScansPage() {
                                 <div className="space-y-4">
                                   <div className="text-sm font-extrabold text-primary uppercase tracking-widest border-b-2 border-border/50 pb-2">Engine Flags</div>
                                   <div className="flex flex-wrap gap-3">
-                                    {Object.entries(scan.flags || {}).length === 0 && Object.keys(scan).filter(k => !['id', 'name', 'cron_expression', 'targets', 'ports', 'last_run', 'next_run', 'metrics', 'is_active'].includes(k)).length === 0 ? (
+                                    {Object.entries(scan.flags || {}).length === 0 ? (
                                       <span className="text-sm text-muted-foreground italic px-2">Using system defaults</span>
                                     ) : (
-                                      Object.entries(scan).filter(([k]) => !['id', 'name', 'cron_expression', 'targets', 'ports', 'last_run', 'next_run', 'metrics', 'is_active'].includes(k)).map(([key, value]) => {
+                                      Object.entries(scan.flags).map(([key, value]) => {
                                         const schema = EXECUTION_FLAGS_SCHEMA.find(s => s.name === key)
                                         const title = schema ? schema.title : key
                                         return (
@@ -270,7 +284,13 @@ export function ScheduledScansPage() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter className="mt-4">
                                       <AlertDialogCancel className="border-2 font-bold">Cancel</AlertDialogCancel>
-                                      <AlertDialogAction className="font-bold" onClick={() => { setScanNowId(null); navigate('/scan') }}>Launch Scan</AlertDialogAction>
+                                      <AlertDialogAction 
+                                        className="font-bold" 
+                                        onClick={() => forceScanMutation.mutate(scan.id)}
+                                        disabled={forceScanMutation.isPending}
+                                      >
+                                        {forceScanMutation.isPending ? 'Launching...' : 'Launch Scan'}
+                                      </AlertDialogAction>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>

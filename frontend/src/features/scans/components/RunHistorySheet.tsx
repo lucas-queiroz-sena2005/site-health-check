@@ -9,16 +9,7 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 
-const MOCK_RUNS = Array.from({ length: 65 }).map((_, i) => {
-  const date = new Date(Date.now() - i * 3600000 * 2.5 - 100000) // spread over a week
-  return {
-    id: `mock-run-${i}`,
-    scan_name: i % 3 === 0 ? 'Daily Perimeter Sweep' : (i % 7 === 0 ? 'Weekly Deep Inspection' : null),
-    status: i % 8 === 0 ? 'FAILED' : (i % 5 === 0 ? 'RUNNING' : 'COMPLETED'),
-    targets: Array(Math.floor(Math.random() * 20) + 1).fill('target'),
-    started_at: date.toISOString(),
-  }
-})
+import { useQuery } from '@tanstack/react-query'
 
 export function RunHistorySheet({ 
   selectedRunId, 
@@ -28,48 +19,23 @@ export function RunHistorySheet({
   onSelectRun: (id: string | null) => void 
 }) {
   const [open, setOpen] = useState(false)
-  const [runs, setRuns] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [offset, setOffset] = useState(0)
+  const { data: runs = [], isLoading, refetch } = useQuery({
+    queryKey: ['runs', 'history'],
+    queryFn: async () => {
+      const res = await fetch(`/api/runs?limit=50`)
+      if (!res.ok) throw new Error('Network error')
+      return res.json()
+    },
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: 'always'
+  })
 
-  const fetchRuns = async (currentOffset: number, append: boolean) => {
-    setIsLoading(true)
-    try {
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 400))
-      
-      const chunk = MOCK_RUNS.slice(currentOffset, currentOffset + 20)
-      
-      if (append) {
-        setRuns(prev => [...prev, ...chunk])
-      } else {
-        setRuns(chunk)
-      }
-      if (chunk.length < 20) {
-        setHasMore(false)
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Reload when opened
   useEffect(() => {
     if (open) {
-      setOffset(0)
-      setHasMore(true)
-      fetchRuns(0, false)
+      refetch()
     }
-  }, [open])
-
-  const handleLoadMore = () => {
-    const nextOffset = offset + 20
-    setOffset(nextOffset)
-    fetchRuns(nextOffset, true)
-  }
+  }, [open, refetch])
 
   const getRunLabel = (id: string | null) => {
     if (!id) return "Loading Latest Run..."
@@ -77,7 +43,7 @@ export function RunHistorySheet({
     if (id === 'mock-run-id-2') return "Scheduled (2 hrs ago)"
     
     // Find in loaded runs
-    const run = runs.find(r => r.id === id)
+    const run = runs.find((r: any) => r.id === id)
     if (run) {
       return run.scan_name || 'Ad-hoc Scan'
     }
@@ -106,7 +72,7 @@ export function RunHistorySheet({
         
         <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 pr-4">
 
-          {runs.map(run => (
+          {runs.map((run: any) => (
             <div 
               key={run.id}
               onClick={() => {
@@ -139,13 +105,16 @@ export function RunHistorySheet({
           {isLoading && (
             <div className="text-center py-4 text-sm text-muted-foreground font-semibold">Loading runs...</div>
           )}
-          
-          {hasMore && !isLoading && runs.length > 0 && (
-            <Button variant="ghost" onClick={handleLoadMore} className="mt-2 w-full font-bold border-2 border-transparent hover:border-border">
-              Load More ↓
-            </Button>
+
+          {!isLoading && runs.length === 0 && (
+            <div className="text-center py-12 text-sm text-muted-foreground font-medium flex flex-col items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-40"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>No scan runs recorded yet.</span>
+              <span className="text-xs text-muted-foreground/70">Execute a live scan or wait for a scheduled scan to populate history.</span>
+            </div>
           )}
-          {!hasMore && runs.length > 0 && (
+          
+          {!isLoading && runs.length > 0 && (
             <div className="text-center py-4 text-xs text-muted-foreground opacity-60 font-semibold tracking-widest uppercase">End of history</div>
           )}
         </div>

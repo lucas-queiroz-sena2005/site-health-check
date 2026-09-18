@@ -5,7 +5,7 @@ This document defines the strict Request/Response JSON schemas and the internal 
 ---
 
 ## 1. Unified Scan Creator (Ad-Hoc & Scheduled)
-**Endpoint:** `POST /api/scans`
+**Endpoint:** `POST /api/scans` (scheduled) or `POST /api/runs/launch` (ad-hoc)
 **Purpose:** A single endpoint to either launch a scan immediately OR save it as a cron schedule. It strictly separates API metadata from the actual Engine JSON payload.
 
 ### Request Schema
@@ -38,20 +38,19 @@ This document defines the strict Request/Response JSON schemas and the internal 
    - Create a `Schedule` row linking them.
    - **Return 201 Created:** `{ "schedule_id": "uuid-5678" }`
 3. **If Ad-Hoc (Cron is null):**
-   - Create a `Job` row in SQLite with `status="RUNNING"`.
-   - Spawn the subprocess: `python -m site_health_check.cli -i -`
-   - Pipe the raw `engine_payload` JSON array directly into the subprocess's `stdin`.
-   - **Return 202 Accepted:** `{ "job_id": "uuid-1234", "websocket_url": "/api/jobs/uuid-1234/stream" }`
+   - Create a `ScanRun` row in SQLite with `status="RUNNING"`.
+   - Spawn the subprocess: `python -m engine.cli <targets> ...`
+   - **Return 202 Accepted:** `{ "id": "uuid-1234", "stream_url": "/api/runs/uuid-1234/stream" }`
 
 ---
 
 ## 2. Real-Time Engine Feed
-**Endpoint:** `WS /api/jobs/{id}/stream`
-**Purpose:** Streams the `stdout` of the CLI subprocess directly to the UI.
+**Endpoint:** `GET /api/runs/{id}/stream`
+**Purpose:** Streams the `stdout` of the CLI subprocess directly to the UI via Server-Sent Events (SSE).
 
 ### Routine
-1. **Connect:** Accept WebSocket connection from the frontend.
-2. **Attach:** Find the running `subprocess` attached to the `job_id`.
-3. **Stream:** Read `stdout` line-by-line asynchronously and push to the socket.
-4. **Cleanup:** When the subprocess exits (EOF), close the socket.
-5. **Post-Processing:** Once closed, FastAPI reads the final output JSON from the CLI, calculates `metrics_json`, and updates the `Job` row in DB to `COMPLETED`.
+1. **Connect:** Accept SSE connection from the frontend via `EventSourceResponse`.
+2. **Attach:** Find the running `subprocess` attached to the `scan_run_id`.
+3. **Stream:** Read `stdout` line-by-line asynchronously and push to the stream.
+4. **Cleanup:** When the subprocess exits (EOF), close the stream.
+5. **Post-Processing:** Once closed, FastAPI reads the final output JSON from the CLI, calculates metrics, and updates the `ScanRun` row in DB to `COMPLETED`.
