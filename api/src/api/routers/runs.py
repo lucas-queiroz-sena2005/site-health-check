@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Any
 from collections.abc import AsyncIterable
 
-from fastapi import APIRouter, HTTPException, Query, status, Path, Request, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, status, Path, Request
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlmodel import select, desc
 from pydantic import Field as PydanticField
@@ -161,7 +161,7 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
                                         expires_in_days=tls.get("expires_in_days", 0),
                                         issuer=tls.get("issuer"),
                                         protocol_version=tls.get("protocol_version"),
-                                        domains_discovered_sans_json=tls.get("domains_discovered_sans_json", [])
+                                        domains_discovered_sans_json=tls.get("domains_discovered_sans", [])
                                     )
                                     session.add(tls_cert)
                                 
@@ -226,11 +226,10 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
         await broadcast(None) # EOF marker
 
 @router.post("/launch", status_code=status.HTTP_201_CREATED)
-def launch_run(
+async def launch_run(
     config: LaunchRunRequest, 
     session: SessionDep,
     request: Request,
-    background_tasks: BackgroundTasks
 ) -> ScanRunResponse:
     snapshot = config.model_dump(exclude={"scan_id"})
     run = ScanRun(
@@ -243,7 +242,7 @@ def launch_run(
     session.commit()
     session.refresh(run)
     
-    background_tasks.add_task(run_engine_cli, run.id, snapshot, request.app.state)
+    asyncio.create_task(run_engine_cli(run.id, snapshot, request.app.state))
     
     # Retrieve scan name if scan_id is present
     scan_name = None

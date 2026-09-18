@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import asyncio
 from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
 from api.database import engine
@@ -24,6 +25,12 @@ async def lifespan(app: FastAPI):
             pass
 
 app = FastAPI(title="Site Health Check API", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 api_router = APIRouter(prefix="/api", tags=["api"])
 
 api_router.include_router(runs.router)

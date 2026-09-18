@@ -1,6 +1,7 @@
+import asyncio
 from datetime import datetime, timezone
 from typing import Any, Annotated
-from fastapi import APIRouter, status, HTTPException, Path, Request, BackgroundTasks
+from fastapi import APIRouter, status, HTTPException, Path, Request
 from sqlmodel import select
 import croniter
 from pydantic import BaseModel, ConfigDict
@@ -188,11 +189,10 @@ def delete_scan(id: Annotated[str, Path()], session: SessionDep):
     session.commit()
 
 @router.post("/{id}/launch", status_code=status.HTTP_201_CREATED)
-def launch_scheduled_scan(
+async def launch_scheduled_scan(
     id: Annotated[str, Path()],
     session: SessionDep,
     request: Request,
-    background_tasks: BackgroundTasks
 ) -> ScanRunResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
@@ -218,7 +218,7 @@ def launch_scheduled_scan(
     session.commit()
     session.refresh(run)
     
-    background_tasks.add_task(run_engine_cli, run.id, snapshot, request.app.state)
+    asyncio.create_task(run_engine_cli(run.id, snapshot, request.app.state))
     
     return ScanRunResponse(
         id=run.id,
