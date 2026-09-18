@@ -9,7 +9,16 @@ export function LiveScanPage() {
   const [isFinished, setIsFinished] = useState(false)
   const [currentRunId, setCurrentRunId] = useState<string | null>(null)
   const terminalContainerRef = useRef<HTMLDivElement>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+      }
+    }
+  }, [])
 
   // Auto-scroll to bottom when logs change without forcing main window to scroll
   useEffect(() => {
@@ -45,6 +54,7 @@ export function LiveScanPage() {
       setCurrentRunId(run.id)
       
       const eventSource = new EventSource(`/api/runs/${run.id}/stream`)
+      eventSourceRef.current = eventSource
       
       eventSource.addEventListener('info', (e) => {
         const payload = JSON.parse(e.data)
@@ -84,6 +94,10 @@ export function LiveScanPage() {
   }
 
   const handleCancel = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
     setLogs([])
     setIsFinished(false)
   }
@@ -133,10 +147,9 @@ export function LiveScanPage() {
           
           {/* Post-Scan Action */}
           {isFinished && (
-            <div className="absolute bottom-6 right-6 flex items-center justify-end z-10">
+            <div className="absolute bottom-6 right-6 flex items-center justify-end z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Button 
                 size="lg" 
-                className="font-bold shadow-2xl border-2 border-primary/50 animate-in fade-in slide-in-from-bottom-4 duration-500"
                 onClick={() => navigate(`/?run=${currentRunId}`)}
               >
                 View Results in Dashboard →

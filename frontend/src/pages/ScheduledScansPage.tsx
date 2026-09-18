@@ -174,7 +174,7 @@ export function ScheduledScansPage() {
                     <TableCell className="font-bold text-[15px]">{scan.name}</TableCell>
                     <TableCell className="font-mono text-primary font-bold bg-primary/5 px-3 py-1 rounded-md inline-block mt-3 mb-2 border border-primary/20">{scan.cron_expression || 'None'}</TableCell>
                     <TableCell className="text-muted-foreground font-medium">{scan.last_run ? new Date(scan.last_run).toLocaleString() : 'Never'}</TableCell>
-                    <TableCell className="font-bold text-green-600 dark:text-green-500">{scan.next_run ? new Date(scan.next_run).toLocaleString() : 'None'}</TableCell>
+                    <TableCell className="font-bold text-green-500">{scan.next_run ? new Date(scan.next_run).toLocaleString() : 'None'}</TableCell>
                   </TableRow>
                   {expandedScanId === scan.id && (
                     <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-2 border-border/40">
@@ -215,7 +215,7 @@ export function ScheduledScansPage() {
                                         <div className="flex flex-col gap-3">
                                           <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground font-semibold">Scanned Targets:</span> <span className="font-bold">{scan.metrics.total_targets_scanned}</span></div>
                                           <div className="flex justify-between border-b border-border/50 pb-2"><span className="text-muted-foreground font-semibold">Duration:</span> <span className="font-bold">{scan.metrics.scan_duration_seconds}s</span></div>
-                                          <div className={`flex justify-between ${scan.metrics.anomalies_found > 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+                                          <div className={`flex justify-between ${scan.metrics.anomalies_found > 0 ? 'text-destructive' : 'text-green-500'}`}>
                                             <span className="font-semibold text-muted-foreground">Anomalies:</span> <span className="font-extrabold">{scan.metrics.anomalies_found}</span>
                                           </div>
                                         </div>

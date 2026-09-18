@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { 
   useScanResults, 
   HierarchicalTable, 
@@ -116,22 +117,25 @@ export function HostTablePage() {
     return urlParams.get('run') || null
   })
 
+  const { data: latestRuns } = useQuery({
+    queryKey: ['runs', 'latest'],
+    queryFn: async () => {
+      const res = await fetch('/api/runs?limit=1')
+      if (!res.ok) throw new Error('Network error')
+      return res.json()
+    },
+    enabled: !selectedRunId
+  })
+
   useEffect(() => {
-    if (!selectedRunId) {
-      fetch('/api/runs?limit=1')
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.length > 0) {
-            const latestRunId = data[0].id
-            setSelectedRunId(latestRunId)
-            const newUrl = new URL(window.location.href)
-            newUrl.searchParams.set('run', latestRunId)
-            window.history.replaceState({}, '', newUrl)
-          }
-        })
-        .catch(err => console.error("Failed to fetch initial run:", err))
+    if (!selectedRunId && latestRuns && latestRuns.length > 0) {
+      const latestRunId = latestRuns[0].id
+      setSelectedRunId(latestRunId)
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.set('run', latestRunId)
+      window.history.replaceState({}, '', newUrl)
     }
-  }, [selectedRunId])
+  }, [selectedRunId, latestRuns])
 
   const { data, isLoading, error } = useScanResults(selectedRunId || undefined)
   const [explicitFilters, setExplicitFilters] = useState<Record<string, string[]>>({
@@ -149,12 +153,19 @@ export function HostTablePage() {
   const [isSavingView, setIsSavingView] = useState(false)
   const [newViewName, setNewViewName] = useState('')
 
+  const { data: fetchedViews } = useQuery({
+    queryKey: ['views'],
+    queryFn: async () => {
+      const res = await fetch('/api/views')
+      if (!res.ok) throw new Error('Network error')
+      return res.json()
+    }
+  })
+
   useEffect(() => {
-    fetch('/api/views')
-      .then(res => res.json())
-      .then(data => {
+    if (fetchedViews) {
         const defaultView = { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
-        const mappedViews = data.map((v: any) => ({
+        const mappedViews = fetchedViews.map((v: any) => ({
           id: v.id,
           name: v.name,
           search: v.search || '',
@@ -163,38 +174,37 @@ export function HostTablePage() {
           tableSortDir: v.table_sort_dir || 'asc'
         }))
         setSavedViews([defaultView, ...mappedViews])
-      })
-      .catch(err => console.error("Failed to fetch views:", err))
-  }, [])
+    }
+  }, [fetchedViews])
+
+  const initialViewId = new URLSearchParams(window.location.search).get('view')
+  const { data: initialView } = useQuery({
+    queryKey: ['views', initialViewId],
+    queryFn: async () => {
+      const res = await fetch(`/api/views/${initialViewId}`)
+      if (!res.ok) throw new Error('View not found')
+      return res.json()
+    },
+    enabled: !!initialViewId
+  })
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const viewId = urlParams.get('view')
-    if (viewId) {
-      fetch(`/api/views/${viewId}`)
-        .then(res => {
-          if (res.ok) return res.json()
-          throw new Error('View not found')
-        })
-        .then(data => {
-          const id = data.id
+    if (initialView) {
+          const id = initialView.id
+          const data = initialView
           setSavedViews(prev => {
-            if (!prev.find(v => v.id === id)) {
-               return [...prev, { id, name: data.name, search: data.search || '', statuses: data.statuses || ['all'], tableSortBy: data.table_sort_by || null, tableSortDir: data.table_sort_dir || 'asc' }]
-            }
-            return prev
+             if (!prev.find(v => v.id === id)) {
+                return [...prev, { id, name: data.name, search: data.search || '', statuses: data.statuses || ['all'], tableSortBy: data.table_sort_by || null, tableSortDir: data.table_sort_dir || 'asc' }]
+             }
+             return prev
           })
           setActiveViewId(id)
           setGlobalSearch(data.search || '')
           setExplicitFilters({ 'global-root-id': data.statuses || ['all'] })
           setSortBy((data.table_sort_by as any) || null)
           setSortDir((data.table_sort_dir as any) || 'asc')
-        })
-        .catch(err => {
-          console.error("Failed to load view from URL:", err)
-        })
     }
-  }, [])
+  }, [initialView])
 
   const handleSelectSavedView = useCallback((viewId: string) => {
     setActiveViewId(viewId)
