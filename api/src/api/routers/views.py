@@ -43,3 +43,21 @@ def get_view(id: Annotated[str, Path()], session: SessionDep) -> SavedViewRespon
     
     return SavedViewResponse.model_validate(db_view)
 
+@router.get("")
+def list_views(session: SessionDep) -> list[SavedViewResponse]:
+    from sqlmodel import select
+    stmt = select(SavedView)
+    views = session.exec(stmt).all()
+    return [SavedViewResponse.model_validate(v) for v in views]
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_view(id: Annotated[str, Path()], session: SessionDep):
+    db_view = session.get(SavedView, id)
+    if not db_view:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="View not found"
+        )
+    session.delete(db_view)
+    session.commit()
+

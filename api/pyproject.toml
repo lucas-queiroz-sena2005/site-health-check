@@ -17,6 +17,7 @@ aiohttp = "^3.8.0"
 fastapi = {extras = ["standard"], version = "^0.141.1"}
 sqlmodel = "^0.0.42"
 pydantic = "^2.13.5"
+croniter = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"

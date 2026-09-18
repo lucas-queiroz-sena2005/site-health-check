@@ -57,3 +57,37 @@ def test_get_saved_view_not_found(client: TestClient):
     assert get_resp.status_code == 404
     assert get_resp.json() == {"detail": "View not found"}
 
+def test_list_saved_views(client: TestClient):
+    # Empty initially
+    resp = client.get("/api/views")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+    payload1 = {"name": "View 1"}
+    payload2 = {"name": "View 2"}
+    client.post("/api/views", json=payload1)
+    client.post("/api/views", json=payload2)
+
+    resp = client.get("/api/views")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 2
+    names = [v["name"] for v in data]
+    assert "View 1" in names
+    assert "View 2" in names
+
+def test_delete_saved_view(client: TestClient):
+    payload = {"name": "Delete Me"}
+    post_resp = client.post("/api/views", json=payload)
+    view_id = post_resp.json()["id"]
+
+    del_resp = client.delete(f"/api/views/{view_id}")
+    assert del_resp.status_code == 204
+
+    get_resp = client.get(f"/api/views/{view_id}")
+    assert get_resp.status_code == 404
+
+def test_delete_saved_view_not_found(client: TestClient):
+    del_resp = client.delete("/api/views/not-a-uuid")
+    assert del_resp.status_code == 404
+    assert del_resp.json() == {"detail": "View not found"}
