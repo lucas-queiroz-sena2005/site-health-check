@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,89 +32,76 @@ import { ScanConfigForm, EXECUTION_FLAGS_SCHEMA, DEFAULT_NEW_SCAN } from '@/comp
 
 export function ScheduledScansPage() {
   const navigate = useNavigate()
-  const [scanNowId, setScanNowId] = useState<number | null>(null)
-  const [scans, setScans] = useState([
-    {
-      id: 1,
-      name: 'Daily Perimeter Sweep',
-      schedule: '0 0 * * *',
-      targets: ['github.com', 'google.com'],
-      ports: [80, 443],
-      flags: { check_tcp: true, check_http: true, check_virtual_hosts: false, timeout: 5 },
-      lastRun: '2 hours ago',
-      nextRun: 'In 22 hours',
-      metrics: {
-        total_targets_scanned: 12,
-        scan_duration_seconds: 1.42,
-        anomalies_found: 0,
-      },
-    },
-    {
-      id: 2,
-      name: 'Weekly Deep Inspection',
-      schedule: '0 2 * * 0',
-      targets: ['internal.network.local'],
-      ports: [22, 80, 443, 3306],
-      flags: { check_tcp: true, check_http: true, recursive_san: true, out_of_scope_depth: 2, workers: 200 },
-      lastRun: '4 days ago',
-      nextRun: 'In 3 days',
-      metrics: {
-        total_targets_scanned: 45,
-        scan_duration_seconds: 14.5,
-        anomalies_found: 2,
-      },
-    },
-    {
-      id: 3,
-      name: 'Datacenter Heartbeat',
-      schedule: '*/15 * * * *',
-      targets: ['10.0.0.1/24'],
-      ports: [443],
-      flags: { check_tcp: true, check_http: false, timeout: 2 },
-      lastRun: '10 mins ago',
-      nextRun: 'In 5 mins',
-      metrics: {
-        total_targets_scanned: 254,
-        scan_duration_seconds: 0.8,
-        anomalies_found: 0,
-      },
-    },
-  ])
-
-  const [expandedScanId, setExpandedScanId] = useState<number | null>(null)
-  const [editingScanId, setEditingScanId] = useState<number | null>(null)
+  const queryClient = useQueryClient()
+  
+  const [scanNowId, setScanNowId] = useState<string | null>(null)
+  const [expandedScanId, setExpandedScanId] = useState<string | null>(null)
+  const [editingScanId, setEditingScanId] = useState<string | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
-  const handleDelete = (id: number) => {
-    setScans(scans.filter((s) => s.id !== id))
-    if (expandedScanId === id) setExpandedScanId(null)
-    if (editingScanId === id) setEditingScanId(null)
+  const { data: scans = [] } = useQuery({
+    queryKey: ['scans'],
+    queryFn: async () => {
+      const res = await fetch('/api/scans')
+      if (!res.ok) throw new Error('Failed to fetch scans')
+      return res.json()
+    }
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/scans/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete scan')
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['scans'] })
+      if (expandedScanId === id) setExpandedScanId(null)
+      if (editingScanId === id) setEditingScanId(null)
+    }
+  })
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch('/api/scans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (!res.ok) throw new Error('Failed to create scan')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scans'] })
+      setIsCreateModalOpen(false)
+    }
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      const res = await fetch(`/api/scans/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      if (!res.ok) throw new Error('Failed to update scan')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scans'] })
+      setEditingScanId(null)
+    }
+  })
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id)
   }
 
   const handleCreate = (data: any) => {
-    const newScan = {
-      ...data,
-      id: Math.max(...scans.map((s) => s.id), 0) + 1,
-      lastRun: 'Never',
-      nextRun: 'Pending',
-      metrics: null,
-    }
-    setScans([...scans, newScan])
-    setIsCreateModalOpen(false)
+    createMutation.mutate(data)
   }
 
-  const handleSaveInline = (id: number, data: any) => {
-    setScans(
-      scans.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              ...data,
-            }
-          : s
-      )
-    )
-    setEditingScanId(null)
+  const handleSaveInline = (id: string, data: any) => {
+    updateMutation.mutate({ id, data })
   }
 
   return (
@@ -184,9 +172,9 @@ export function ScheduledScansPage() {
                       </svg>
                     </TableCell>
                     <TableCell className="font-bold text-[15px]">{scan.name}</TableCell>
-                    <TableCell className="font-mono text-primary font-bold bg-primary/5 px-3 py-1 rounded-md inline-block mt-3 mb-2 border border-primary/20">{scan.schedule}</TableCell>
-                    <TableCell className="text-muted-foreground font-medium">{scan.lastRun}</TableCell>
-                    <TableCell className="font-bold text-green-600 dark:text-green-500">{scan.nextRun}</TableCell>
+                    <TableCell className="font-mono text-primary font-bold bg-primary/5 px-3 py-1 rounded-md inline-block mt-3 mb-2 border border-primary/20">{scan.cron_expression || 'None'}</TableCell>
+                    <TableCell className="text-muted-foreground font-medium">{scan.last_run ? new Date(scan.last_run).toLocaleString() : 'Never'}</TableCell>
+                    <TableCell className="font-bold text-green-600 dark:text-green-500">{scan.next_run ? new Date(scan.next_run).toLocaleString() : 'None'}</TableCell>
                   </TableRow>
                   {expandedScanId === scan.id && (
                     <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-2 border-border/40">
@@ -241,10 +229,10 @@ export function ScheduledScansPage() {
                                 <div className="space-y-4">
                                   <div className="text-sm font-extrabold text-primary uppercase tracking-widest border-b-2 border-border/50 pb-2">Engine Flags</div>
                                   <div className="flex flex-wrap gap-3">
-                                    {Object.entries(scan.flags).length === 0 ? (
+                                    {Object.entries(scan.flags || {}).length === 0 && Object.keys(scan).filter(k => !['id', 'name', 'cron_expression', 'targets', 'ports', 'last_run', 'next_run', 'metrics', 'is_active'].includes(k)).length === 0 ? (
                                       <span className="text-sm text-muted-foreground italic px-2">Using system defaults</span>
                                     ) : (
-                                      Object.entries(scan.flags).map(([key, value]) => {
+                                      Object.entries(scan).filter(([k]) => !['id', 'name', 'cron_expression', 'targets', 'ports', 'last_run', 'next_run', 'metrics', 'is_active'].includes(k)).map(([key, value]) => {
                                         const schema = EXECUTION_FLAGS_SCHEMA.find(s => s.name === key)
                                         const title = schema ? schema.title : key
                                         return (

@@ -7,6 +7,7 @@ export function LiveScanPage() {
   const [logs, setLogs] = useState<string[]>([])
   const [isScanning, setIsScanning] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null)
   const terminalContainerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
@@ -23,65 +24,63 @@ export function LiveScanPage() {
     }
   }, [logs])
 
-  const handleLaunch = (data: any) => {
+  const handleLaunch = async (data: any) => {
     setIsScanning(true)
     setIsFinished(false)
+    setCurrentRunId(null)
     setLogs([`[INFO] Scanner initialized. Targeting: ${data.targets.length > 0 ? data.targets.join(', ') : 'None'}`])
     
-    // Generate ~150 lines of mock logs
-    const mockLines: string[] = []
-    const targetCount = data.targets.length || 1
-    
-    mockLines.push(`[INFO] Resolving DNS for ${targetCount} targets...`)
-    mockLines.push(`[INFO] Discovered 24 internal IPs from CIDR expansion.`)
-    mockLines.push(`[INFO] Beginning L4 TCP probe across 24 nodes on ports [80, 443]...`)
-    
-    for (let i = 1; i <= 24; i++) {
-      const ip = `10.0.0.${i + 10}`
-      mockLines.push(`[DEBUG] Handshake initiated with ${ip}:80`)
-      mockLines.push(`[DEBUG] Handshake initiated with ${ip}:443`)
+    try {
+      const response = await fetch('/api/runs/launch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
       
-      if (i % 4 === 0) {
-        mockLines.push(`[WARN] Connection refused on ${ip}:80 - marking port closed.`)
-        mockLines.push(`[INFO] ${ip}:443 established in ${Math.floor(Math.random() * 20 + 5)}ms`)
-        mockLines.push(`[INFO] Extracting TLS Certificate from ${ip}:443...`)
-        mockLines.push(`[SUCCESS] TLS Valid: Subject Alternative Names found for ${ip}`)
-        mockLines.push(`[INFO] Executing HTTP GET / on ${ip}:443`)
-        mockLines.push(`[DEBUG] 302 Redirect encountered to /login on ${ip}`)
-      } else if (i % 7 === 0) {
-        mockLines.push(`[ERROR] Timeout on ${ip}:443 after 10.0s`)
-        mockLines.push(`[ERROR] Timeout on ${ip}:80 after 10.0s`)
-        mockLines.push(`[WARN] Node ${ip} is entirely unreachable (Void Space).`)
-      } else {
-        mockLines.push(`[INFO] ${ip}:80 established in ${Math.floor(Math.random() * 20 + 5)}ms`)
-        mockLines.push(`[INFO] ${ip}:443 established in ${Math.floor(Math.random() * 20 + 5)}ms`)
-        mockLines.push(`[INFO] Executing HTTP GET / on ${ip}:80`)
-        mockLines.push(`[SUCCESS] HTTP 200 OK received from ${ip}:80 in ${Math.floor(Math.random() * 50 + 10)}ms`)
+      if (!response.ok) {
+        throw new Error('Failed to launch scan')
       }
-    }
-    
-    mockLines.push(`[INFO] Performing recursive SAN checks on discovered domains...`)
-    for (let i = 0; i < 15; i++) {
-      mockLines.push(`[DEBUG] Recursive check ${i+1}/15: Scanning extracted SAN internal-api-${i}.local`)
-    }
-    
-    mockLines.push(`[INFO] Aggregating results and checking historical diffs...`)
-    mockLines.push(`[SUCCESS] Job completed successfully in 4.82s`)
-
-    let step = 0
-    const interval = setInterval(() => {
-      if (step < mockLines.length) {
-        // Push 1 to 3 lines at a time for a more realistic bursty output
-        const burstSize = Math.floor(Math.random() * 3) + 1
-        const nextLines = mockLines.slice(step, step + burstSize)
-        setLogs(prev => [...prev, ...nextLines])
-        step += burstSize
-      } else {
+      
+      const run = await response.json()
+      setCurrentRunId(run.id)
+      
+      const eventSource = new EventSource(`/api/runs/${run.id}/stream`)
+      
+      eventSource.addEventListener('info', (e) => {
+        const payload = JSON.parse(e.data)
+        setLogs(prev => [...prev, `[INFO] ${payload.message}`])
+      })
+      
+      eventSource.addEventListener('log', (e) => {
+        const payload = JSON.parse(e.data)
+        setLogs(prev => [...prev, payload.message])
+      })
+      
+      eventSource.addEventListener('status', (e) => {
+        const payload = JSON.parse(e.data)
+        setLogs(prev => [...prev, `[STATUS] ${payload.message}`])
         setIsScanning(false)
         setIsFinished(true)
-        clearInterval(interval)
-      }
-    }, 40) // Fast interval for ~150 lines
+        eventSource.close()
+      })
+      
+      eventSource.addEventListener('error', (e) => {
+        if (e.data) {
+          const payload = JSON.parse(e.data)
+          setLogs(prev => [...prev, `[ERROR] ${payload.message}`])
+        } else {
+          setLogs(prev => [...prev, `[ERROR] Connection to log stream lost.`])
+        }
+        setIsScanning(false)
+        setIsFinished(true)
+        eventSource.close()
+      })
+      
+    } catch (err: any) {
+      setLogs(prev => [...prev, `[ERROR] ${err.message}`])
+      setIsScanning(false)
+      setIsFinished(true)
+    }
   }
 
   const handleCancel = () => {
@@ -138,7 +137,7 @@ export function LiveScanPage() {
               <Button 
                 size="lg" 
                 className="font-bold shadow-2xl border-2 border-primary/50 animate-in fade-in slide-in-from-bottom-4 duration-500"
-                onClick={() => navigate('/?run=mock-run-id')}
+                onClick={() => navigate(`/?run=${currentRunId}`)}
               >
                 View Results in Dashboard →
               </Button>

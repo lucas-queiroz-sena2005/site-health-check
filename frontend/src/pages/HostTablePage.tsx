@@ -118,14 +118,18 @@ export function HostTablePage() {
 
   useEffect(() => {
     if (!selectedRunId) {
-      // TODO: When backend DB is populated, use: fetch('/api/runs?limit=1')
-      // For now, default to the latest mock run to fulfill ADR-0013
-      const latestRunId = 'mock-run-0'
-      setSelectedRunId(latestRunId)
-      
-      const newUrl = new URL(window.location.href)
-      newUrl.searchParams.set('run', latestRunId)
-      window.history.replaceState({}, '', newUrl)
+      fetch('/api/runs?limit=1')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            const latestRunId = data[0].id
+            setSelectedRunId(latestRunId)
+            const newUrl = new URL(window.location.href)
+            newUrl.searchParams.set('run', latestRunId)
+            window.history.replaceState({}, '', newUrl)
+          }
+        })
+        .catch(err => console.error("Failed to fetch initial run:", err))
     }
   }, [selectedRunId])
 
@@ -139,14 +143,29 @@ export function HostTablePage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const [savedViews, setSavedViews] = useState([
-    { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' },
-    { id: 'view-ghosts', name: 'Critical Outages & Ghosts', search: '', statuses: ['ghost', 'failed'], tableSortBy: 'status', tableSortDir: 'desc' },
-    { id: 'view-active-ghost', name: 'Active & Ghost Outages', search: '', statuses: ['active', 'ghost'], tableSortBy: null, tableSortDir: 'asc' },
-    { id: 'view-datacenter', name: 'Datacenter Core Infrastructure', search: 'datacenter_core', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
+    { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
   ])
   const [activeViewId, setActiveViewId] = useState('view-default')
   const [isSavingView, setIsSavingView] = useState(false)
   const [newViewName, setNewViewName] = useState('')
+
+  useEffect(() => {
+    fetch('/api/views')
+      .then(res => res.json())
+      .then(data => {
+        const defaultView = { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
+        const mappedViews = data.map((v: any) => ({
+          id: v.id,
+          name: v.name,
+          search: v.search || '',
+          statuses: v.statuses || ['all'],
+          tableSortBy: v.table_sort_by || null,
+          tableSortDir: v.table_sort_dir || 'asc'
+        }))
+        setSavedViews([defaultView, ...mappedViews])
+      })
+      .catch(err => console.error("Failed to fetch views:", err))
+  }, [])
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -200,10 +219,17 @@ export function HostTablePage() {
     }
   }, [savedViews])
 
-  const handleDeleteView = useCallback(() => {
+  const handleDeleteView = useCallback(async () => {
      if (activeViewId && activeViewId !== 'view-default' && activeViewId !== 'custom' && activeViewId !== 'custom-new') {
-        setSavedViews(prev => prev.filter(v => v.id !== activeViewId))
-        handleSelectSavedView('view-default')
+        try {
+          const res = await fetch(`/api/views/${activeViewId}`, { method: 'DELETE' })
+          if (res.ok) {
+            setSavedViews(prev => prev.filter(v => v.id !== activeViewId))
+            handleSelectSavedView('view-default')
+          }
+        } catch (err) {
+          console.error("Failed to delete view:", err)
+        }
      }
   }, [activeViewId, handleSelectSavedView])
 

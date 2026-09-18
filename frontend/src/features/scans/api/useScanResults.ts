@@ -1,34 +1,29 @@
 import { useQuery } from '@tanstack/react-query'
 import { scanQueryKeys } from './queryKeys'
-import { type ScanResult, type HostState } from '../types'
+import { type ScanResult } from '../types'
 
 export function useScanResults(runId?: string) {
   return useQuery({
     queryKey: scanQueryKeys.results({ runId }),
     queryFn: async () => {
-      // Mocking fetch from local engine file instead of real API
-      const url = '/mock-mid-size-result.json'
+      if (!runId) return null
+      
+      const url = `/api/runs/${runId}/results`
       const res = await fetch(url)
       if (!res.ok) {
         throw new Error('Network response was not ok')
       }
       
-      const rawMap = await res.json()
-      
-      // The engine raw file is a Record<ip, data> but the API returns HostState[]
-      // Let's map it into the format the UI expects:
-      const mockHosts: HostState[] = Object.entries(rawMap).map(([ip, data]: [string, any]) => ({
-        ...data,
-        ip_address: ip
-      }))
+      const rawData = await res.json()
       
       const data: ScanResult = {
-        id: 'mock-engine-data',
+        id: runId,
         timestamp: new Date().toISOString(),
-        hosts: mockHosts
+        hosts: rawData.results || []
       }
       
       return data
     },
+    enabled: !!runId
   })
 }
