@@ -62,7 +62,7 @@ class ExecutionFlags(BaseModel):
 
 class ExecutionConfig(BaseModel):
     targets: list[str] = PydanticField(default_factory=list, title="Targets")
-    ports: list[int] = PydanticField(default_factory=list, title="Ports")
+    ports: list[str | int] = PydanticField(default_factory=list, title="Ports")
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
     
 class ScanTargetGroupLink(SQLModel, table=True):
@@ -87,7 +87,7 @@ class Scan(SQLModel, table=True):
     cron_expression: str | None = None
     is_active: bool = True
     
-    ports_json: list[int] = Field(sa_column=Column(JSON))
+    ports_json: list[str | int] = Field(sa_column=Column(JSON))
     flags_json: dict[str, Any] = Field(sa_column=Column(JSON))
     
     deleted_at: datetime | None = None

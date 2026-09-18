@@ -128,12 +128,12 @@ export function ScanConfigForm({
               type="text"
               defaultValue={initialData?.ports?.join(', ') || ''}
               className="bg-background border-black/15 dark:border-white/10"
-              placeholder="e.g. 80, 443"
+              placeholder="e.g. 80, 443, 8080-8090"
               onChange={(e) => {
                 const arr = e.target.value
                   .split(',')
-                  .map((s) => parseInt(s.trim(), 10))
-                  .filter((n) => !isNaN(n))
+                  .map((s) => s.trim())
+                  .filter(Boolean)
                 setForm({ ...form, ports: arr })
               }}
             />
