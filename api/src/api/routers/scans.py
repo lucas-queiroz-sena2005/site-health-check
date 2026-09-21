@@ -40,7 +40,7 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         name=request.name,
         cron_expression=request.cron_expression,
         ports_json=request.ports,
-        flags_json=request.model_dump(exclude={"name", "cron_expression", "targets", "ports"})
+        flags_json=request.flags.model_dump()
     )
     session.add(scan)
     
@@ -73,7 +73,7 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         metrics=None,
         targets=request.targets,
         ports=scan.ports_json,
-        **scan.flags_json
+        flags=scan.flags_json
     )
 
 @router.get("")
@@ -112,7 +112,7 @@ def list_scans(session: SessionDep) -> list[ScanResponse]:
             metrics=metrics,
             targets=targets,
             ports=s.ports_json,
-            **s.flags_json
+            flags=s.flags_json
         ))
     return responses
 
@@ -125,7 +125,7 @@ def update_scan(id: Annotated[str, Path()], request: ScanCreateRequest, session:
     scan.name = request.name
     scan.cron_expression = request.cron_expression
     scan.ports_json = request.ports
-    scan.flags_json = request.model_dump(exclude={"name", "cron_expression", "targets", "ports"})
+    scan.flags_json = request.flags.model_dump()
     session.add(scan)
     
     # Update targets (delete old links, recreate ad-hoc)

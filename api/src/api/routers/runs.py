@@ -175,6 +175,8 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
             cmd.extend(["-p", ",".join(map(str, ports))])
             
         flags = snapshot.get("flags", {})
+        if isinstance(flags, dict) and "flags" in flags:
+            flags = flags["flags"]
         
         # Import the schema to read the metadata
         from api.models import ExecutionFlags
