@@ -25,7 +25,7 @@ function filterTree(
     if (filterForChildren.includes('all')) {
       matchesStatus = true
     } else {
-      if (node.type === 'HTTP' || node.type === 'SAN') {
+      if (node.type === 'HTTP') {
         matchesStatus = parentMatchesStatus
       } else {
         for (const f of filterForChildren) {

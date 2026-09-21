@@ -147,19 +147,6 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
           rawPayload: { ...port, http_routing_checks: undefined }
         }
 
-        // Add SAN nodes from TLS certificate
-        if (port.tls_certificate?.domains_discovered_sans_json?.length > 0) {
-          port.tls_certificate.domains_discovered_sans_json.forEach((san: string, sanIdx: number) => {
-            portNode.children.push({
-              id: `san-${portIdStr}-${sanIdx}`,
-              type: 'SAN',
-              label: san,
-              status: 'neutral',
-              children: [],
-              rawPayload: { domain: san, source: 'tls_certificate' }
-            })
-          })
-        }
 
         if (port.http_routing_checks) {
           Object.entries(port.http_routing_checks).forEach(([domain, http]: [string, any], httpIdx) => {
@@ -276,19 +263,6 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         rawPayload: { ...port, http_routing_checks: undefined }
       }
 
-      // Add SAN nodes from TLS certificate
-      if (port.tls_certificate?.domains_discovered_sans_json?.length > 0) {
-        port.tls_certificate.domains_discovered_sans_json.forEach((san: string, sanIdx: number) => {
-          portNode.children.push({
-            id: `san-${portIdStr}-${sanIdx}`,
-            type: 'SAN',
-            label: san,
-            status: 'neutral',
-            children: [],
-            rawPayload: { domain: san, source: 'tls_certificate' }
-          })
-        })
-      }
 
       if (port.http_routing_checks) {
         Object.entries(port.http_routing_checks).forEach(([domain, http]: [string, any], httpIdx) => {
