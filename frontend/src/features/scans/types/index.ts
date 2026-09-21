@@ -18,6 +18,7 @@ export const ScanResultSchema = z.object({
   id: z.string(),
   timestamp: z.string(),
   hosts: z.array(HostStateSchema),
+  metadata: z.any().optional()
 })
 
 export type PortState = z.infer<typeof PortStateSchema>

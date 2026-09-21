@@ -26,7 +26,7 @@ export function RunHistorySheet({
       if (!res.ok) throw new Error('Network error')
       return res.json()
     },
-    enabled: open,
+    enabled: true,
     staleTime: 0,
     refetchOnMount: 'always'
   })

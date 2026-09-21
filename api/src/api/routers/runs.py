@@ -391,4 +391,7 @@ def get_run_results(
     stmt = select(HostState).where(HostState.scan_run_id == id)
     hosts = session.exec(stmt).all()
     
-    return {"results": hosts}
+    return {
+        "results": hosts,
+        "metadata": run.metrics_json or {}
+    }

@@ -19,7 +19,8 @@ export function useScanResults(runId?: string) {
       const data: ScanResult = {
         id: runId,
         timestamp: new Date().toISOString(),
-        hosts: rawData.results || []
+        hosts: rawData.results || [],
+        metadata: rawData.metadata || {}
       }
       
       return data
