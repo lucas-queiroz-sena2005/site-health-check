@@ -25,6 +25,107 @@ class ScanRunResponse(ExecutionConfig):
     finished_at: datetime | None = None
     metrics_json: dict[str, Any] | None = None
 
+def _ingest_results(run_id: str, tmp_path: str, returncode: int) -> None:
+    """Sync DB ingestion — runs in a thread via asyncio.to_thread()."""
+    import json
+    from sqlmodel import Session
+    from api.database import engine as db_engine
+    from api.models import (
+        ScanRun, ScanRunStatus, HostState, PortState,
+        TlsCertificate, HttpRoutingCheck,
+    )
+
+    with Session(db_engine) as session:
+        run = session.get(ScanRun, run_id)
+        if not run:
+            return
+
+        run.finished_at = datetime.now(timezone.utc)
+
+        if returncode != 0:
+            run.status = ScanRunStatus.FAILED
+            session.commit()
+            return
+
+        run.status = ScanRunStatus.COMPLETED
+        try:
+            with open(tmp_path, "r") as f:
+                results = json.load(f)
+
+            for ip, host_data in results.items():
+                host_state = HostState(
+                    scan_run_id=run_id,
+                    ip_address=ip,
+                    metadata_resolved_from=host_data.get("metadata", {}).get("resolved_from"),
+                    metadata_discovered_from_json=host_data.get("metadata", {}).get("discovered_from", [])
+                )
+                session.add(host_state)
+                session.flush()  # assigns host_state.id without committing
+
+                ports_dict = host_data.get("ports", {})
+                for port_str, port_data in ports_dict.items():
+                    port_state = PortState(
+                        host_state_id=host_state.id,
+                        port_number=int(port_str),
+                        tcp_status=port_data.get("tcp_status", "closed"),
+                        tcp_latency_ms=port_data.get("tcp_latency_ms")
+                    )
+                    session.add(port_state)
+                    session.flush()  # assigns port_state.id without committing
+
+                    tls = port_data.get("tls_certificate")
+                    if tls:
+                        tls_cert = TlsCertificate(
+                            port_state_id=port_state.id,
+                            valid=tls.get("valid", False),
+                            expires_in_days=tls.get("expires_in_days", 0),
+                            issuer=tls.get("issuer"),
+                            protocol_version=tls.get("protocol_version"),
+                            domains_discovered_sans_json=tls.get("domains_discovered_sans", [])
+                        )
+                        session.add(tls_cert)
+
+                    routing = port_data.get("http_routing_checks", {})
+                    for domain, r_data in routing.items():
+                        route = HttpRoutingCheck(
+                            port_state_id=port_state.id,
+                            domain=domain,
+                            status_code=r_data.get("status_code"),
+                            http_latency_ms=r_data.get("http_latency_ms"),
+                            path_checked=r_data.get("path_checked", "/"),
+                            redirects_to_url=r_data.get("redirects_to_url"),
+                            server_header=r_data.get("server_header"),
+                            notes=r_data.get("notes")
+                        )
+                        session.add(route)
+
+            # Metrics
+            duration = round((run.finished_at - run.started_at).total_seconds(), 2) if run.started_at else 0.0
+            anomalies = 0
+            for ip, host_data in results.items():
+                for port_str, port_data in host_data.get("ports", {}).items():
+                    if port_data.get("tcp_status") != "open":
+                        anomalies += 1
+                    tls = port_data.get("tls_certificate")
+                    if tls and not tls.get("valid", True):
+                        anomalies += 1
+                    for domain, r_data in port_data.get("http_routing_checks", {}).items():
+                        sc = r_data.get("status_code")
+                        if sc and sc >= 400:
+                            anomalies += 1
+
+            run.metrics_json = {
+                "total_targets_scanned": len(results),
+                "scan_duration_seconds": duration,
+                "anomalies_found": anomalies
+            }
+            session.commit()
+
+        except Exception as parse_err:
+            run.status = ScanRunStatus.FAILED
+            run.metrics_json = {"error": str(parse_err)}
+            session.commit()
+
 async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
     tmp_path = None
 
@@ -48,10 +149,10 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
         import json
         import os
         from sqlmodel import Session
-        from api.database import engine
-        from api.models import ScanRun, ScanRunStatus, HostState, PortState, TlsCertificate, HttpRoutingCheck
+        from api.database import engine as db_engine
+        from api.models import ScanRun, ScanRunStatus
 
-        with Session(engine) as session:
+        with Session(db_engine) as session:
             run = session.get(ScanRun, run_id)
             if run:
                 run.status = ScanRunStatus.RUNNING
@@ -63,7 +164,7 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
             tmp_path = tmp.name
 
-        cmd = ["python", "-m", "engine.cli"]
+        cmd = ["python", "-u", "-m", "engine.cli"]
         
         targets = snapshot.get("targets", [])
         if targets:
@@ -120,101 +221,15 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
         await process.wait()
         await broadcast(ServerSentEvent(data={"message": f"Run finished with code {process.returncode}"}, event="status"))
 
-        with Session(engine) as session:
-            run = session.get(ScanRun, run_id)
-            if run:
-                run.finished_at = datetime.now(timezone.utc)
-                if process.returncode == 0:
-                    run.status = ScanRunStatus.COMPLETED
-                    try:
-                        with open(tmp_path, "r") as f:
-                            results = json.load(f)
-                            
-                        for ip, host_data in results.items():
-                            host_state = HostState(
-                                scan_run_id=run_id,
-                                ip_address=ip,
-                                metadata_resolved_from=host_data.get("metadata", {}).get("resolved_from"),
-                                metadata_discovered_from_json=host_data.get("metadata", {}).get("discovered_from", [])
-                            )
-                            session.add(host_state)
-                            session.commit()
-                            session.refresh(host_state)
-                            
-                            ports_dict = host_data.get("ports", {})
-                            for port_str, port_data in ports_dict.items():
-                                port_state = PortState(
-                                    host_state_id=host_state.id,
-                                    port_number=int(port_str),
-                                    tcp_status=port_data.get("tcp_status", "closed"),
-                                    tcp_latency_ms=port_data.get("tcp_latency_ms")
-                                )
-                                session.add(port_state)
-                                session.commit()
-                                session.refresh(port_state)
-                                
-                                tls = port_data.get("tls_certificate")
-                                if tls:
-                                    tls_cert = TlsCertificate(
-                                        port_state_id=port_state.id,
-                                        valid=tls.get("valid", False),
-                                        expires_in_days=tls.get("expires_in_days", 0),
-                                        issuer=tls.get("issuer"),
-                                        protocol_version=tls.get("protocol_version"),
-                                        domains_discovered_sans_json=tls.get("domains_discovered_sans", [])
-                                    )
-                                    session.add(tls_cert)
-                                
-                                routing = port_data.get("http_routing_checks", {})
-                                for domain, r_data in routing.items():
-                                    route = HttpRoutingCheck(
-                                        port_state_id=port_state.id,
-                                        domain=domain,
-                                        status_code=r_data.get("status_code"),
-                                        http_latency_ms=r_data.get("http_latency_ms"),
-                                        path_checked=r_data.get("path_checked", "/"),
-                                        redirects_to_url=r_data.get("redirects_to_url"),
-                                        server_header=r_data.get("server_header"),
-                                        notes=r_data.get("notes")
-                                    )
-                                    session.add(route)
-                        
-                        # Calculate and store metrics
-                        duration = round((run.finished_at - run.started_at).total_seconds(), 2) if run.started_at else 0.0
-                        total_targets = len(results)
-                        anomalies = 0
-                        for ip, host_data in results.items():
-                            for port_str, port_data in host_data.get("ports", {}).items():
-                                if port_data.get("tcp_status") != "open":
-                                    anomalies += 1
-                                tls = port_data.get("tls_certificate")
-                                if tls and not tls.get("valid", True):
-                                    anomalies += 1
-                                for domain, r_data in port_data.get("http_routing_checks", {}).items():
-                                    sc = r_data.get("status_code")
-                                    if sc and sc >= 400:
-                                        anomalies += 1
-
-                        run.metrics_json = {
-                            "total_targets_scanned": total_targets,
-                            "scan_duration_seconds": duration,
-                            "anomalies_found": anomalies
-                        }
-                        session.commit()
-                    except Exception as parse_err:
-                        run.status = ScanRunStatus.FAILED
-                        run.metrics_json = {"error": str(parse_err)}
-                        session.commit()
-                else:
-                    run.status = ScanRunStatus.FAILED
-                    session.commit()
+        # DB ingestion runs in a thread so the event loop stays free
+        await asyncio.to_thread(_ingest_results, run_id, tmp_path, process.returncode)
 
     except Exception as e:
         await broadcast(ServerSentEvent(data={"message": f"Engine error: {str(e)}"}, event="error"))
         from sqlmodel import Session
-        from api.database import engine
+        from api.database import engine as db_engine
         from api.models import ScanRun, ScanRunStatus
-        with Session(engine) as session:
+        with Session(db_engine) as session:
             run = session.get(ScanRun, run_id)
             if run:
                 run.status = ScanRunStatus.FAILED
@@ -322,24 +337,33 @@ async def stream_run_logs(
     if not hasattr(app_state, "run_logs"):
         app_state.run_logs = {}
 
-    yield ServerSentEvent(data={"message": f"Attached to run {id} log stream"}, event="info")
-
-    # Replay historical logs
-    for past_event in app_state.run_logs.get(id, []):
-        yield past_event
-
-    # Check if run is already finished in DB
-    from sqlmodel import Session
-    from api.database import engine
-    from api.models import ScanRun, ScanRunStatus
-    with Session(engine) as session:
-        run = session.get(ScanRun, id)
-        if run and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED):
-            return
-
-    queue = asyncio.Queue()
+    # Register queue BEFORE replaying history.
+    # Without this, broadcast(None) can fire between replay and registration,
+    # leaving queue.get() hanging forever.
+    queue: asyncio.Queue[ServerSentEvent | None] = asyncio.Queue()
     app_state.log_subscribers.setdefault(id, []).append(queue)
+    historical = list(app_state.run_logs.get(id, []))
+
     try:
+        yield ServerSentEvent(data={"message": f"Attached to run {id} log stream"}, event="info")
+
+        for past_event in historical:
+            yield past_event
+
+        # If run finished before we registered, broadcast(None) was missed.
+        # DB check catches that edge case.
+        from sqlmodel import Session
+        from api.database import engine as db_engine
+        from api.models import ScanRun, ScanRunStatus
+        with Session(db_engine) as session:
+            run = session.get(ScanRun, id)
+            if run and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED):
+                while not queue.empty():
+                    event = queue.get_nowait()
+                    if event is not None:
+                        yield event
+                return
+
         while True:
             event = await queue.get()
             if event is None:
