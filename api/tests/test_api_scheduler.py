@@ -1,11 +1,11 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
-import asyncio
-from datetime import datetime, timezone, timedelta
+from api.models import Scan, ScanRun, ScanRunStatus, ScanTargetGroupLink, TargetGroup
+from api.services.scheduler import check_and_run_scheduled_scans
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-from api.models import Scan, TargetGroup, ScanTargetGroupLink, ScanRun, ScanRunStatus
-from api.services.scheduler import check_and_run_scheduled_scans
 
 class DummyAppState:
     def __init__(self):

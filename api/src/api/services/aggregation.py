@@ -1,5 +1,7 @@
 from collections import defaultdict
+
 from api.models import HostState
+
 
 def aggregate_void_nodes(
     ip_states: list[HostState],
@@ -34,11 +36,10 @@ def aggregate_void_nodes(
     for parent, count in void_counts.items():
         if count > 0:
             synthetic_void = HostState(
-                id=None,
-                job_id=None,
+                scan_run_id=ip_states[0].scan_run_id if ip_states else "",
                 ip_address=f"Void ({count})",
                 metadata_resolved_from=parent if parent != "unknown" else None,
-                metadata_discovered_from=["void_aggregated"]
+                metadata_discovered_from_json=["void_aggregated"]
             )
             synthetic_void.ports_list = []
             kept_ips.append(synthetic_void)

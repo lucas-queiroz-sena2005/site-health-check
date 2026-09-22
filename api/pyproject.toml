@@ -9,7 +9,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.14"
+python = "^3.11"
 engine = { path = "../engine", develop = true }
 requests = "^2.31.0"
 cryptography = "^50.0.0"

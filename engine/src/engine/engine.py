@@ -1,13 +1,12 @@
 """The Core Asynchronous Execution Engine (Breadth-First Search)."""
 
 import asyncio
-import aiohttp
+import ipaddress
 from typing import Any
 
-import ipaddress
 from engine.operations.network import resolve_target
-from engine.probes.tcp import check_tcp_and_tls
 from engine.probes.http import check_http_routing
+from engine.probes.tcp import check_tcp_and_tls
 from engine.schemas.engine import IpState
 
 # The master state dictionary: IP (str) -> IpState

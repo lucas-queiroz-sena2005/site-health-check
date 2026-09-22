@@ -1,8 +1,8 @@
 """Network operations and helpers."""
 
 import asyncio
-import socket
 import ipaddress
+import socket
 
 
 async def resolve_target(target: str) -> tuple[str, str, bool]:

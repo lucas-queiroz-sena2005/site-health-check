@@ -1,5 +1,6 @@
 import dataclasses
 
+
 @dataclasses.dataclass
 class TargetSegment:
     segment_type: str      # "domain", "ip", or "cidr"

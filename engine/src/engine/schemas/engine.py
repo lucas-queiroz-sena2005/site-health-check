@@ -1,6 +1,7 @@
 import dataclasses
 from typing import Any
 
+
 @dataclasses.dataclass
 class TaskFlags:
     """Configuration flags defining the depth and behavior of the scan."""

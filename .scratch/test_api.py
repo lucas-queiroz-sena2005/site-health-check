@@ -1,11 +1,6 @@
-import subprocess
-import time
-import requests
 import json
 
-import time
 import requests
-import json
 
 print("\n--- 1. Testing Dynamic Schemas (GET /api/schemas/schedule) ---")
 resp = requests.get("http://127.0.0.1:8000/api/schemas/schedule")

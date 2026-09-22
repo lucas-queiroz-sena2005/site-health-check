@@ -1,9 +1,12 @@
 import uuid
+from datetime import datetime
 from enum import Enum
-from datetime import datetime, timezone
-from pydantic import BaseModel, ConfigDict, Field as PydanticField, model_serializer
-from sqlmodel import Field, SQLModel, Column, JSON, Relationship
 from typing import Any
+
+from pydantic import BaseModel, model_serializer
+from pydantic import Field as PydanticField
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+
 
 def generate_uuid() -> str:
     return str(uuid.uuid4())

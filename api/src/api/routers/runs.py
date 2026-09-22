@@ -1,15 +1,15 @@
 import asyncio
+from collections.abc import AsyncIterable
 from datetime import datetime, timezone
 from typing import Annotated, Any
-from collections.abc import AsyncIterable
 
-from fastapi import APIRouter, HTTPException, Query, status, Path, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
-from sqlmodel import select, desc
 from pydantic import Field as PydanticField
+from sqlmodel import col, desc, select
 
-from api.models import ScanRun, ScanRunStatus, ExecutionConfig, Scan
 from api.database import SessionDep
+from api.models import ExecutionConfig, ExecutionFlags, Scan, ScanRun, ScanRunStatus
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
@@ -28,11 +28,17 @@ class ScanRunResponse(ExecutionConfig):
 def _ingest_results(run_id: str, tmp_path: str, returncode: int) -> None:
     """Sync DB ingestion — runs in a thread via asyncio.to_thread()."""
     import json
+
     from sqlmodel import Session
+
     from api.database import engine as db_engine
     from api.models import (
-        ScanRun, ScanRunStatus, HostState, PortState,
-        TlsCertificate, HttpRoutingCheck,
+        HostState,
+        HttpRoutingCheck,
+        PortState,
+        ScanRun,
+        ScanRunStatus,
+        TlsCertificate,
     )
 
     with Session(db_engine) as session:
@@ -100,7 +106,12 @@ def _ingest_results(run_id: str, tmp_path: str, returncode: int) -> None:
                         session.add(route)
 
             # Metrics
-            duration = round((run.finished_at - run.started_at).total_seconds(), 2) if run.started_at else 0.0
+            duration = 0.0
+            if run.started_at and run.finished_at:
+                started_at = run.started_at
+                if started_at.tzinfo is None:
+                    started_at = started_at.replace(tzinfo=timezone.utc)
+                duration = round((run.finished_at - started_at).total_seconds(), 2)
             anomalies = 0
             for ip, host_data in results.items():
                 for port_str, port_data in host_data.get("ports", {}).items():
@@ -128,6 +139,7 @@ def _ingest_results(run_id: str, tmp_path: str, returncode: int) -> None:
 
 async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
     tmp_path = None
+    import os
 
     if not hasattr(app_state, "log_subscribers"):
         app_state.log_subscribers = {}
@@ -146,9 +158,9 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
 
     try:
         import tempfile
-        import json
-        import os
+
         from sqlmodel import Session
+
         from api.database import engine as db_engine
         from api.models import ScanRun, ScanRunStatus
 
@@ -187,10 +199,12 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
                 continue
                 
             extra = fields[key].json_schema_extra or {}
+            if not isinstance(extra, dict):
+                continue
             cli_arg = extra.get("cli_arg")
             is_switch = extra.get("is_switch", False)
             
-            if not cli_arg:
+            if not isinstance(cli_arg, str):
                 continue
                 
             if is_switch and isinstance(value, bool):
@@ -221,14 +235,15 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
                 await broadcast(ServerSentEvent(data={"message": line.decode('utf-8').strip()}, event="log"))
                 
         await process.wait()
-        await broadcast(ServerSentEvent(data={"message": f"Run finished with code {process.returncode}"}, event="status"))
+        await broadcast(ServerSentEvent(data={"message": f"Run finished with code {process.returncode if process.returncode is not None else 1}"}, event="status"))
 
         # DB ingestion runs in a thread so the event loop stays free
-        await asyncio.to_thread(_ingest_results, run_id, tmp_path, process.returncode)
+        await asyncio.to_thread(_ingest_results, run_id, tmp_path, process.returncode if process.returncode is not None else 1)
 
     except Exception as e:
-        await broadcast(ServerSentEvent(data={"message": f"Engine error: {str(e)}"}, event="error"))
+        await broadcast(ServerSentEvent(data={"message": f"Engine error: {e!s}"}, event="error"))
         from sqlmodel import Session
+
         from api.database import engine as db_engine
         from api.models import ScanRun, ScanRunStatus
         with Session(db_engine) as session:
@@ -278,7 +293,7 @@ async def launch_run(
         metrics_json=run.metrics_json,
         targets=snapshot.get("targets", []),
         ports=snapshot.get("ports", []),
-        flags=snapshot.get("flags", {})
+        flags=ExecutionFlags.model_validate(snapshot.get("flags", {}))
     )
 
 @router.get("")
@@ -289,7 +304,7 @@ def list_runs(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0
 ) -> list[ScanRunResponse]:
-    stmt = select(ScanRun, Scan.name).outerjoin(Scan, ScanRun.scan_id == Scan.id)
+    stmt = select(ScanRun, Scan.name).outerjoin(Scan, col(ScanRun.scan_id) == Scan.id)
     
     if scan_id:
         stmt = stmt.where(ScanRun.scan_id == scan_id)
@@ -311,6 +326,9 @@ def list_runs(
             run = getattr(row, "ScanRun", row)
             scan_name = getattr(row, "name", None)
 
+        if run is None:
+            continue
+
         config = run.execution_config_snapshot_json or {}
         runs.append(
             ScanRunResponse(
@@ -323,7 +341,7 @@ def list_runs(
                 metrics_json=run.metrics_json,
                 targets=config.get("targets", []),
                 ports=config.get("ports", []),
-                flags=config.get("flags", {})
+                flags=ExecutionFlags.model_validate(config.get("flags", {}))
             )
         )
     return runs
@@ -355,6 +373,7 @@ async def stream_run_logs(
         # If run finished before we registered, broadcast(None) was missed.
         # DB check catches that edge case.
         from sqlmodel import Session
+
         from api.database import engine as db_engine
         from api.models import ScanRun, ScanRunStatus
         with Session(db_engine) as session:
@@ -382,6 +401,7 @@ def get_run_results(
     session: SessionDep
 ) -> dict[str, Any]:
     from sqlmodel import select
+
     from api.models import HostState
     
     run = session.get(ScanRun, id)

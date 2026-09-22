@@ -1,8 +1,9 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
+
 import croniter
-from sqlmodel import Session, select
+from sqlmodel import Session, col, desc, select
 
 from api.database import engine
 from api.models import Scan, ScanRun, ScanRunStatus
@@ -28,7 +29,7 @@ async def check_and_run_scheduled_scans(app_state):
                 # Check for active running or pending runs for this scan
                 active_run_stmt = select(ScanRun).where(
                     ScanRun.scan_id == scan.id,
-                    ScanRun.status.in_([ScanRunStatus.PENDING, ScanRunStatus.RUNNING])
+                    col(ScanRun.status).in_([ScanRunStatus.PENDING, ScanRunStatus.RUNNING])
                 )
                 if session.exec(active_run_stmt).first():
                     continue
@@ -36,7 +37,7 @@ async def check_and_run_scheduled_scans(app_state):
                 # Get the most recent run
                 latest_run_stmt = select(ScanRun).where(
                     ScanRun.scan_id == scan.id
-                ).order_by(ScanRun.started_at.desc()).limit(1)
+                ).order_by(desc(ScanRun.started_at)).limit(1)
                 latest_run = session.exec(latest_run_stmt).first()
                 
                 should_run = False

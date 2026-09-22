@@ -1,4 +1,3 @@
-import sys
 import re
 
 with open('/home/crow/Projects/site-health-check/frontend/src/App.jsx', 'r') as f:

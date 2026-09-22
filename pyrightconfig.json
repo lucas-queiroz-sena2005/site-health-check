@@ -1,15 +1,21 @@
 {
-  "venvPath": ".",
+  "pythonVersion": "3.14",
   "executionEnvironments": [
     {
       "root": "api",
-      "venv": "api/.venv",
-      "extraPaths": ["api/src"]
+      "extraPaths": [
+        "api/src",
+        "engine/src",
+        "api/.venv/lib/python3.14/site-packages",
+        "engine/.venv/lib/python3.14/site-packages"
+      ]
     },
     {
       "root": "engine",
-      "venv": "engine/.venv",
-      "extraPaths": ["engine/src"]
+      "extraPaths": [
+        "engine/src",
+        "engine/.venv/lib/python3.14/site-packages"
+      ]
     }
   ]
 }

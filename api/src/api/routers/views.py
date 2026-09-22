@@ -1,8 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, HTTPException, status
-from sqlmodel import Session
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from pydantic import BaseModel, ConfigDict
+from sqlmodel import Session
 
 from api.database import get_session
 from api.models import SavedView

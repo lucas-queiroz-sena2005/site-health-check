@@ -1,14 +1,22 @@
 import asyncio
 from datetime import datetime, timezone
-from typing import Any, Annotated
-from fastapi import APIRouter, status, HTTPException, Path, Request
-from sqlmodel import select
-import croniter
-from pydantic import BaseModel, ConfigDict
+from typing import Annotated, Any
 
-from api.models import Scan, TargetGroup, ScanTargetGroupLink, ExecutionConfig, ScanRun, ScanRunStatus
+import croniter
+from fastapi import APIRouter, HTTPException, Path, Request, status
+from sqlmodel import desc, select
+
 from api.database import SessionDep
-from api.routers.runs import run_engine_cli, ScanRunResponse
+from api.models import (
+    ExecutionConfig,
+    ExecutionFlags,
+    Scan,
+    ScanRun,
+    ScanRunStatus,
+    ScanTargetGroupLink,
+    TargetGroup,
+)
+from api.routers.runs import ScanRunResponse, run_engine_cli
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
@@ -73,7 +81,7 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         metrics=None,
         targets=request.targets,
         ports=scan.ports_json,
-        flags=scan.flags_json
+        flags=ExecutionFlags.model_validate(scan.flags_json)
     )
 
 @router.get("")
@@ -88,7 +96,7 @@ def list_scans(session: SessionDep) -> list[ScanResponse]:
         for tg in s.target_groups:
             targets.extend(tg.targets_json)
         # Get latest run
-        run_stmt = select(ScanRun).where(ScanRun.scan_id == s.id).order_by(ScanRun.started_at.desc()).limit(1)
+        run_stmt = select(ScanRun).where(ScanRun.scan_id == s.id).order_by(desc(ScanRun.started_at)).limit(1)
         latest_run = session.exec(run_stmt).first()
         
         last_run = latest_run.started_at if latest_run and latest_run.started_at else None
@@ -112,7 +120,7 @@ def list_scans(session: SessionDep) -> list[ScanResponse]:
             metrics=metrics,
             targets=targets,
             ports=s.ports_json,
-            flags=s.flags_json
+            flags=ExecutionFlags.model_validate(s.flags_json)
         ))
     return responses
 
@@ -151,7 +159,7 @@ def update_scan(id: Annotated[str, Path()], request: ScanCreateRequest, session:
     session.refresh(scan)
     
     # Re-calculate runs
-    run_stmt = select(ScanRun).where(ScanRun.scan_id == scan.id).order_by(ScanRun.started_at.desc()).limit(1)
+    run_stmt = select(ScanRun).where(ScanRun.scan_id == scan.id).order_by(desc(ScanRun.started_at)).limit(1)
     latest_run = session.exec(run_stmt).first()
     last_run = latest_run.started_at if latest_run and latest_run.started_at else None
     metrics = latest_run.metrics_json if latest_run else None
@@ -174,7 +182,7 @@ def update_scan(id: Annotated[str, Path()], request: ScanCreateRequest, session:
         metrics=metrics,
         targets=request.targets,
         ports=scan.ports_json,
-        **scan.flags_json
+        flags=ExecutionFlags.model_validate(scan.flags_json)
     )
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -230,6 +238,6 @@ async def launch_scheduled_scan(
         metrics_json=run.metrics_json,
         targets=targets,
         ports=scan.ports_json or [80, 443],
-        flags=scan.flags_json or {}
+        flags=ExecutionFlags.model_validate(scan.flags_json or {})
     )
 

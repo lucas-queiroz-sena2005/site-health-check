@@ -1,8 +1,10 @@
+import ipaddress
 import re
 import sys
-import ipaddress
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Any
+from typing import Any
+
 from engine.schemas.parsing import TargetSegment, TargetValidationResult
 
 DOMAIN_REGEX = r"^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^localhost$"

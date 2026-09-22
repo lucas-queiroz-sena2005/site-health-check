@@ -2,13 +2,13 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, HTTPException, status
-from sqlmodel import Session, select, func, col, and_
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlmodel import Session, and_, col, func, select
 
+from api.config import settings
 from api.database import get_session
 from api.models import HostState, PortState, ScanRun
-from api.config import settings
 from api.services.aggregation import aggregate_void_nodes
 
 router = APIRouter(prefix="/results", tags=["results"])
@@ -107,7 +107,7 @@ def get_results(
             .join(PortState, col(HostState.id) == col(PortState.host_state_id))
             .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
             .where(PortState.tcp_status == "open")
-            .where(ScanRun.started_at >= cutoff)
+            .where(col(ScanRun.started_at) >= cutoff)
             .distinct()
         )
         # We only care about IPs in the current result set

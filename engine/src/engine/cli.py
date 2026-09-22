@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 
-from engine.parsing import validate_and_clean_target, parse_ports, expand_target_ranges
+from engine.parsing import expand_target_ranges, parse_ports, validate_and_clean_target
 from engine.schemas.engine import TaskConfig, TaskFlags
 
 

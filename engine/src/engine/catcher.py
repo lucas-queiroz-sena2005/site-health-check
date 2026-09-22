@@ -1,11 +1,10 @@
 import re
-from typing import Optional
 
 
 def validate_html(
     html_content: str,
-    expected_strings: Optional[list[str]] = None,
-    undesired_strings: Optional[list[str]] = None,
+    expected_strings: list[str] | None = None,
+    undesired_strings: list[str] | None = None,
     require_all_expected: bool = True,
     reject_any_undesired: bool = True,
 ) -> tuple[bool, str]:

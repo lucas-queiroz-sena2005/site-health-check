@@ -10,6 +10,7 @@ import aiohttp.abc
 from engine.catcher import validate_html
 from engine.schemas.engine import HttpRoutingCheck, TaskFlags
 
+
 class SingleIPResolver(aiohttp.abc.AbstractResolver):
     """
     A custom DNS resolver that intercepts all requests and routes them 
