@@ -1,14 +1,29 @@
 # Ignore Python compiled files
 __pycache__/
 *.pyc
-src/.ruff_cache/
+.ruff_cache/
+
+# Ignore Node / Frontend build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Ignore Environment & Security
+.env
+.env.*
+!.env.example
+
+# Ignore local scratch & system files
+.scratch/
+.DS_Store
+*.db
 
 # Ignore output files
 /results*.json
 /results/*.json
 
-# Ignore virtual environments if created manually
+# Ignore virtual environments
 .venv/
 venv/
 env/
-*.db
+
