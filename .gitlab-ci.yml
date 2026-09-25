@@ -13,4 +13,4 @@ deploy_production:
   tags:
     - tcp-scanner
   only:
-    - main
+    - production
