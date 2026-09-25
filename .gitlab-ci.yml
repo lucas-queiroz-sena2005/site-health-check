@@ -10,5 +10,7 @@ deploy_production:
     
     # Prune dangling images to prevent the 21GB disk from filling up over time
     - docker image prune -f
+  tags:
+    - tcp-scanner
   only:
     - main
