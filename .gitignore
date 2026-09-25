@@ -26,4 +26,5 @@ dist/
 .venv/
 venv/
 env/
-
+# Ignore environment variable files
+!.env.template
