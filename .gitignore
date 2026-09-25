@@ -12,3 +12,8 @@ src/.ruff_cache/
 venv/
 env/
 *.db
+
+# Ignore environment variable files
+.env
+.env.*
+!.env.template

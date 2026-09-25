@@ -19,8 +19,8 @@ FROM docker.io/library/nginx:alpine
 # Copy the built static assets from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config for API proxying
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx config for API proxying to templates so environment variables are replaced
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Expose port 80 to the host
 EXPOSE 80

@@ -5,6 +5,8 @@ deploy_production:
   stage: deploy
   # We use the shell executor, so this runs directly on the Rocky OS server.
   script:
+    - chmod +x ./init-letsencrypt.sh
+    - ./init-letsencrypt.sh
     # docker compose will automatically build the images and recreate the containers if needed
     - docker compose up -d --build
     
