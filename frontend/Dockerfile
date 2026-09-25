@@ -19,11 +19,19 @@ FROM docker.io/library/nginx:alpine
 # Copy the built static assets from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy custom nginx config for API proxying to templates so environment variables are replaced
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+# Copy the custom nginx config templates
+COPY nginx-http.conf.template /etc/nginx/templates/nginx-http.conf.template
+COPY nginx-ssl.conf.template /etc/nginx/templates/nginx-ssl.conf.template
+
+# Copy and set up the dynamic entrypoint
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Expose port 80 to the host
 EXPOSE 80
+
+# Use our custom entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

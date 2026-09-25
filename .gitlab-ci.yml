@@ -5,6 +5,9 @@ deploy_production:
   stage: deploy
   # We use the shell executor, so this runs directly on the Rocky OS server.
   script:
+    - echo "DOMAIN_NAME=$DOMAIN_NAME" > .env
+    - echo "CERTBOT_EMAIL=$CERTBOT_EMAIL" >> .env
+    - echo "ENABLE_SSL=$ENABLE_SSL" >> .env
     - chmod +x ./init-letsencrypt.sh
     - ./init-letsencrypt.sh
     # docker compose will automatically build the images and recreate the containers if needed

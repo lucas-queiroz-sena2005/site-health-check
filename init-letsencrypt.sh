@@ -6,6 +6,11 @@ if ! [ -x "$(command -v docker)" ]; then
   exit 1
 fi
 
+if [ "$ENABLE_SSL" != "true" ]; then
+  echo "ENABLE_SSL is not set to true. Skipping Let's Encrypt initialization."
+  exit 0
+fi
+
 if [ -z "$DOMAIN_NAME" ] || [ -z "$CERTBOT_EMAIL" ]; then
   echo "Error: DOMAIN_NAME or CERTBOT_EMAIL environment variables are not set."
   echo "Ensure these are configured in GitLab CI/CD Variables."
