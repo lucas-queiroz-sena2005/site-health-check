@@ -17,3 +17,7 @@ env/
 .env
 .env.*
 !.env.template
+
+# Ignore docker volumes
+certbot/conf/
+certbot/www/
