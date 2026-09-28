@@ -8,6 +8,10 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
     location /api/ {
         proxy_pass http://backend:8000/api/;
         proxy_set_header Host $host;
