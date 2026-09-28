@@ -39,11 +39,12 @@ fi
 
 echo "### Creating dummy certificate for $domains ..."
 path="/etc/letsencrypt/live/$domains"
-mkdir -p "$data_path/conf/live/$domains"
+
 docker compose run --rm --entrypoint "\
+  mkdir -p \"$path\" && \
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
-    -keyout '$path/privkey.pem' \
-    -out '$path/fullchain.pem' \
+    -keyout \"$path/privkey.pem\" \
+    -out \"$path/fullchain.pem\" \
     -subj '/CN=localhost'" certbot
 echo
 
@@ -57,7 +58,6 @@ docker compose run --rm --entrypoint "\
   rm -Rf /etc/letsencrypt/archive/$domains && \
   rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
 echo
-
 
 echo "### Requesting Let's Encrypt certificate for $domains ..."
 # Join $domains to -d args
@@ -78,6 +78,7 @@ docker compose run --rm --entrypoint "\
     $domain_args \
     --rsa-key-size $rsa_key_size \
     --agree-tos \
+    --non-interactive \
     --force-renewal" certbot
 echo
 
