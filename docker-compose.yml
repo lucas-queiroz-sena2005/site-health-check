@@ -10,8 +10,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt:z
+      - ./certbot/www:/var/www/certbot:z
     depends_on:
       backend:
         condition: service_healthy
@@ -39,8 +39,8 @@ services:
     image: docker.io/certbot/certbot
     container_name: site-health-check-certbot
     volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt:z
+      - ./certbot/www:/var/www/certbot:z
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     restart: unless-stopped
 

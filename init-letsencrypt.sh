@@ -25,7 +25,9 @@ if [ -z "$DOMAIN_NAME" ] || [ -z "$CERTBOT_EMAIL" ]; then
   exit 1
 fi
 
-domains=($DOMAIN_NAME)
+# Sanitize DOMAIN_NAME (strip whitespace and carriage returns)
+CLEAN_DOMAIN=$(echo "$DOMAIN_NAME" | tr -d '[:space:]')
+domains=($CLEAN_DOMAIN)
 rsa_key_size=4096
 data_path="./certbot"
 email="$CERTBOT_EMAIL"
