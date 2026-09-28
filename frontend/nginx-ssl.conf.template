@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name ${SERVER_NAME};
+    server_name ${DOMAIN_NAME};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -13,10 +13,10 @@ server {
 
 server {
     listen 443 ssl;
-    server_name ${SERVER_NAME};
+    server_name ${DOMAIN_NAME};
 
-    ssl_certificate /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN_NAME}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_NAME}/privkey.pem;
 
     location / {
         root /usr/share/nginx/html;
