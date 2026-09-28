@@ -16,12 +16,12 @@ RUN npm run build
 # --- Serve Stage ---
 FROM docker.io/library/nginx:alpine
 
+# Copy the custom nginx config templates to a staging area
+COPY nginx-http.conf.template /app/nginx-http.conf.template
+COPY nginx-ssl.conf.template /app/nginx-ssl.conf.template
+
 # Copy the built static assets from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy the custom nginx config templates
-COPY nginx-http.conf.template /etc/nginx/templates/nginx-http.conf.template
-COPY nginx-ssl.conf.template /etc/nginx/templates/nginx-ssl.conf.template
 
 # Copy and set up the dynamic entrypoint
 COPY entrypoint.sh /app/entrypoint.sh
