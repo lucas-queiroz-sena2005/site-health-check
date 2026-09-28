@@ -6,6 +6,7 @@ stages:
 
 deploy_production:
   stage: deploy
+  environment: production
   script:
     - |
       cat <<EOF > .env
