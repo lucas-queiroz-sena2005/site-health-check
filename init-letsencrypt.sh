@@ -6,8 +6,16 @@ if ! [ -x "$(command -v docker)" ]; then
   exit 1
 fi
 
-if [ "$ENABLE_SSL" != "true" ]; then
-  echo "ENABLE_SSL is not set to true. Skipping Let's Encrypt initialization."
+# Explicitly load variables from .env if present
+if [ -f .env ]; then
+  set -a; source .env; set +a
+fi
+
+# Sanitize ENABLE_SSL (lowercase, remove spaces)
+SAFE_ENABLE_SSL=$(echo "$ENABLE_SSL" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+
+if [ "$SAFE_ENABLE_SSL" != "true" ]; then
+  echo "ENABLE_SSL is set to '$ENABLE_SSL' (not true). Skipping Let's Encrypt initialization."
   exit 0
 fi
 
