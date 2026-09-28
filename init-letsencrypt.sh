@@ -72,6 +72,12 @@ case "$email" in
   *) email_arg="--email $email" ;;
 esac
 
+staging_arg=""
+if [ "$USE_STAGING_SSL" = "true" ]; then
+  echo "### Using Let's Encrypt Staging Environment..."
+  staging_arg="--staging"
+fi
+
 docker compose run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $email_arg \
@@ -79,6 +85,7 @@ docker compose run --rm --entrypoint "\
     --rsa-key-size $rsa_key_size \
     --agree-tos \
     --non-interactive \
+    $staging_arg \
     --force-renewal" certbot
 echo
 

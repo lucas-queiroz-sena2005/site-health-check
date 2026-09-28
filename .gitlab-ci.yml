@@ -13,6 +13,7 @@ deploy_production:
       DOMAIN_NAME=$DOMAIN_NAME
       CERTBOT_EMAIL=$CERTBOT_EMAIL
       ENABLE_SSL=$ENABLE_SSL
+      USE_STAGING_SSL=$USE_STAGING_SSL
       EOF
     - chmod +x ./init-letsencrypt.sh
     - ./init-letsencrypt.sh
