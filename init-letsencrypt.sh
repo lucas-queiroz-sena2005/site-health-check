@@ -11,8 +11,9 @@ if [ -f .env ]; then
   set -a; source .env; set +a
 fi
 
-# Sanitize ENABLE_SSL (lowercase, remove spaces)
+# Sanitize ENABLE_SSL and LOCAL_HTTPS (lowercase, remove spaces)
 SAFE_ENABLE_SSL=$(echo "$ENABLE_SSL" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+SAFE_LOCAL_HTTPS=$(echo "$LOCAL_HTTPS" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 
 if [ "$SAFE_ENABLE_SSL" != "true" ]; then
   echo "ENABLE_SSL is set to '$ENABLE_SSL' (not true). Skipping Let's Encrypt initialization."
@@ -51,6 +52,12 @@ echo
 echo "### Starting nginx ..."
 docker compose up --force-recreate -d frontend
 echo
+
+if [ "$SAFE_LOCAL_HTTPS" = "true" ]; then
+  echo "### LOCAL_HTTPS is true. Keeping dummy certificate and skipping Let's Encrypt."
+  echo "### Local HTTPS setup complete."
+  exit 0
+fi
 
 echo "### Deleting dummy certificate for $domains ..."
 docker compose run --rm --entrypoint "sh -c '\

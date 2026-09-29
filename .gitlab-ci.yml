@@ -4,16 +4,17 @@ variables:
 stages:
   - deploy
 
-deploy_production:
+.deploy_template: &deploy_template
   stage: deploy
-  environment: production
   script:
     - |
       cat <<EOF > .env
       DOMAIN_NAME=$DOMAIN_NAME
       CERTBOT_EMAIL=$CERTBOT_EMAIL
       ENABLE_SSL=$ENABLE_SSL
+      LOCAL_HTTPS=$LOCAL_HTTPS
       USE_STAGING_SSL=$USE_STAGING_SSL
+      ALLOWED_IPS=$ALLOWED_IPS
       EOF
     - chmod +x ./init-letsencrypt.sh
     - ./init-letsencrypt.sh
@@ -21,5 +22,15 @@ deploy_production:
     - docker system prune -af --filter "until=72h"
   tags:
     - tcp-scanner
+
+deploy_local_staging:
+  <<: *deploy_template
+  environment: local-staging
+  only:
+    - local-staging
+
+deploy_production:
+  <<: *deploy_template
+  environment: production
   only:
     - production
