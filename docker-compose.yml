@@ -3,6 +3,7 @@ version: '3.8'
 services:
   frontend:
     build: ./frontend
+    image: localhost/site-health-check-frontend
     container_name: site-health-check-frontend
     ports:
       - "${HTTP_PORT:-80}:80"
@@ -21,6 +22,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+    image: localhost/site-health-check-backend
     container_name: site-health-check-backend
     ports:
       - "8000:8000"
