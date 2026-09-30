@@ -14,7 +14,7 @@ stages:
       ENABLE_SSL=$ENABLE_SSL
       LOCAL_HTTPS=$LOCAL_HTTPS
       USE_STAGING_SSL=$USE_STAGING_SSL
-      ALLOWED_IPS="$ALLOWED_IPS"
+      ALLOWED_IPS=$ALLOWED_IPS
       LOCAL_CA_DIR=$LOCAL_CA_DIR
       EOF
     - chmod +x ./init-letsencrypt.sh

@@ -74,6 +74,46 @@ Adicione e gerencie rotinas automáticas de execução, ajustando a frequência 
    - **Frontend:** `http://localhost:8080`
    - **Backend API:** `http://localhost:8000`
 
+## CI/CD
+
+O deploy é automatizado via GitLab CI/CD com um pipeline de estágio único (`deploy`).
+
+### Pipeline
+
+| Job | Branch trigger | Environment | O que faz |
+|---|---|---|---|
+| `deploy_local_staging` | `local-staging` | `local-staging` | Deploy no servidor de staging local |
+| `deploy_production` | `production` | `production` | Deploy no servidor de produção |
+
+Cada job executa:
+1. Gera o `.env` a partir das variáveis CI/CD
+2. Executa `init-letsencrypt.sh` (gera certificados SSL)
+3. `docker compose up -d --build` (build e deploy dos containers)
+4. `docker system prune` (limpeza de imagens antigas)
+
+### Runner
+
+O pipeline espera um runner com a tag `tcp-scanner` usando o executor `shell`. O runner precisa de:
+- Podman (com `docker` como alias ou symlink)
+- `podman-compose` instalado
+- SubUID/SubGID configurados para o usuário do runner (rootless)
+- `loginctl enable-linger` habilitado para o usuário do runner
+
+### Variáveis CI/CD (GitLab → Settings → CI/CD → Variables)
+
+| Variável | Scope | Obrigatória | Descrição |
+|---|---|---|---|
+| `DOMAIN_NAME` | Per-environment | Sim | Domínio do servidor (ex: `exemplo.com.br`) |
+| `CERTBOT_EMAIL` | Per-environment | Sim | E-mail para registro no Let's Encrypt |
+| `ENABLE_SSL` | Per-environment | Sim | `true` para habilitar HTTPS |
+| `LOCAL_HTTPS` | `local-staging` | Não | `true` para usar certificado local (bypassa Let's Encrypt) |
+| `USE_STAGING_SSL` | Per-environment | Não | `true` para usar o ambiente staging do Let's Encrypt |
+| `ALLOWED_IPS` | Per-environment | Não | Diretivas nginx de IP whitelist (ex: `allow 10.0.0.1;`) |
+| `LOCAL_CA_DIR` | `local-staging` | Não | Caminho absoluto para o diretório da CA local no runner (ex: `/home/gitlab-runner/.local-ca`) |
+
+> [!TIP]
+> Para staging local, defina as variáveis com scope no environment `local-staging`. Para produção, use o scope `production`. Variáveis sem scope se aplicam a todos os environments.
+
 ## Arquitetura
 
 O projeto é dividido em três frentes principais:
