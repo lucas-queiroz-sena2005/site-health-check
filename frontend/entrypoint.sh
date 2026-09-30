@@ -2,6 +2,10 @@
 
 mkdir -p /etc/nginx/templates/
 
+# Strip literal quotes
+ALLOWED_IPS="${ALLOWED_IPS#\"}"
+ALLOWED_IPS="${ALLOWED_IPS%\"}"
+
 if [ -z "$ALLOWED_IPS" ]; then
     export ALLOWED_IPS="allow all;"
 else
