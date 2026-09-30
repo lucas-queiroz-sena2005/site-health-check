@@ -2,10 +2,6 @@
 
 mkdir -p /etc/nginx/templates/
 
-# Strip any literal quotes that podman-compose might have passed from the .env file
-ALLOWED_IPS="${ALLOWED_IPS#\"}"
-ALLOWED_IPS="${ALLOWED_IPS%\"}"
-
 if [ -z "$ALLOWED_IPS" ]; then
     export ALLOWED_IPS="allow all;"
 else
