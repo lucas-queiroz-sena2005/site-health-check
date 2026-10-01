@@ -78,10 +78,10 @@ EOF
   rm "$host_path/req.cnf" "$host_path/v3.ext" "$host_path/cert.csr"
 else
   docker compose run --rm --entrypoint "sh -c '\
-    mkdir -p $path && \
+    mkdir -p /etc/letsencrypt/live/$domains && \
     openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
-      -keyout $path/privkey.pem \
-      -out $path/fullchain.pem \
+      -keyout /etc/letsencrypt/live/$domains/privkey.pem \
+      -out /etc/letsencrypt/live/$domains/fullchain.pem \
       -subj /CN=localhost'" certbot
 fi
 echo

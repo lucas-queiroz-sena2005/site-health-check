@@ -19,9 +19,10 @@ stages:
       HTTP_PORT=$HTTP_PORT
       HTTPS_PORT=$HTTPS_PORT
       EOF
+    - docker compose build
     - chmod +x ./init-letsencrypt.sh
     - ./init-letsencrypt.sh
-    - docker compose up -d --build
+    - docker compose up -d
     - docker system prune -af --filter "until=72h"
   tags:
     - tcp-scanner
