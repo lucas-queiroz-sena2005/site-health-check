@@ -10,7 +10,7 @@ if [ -z "$ALLOWED_IPS" ]; then
     export ALLOWED_IPS="allow all;"
 else
     # Automatically allow the container's gateway IP (Podman/Docker bridge)
-    GATEWAY_IP=$(ip route show default | awk '{print $3}')
+    GATEWAY_IP=$(ip route | awk '/^default/ {print $3}' | head -n 1)
     if [ -n "$GATEWAY_IP" ]; then
         export ALLOWED_IPS="allow $GATEWAY_IP; $ALLOWED_IPS"
     fi
