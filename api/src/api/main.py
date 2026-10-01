@@ -42,7 +42,13 @@ class SuppressDisconnectMiddleware:
         except anyio.BrokenResourceError:
             return
 
-app = FastAPI(title="Site Health Check API", lifespan=lifespan)
+app = FastAPI(
+    title="Site Health Check API", 
+    lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
