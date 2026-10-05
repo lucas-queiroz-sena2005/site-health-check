@@ -19,6 +19,9 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN_NAME}/privkey.pem;
 
     location / {
+        ${ALLOWED_IPS}
+        deny all;
+
         root /usr/share/nginx/html;
         index index.html index.htm;
         try_files $uri $uri/ /index.html;

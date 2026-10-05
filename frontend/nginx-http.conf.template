@@ -3,6 +3,9 @@ server {
     server_name ${DOMAIN_NAME};
 
     location / {
+        ${ALLOWED_IPS}
+        deny all;
+
         root /usr/share/nginx/html;
         index index.html index.htm;
         try_files $uri $uri/ /index.html;

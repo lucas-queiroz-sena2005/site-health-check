@@ -11,8 +11,9 @@ if [ -f .env ]; then
   set -a; source .env; set +a
 fi
 
-# Sanitize ENABLE_SSL (lowercase, remove spaces)
+# Sanitize ENABLE_SSL and LOCAL_HTTPS (lowercase, remove spaces)
 SAFE_ENABLE_SSL=$(echo "$ENABLE_SSL" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+SAFE_LOCAL_HTTPS=$(echo "$LOCAL_HTTPS" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 
 if [ "$SAFE_ENABLE_SSL" != "true" ]; then
   echo "ENABLE_SSL is set to '$ENABLE_SSL' (not true). Skipping Let's Encrypt initialization."
@@ -37,20 +38,63 @@ if [ -d "$data_path/conf/live/$domains" ]; then
   exit 0
 fi
 
-echo "### Creating dummy certificate for $domains ..."
-path="/etc/letsencrypt/live/$domains"
+if [ "$SAFE_LOCAL_HTTPS" = "true" ] && [ -f "$LOCAL_CA_DIR/rootCA.pem" ]; then
+  echo "### Generating signed local certificate for $domains using Local CA..."
+  host_path="./certbot/conf/live/$domains"
+  mkdir -p "$host_path"
+  
+  openssl genrsa -out "$host_path/privkey.pem" $rsa_key_size
+  
+  cat > "$host_path/req.cnf" <<EOF
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+prompt = no
+[req_distinguished_name]
+CN = $domains
+[v3_req]
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = $domains
+EOF
 
-docker compose run --rm --entrypoint "sh -c '\
-  mkdir -p $path && \
-  openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
-    -keyout $path/privkey.pem \
-    -out $path/fullchain.pem \
-    -subj /CN=localhost'" certbot
+  openssl req -new -key "$host_path/privkey.pem" -out "$host_path/cert.csr" -config "$host_path/req.cnf"
+
+  cat > "$host_path/v3.ext" <<EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+[alt_names]
+DNS.1 = $domains
+EOF
+
+  openssl x509 -req -in "$host_path/cert.csr" \
+    -CA "$LOCAL_CA_DIR/rootCA.pem" \
+    -CAkey "$LOCAL_CA_DIR/rootCA.key" \
+    -CAcreateserial -out "$host_path/fullchain.pem" \
+    -days 365 -extfile "$host_path/v3.ext"
+    
+  rm "$host_path/req.cnf" "$host_path/v3.ext" "$host_path/cert.csr"
+else
+  docker compose run --rm --entrypoint "sh -c '\
+    mkdir -p /etc/letsencrypt/live/'$domains' && \
+    openssl req -x509 -nodes -newkey rsa:'$rsa_key_size' -days 1\
+      -keyout /etc/letsencrypt/live/'$domains'/privkey.pem \
+      -out /etc/letsencrypt/live/'$domains'/fullchain.pem \
+      -subj /CN=localhost'" certbot
+fi
 echo
 
 echo "### Starting nginx ..."
 docker compose up --force-recreate -d frontend
 echo
+
+if [ "$SAFE_LOCAL_HTTPS" = "true" ]; then
+  echo "### LOCAL_HTTPS is true. Keeping dummy certificate and skipping Let's Encrypt."
+  echo "### Local HTTPS setup complete."
+  exit 0
+fi
 
 echo "### Deleting dummy certificate for $domains ..."
 docker compose run --rm --entrypoint "sh -c '\

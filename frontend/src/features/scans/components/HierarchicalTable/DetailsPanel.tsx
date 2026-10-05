@@ -12,7 +12,7 @@ function Section({ title, data }: { title: string, data: Record<string, any> }) 
         {title}
       </div>
       <div className="p-4 grid grid-cols-2 gap-x-6 gap-y-3">
-        {Object.entries(data).map(([key, value]) => {
+        {Object.entries(data).filter(([_, v]) => v !== undefined).map(([key, value]) => {
           if (typeof value === 'object' && value !== null) {
              return (
                <div key={key} className="col-span-2 flex flex-col gap-1">
