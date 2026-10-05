@@ -15,6 +15,18 @@ async def lifespan(app: FastAPI):
     await asyncio.to_thread(SQLModel.metadata.create_all, engine)
     app.state.log_subscribers = {}
     app.state.run_logs = {}
+    app.state.processes = {}
+    
+    from sqlmodel import Session, select
+    from api.models import ScanRun, ScanRunStatus
+    with Session(engine) as session:
+        runs = session.exec(select(ScanRun).where(ScanRun.status.in_([ScanRunStatus.PENDING, ScanRunStatus.RUNNING]))).all()
+        for run in runs:
+            run.status = ScanRunStatus.FAILED
+            run.metrics_json = run.metrics_json or {}
+            run.metrics_json["reason"] = "api_restart"
+            session.add(run)
+        session.commit()
     scheduler_task = asyncio.create_task(scheduler_loop(app.state))
     try:
         yield

@@ -80,3 +80,35 @@ def test_launch_scheduled_scan_endpoint(client: TestClient):
     filtered_runs = filter_resp.json()
     assert len(filtered_runs) == 1
     assert filtered_runs[0]["id"] == forced_run["id"]
+
+def test_abort_run(client: TestClient):
+    # Launch an ad-hoc run
+    launch_resp = client.post(
+        "/api/runs/launch",
+        json={
+            "targets": ["10.0.0.1"],
+            "ports": [80],
+            "flags": {"worker_delay": 10.0}
+        }
+    )
+    assert launch_resp.status_code == 201
+    run_id = launch_resp.json()["id"]
+
+    import time
+    # Give the background task a moment to spawn the process
+    time.sleep(0.5)
+
+    # Abort the run
+    abort_resp = client.post(f"/api/runs/{run_id}/abort")
+    assert abort_resp.status_code == 202
+    assert "Abort signal sent" in abort_resp.json()["message"]
+    
+    # Let the process handle the signal
+    time.sleep(1)
+
+    # Verify status changed to ABORTED
+    list_resp = client.get(f"/api/runs?limit=50")
+    runs = list_resp.json()
+    found = next((r for r in runs if r["id"] == run_id), None)
+    assert found is not None
+    assert found["status"] == "ABORTED"

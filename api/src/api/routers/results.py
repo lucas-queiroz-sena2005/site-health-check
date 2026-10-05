@@ -101,13 +101,14 @@ def get_results(
     historical_active_ips = set()
     if ghost_window is not None:
         cutoff = datetime.now(timezone.utc) - ghost_window
-        # Find all IPs that had an open port in a run started after the cutoff
+        from api.models import ScanRunStatus
         historical_stmt = (
             select(HostState.ip_address)
             .join(PortState, col(HostState.id) == col(PortState.host_state_id))
             .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
             .where(PortState.tcp_status == "open")
             .where(col(ScanRun.started_at) >= cutoff)
+            .where(ScanRun.status == ScanRunStatus.COMPLETED)
             .distinct()
         )
         # We only care about IPs in the current result set

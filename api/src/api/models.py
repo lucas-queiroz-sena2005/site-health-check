@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, model_serializer
 from pydantic import Field as PydanticField
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
 def generate_uuid() -> str:
@@ -16,6 +16,7 @@ class ScanRunStatus(str, Enum):
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    ABORTED = "ABORTED"
 
 class ExecutionFlags(BaseModel):
     check_tcp: bool = PydanticField(
@@ -121,6 +122,7 @@ class SavedView(SQLModel, table=True):
 
 class HttpRoutingCheck(SQLModel, table=True):
     __tablename__: str = "http_routing_checks"  # type: ignore
+    __table_args__ = (UniqueConstraint("port_state_id", "domain"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     port_state_id: str = Field(foreign_key="port_states.id", exclude=True)
@@ -147,6 +149,7 @@ class TlsCertificate(SQLModel, table=True):
 
 class PortState(SQLModel, table=True):
     __tablename__: str = "port_states"  # type: ignore
+    __table_args__ = (UniqueConstraint("host_state_id", "port_number"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     host_state_id: str = Field(foreign_key="host_states.id", exclude=True)
@@ -172,6 +175,7 @@ class PortState(SQLModel, table=True):
 
 class HostState(SQLModel, table=True):
     __tablename__: str = "host_states"  # type: ignore
+    __table_args__ = (UniqueConstraint("scan_run_id", "ip_address"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     scan_run_id: str = Field(foreign_key="scan_runs.id")
