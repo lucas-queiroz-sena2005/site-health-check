@@ -1,0 +1,29 @@
+[project]
+name = "site-health-check"
+version = "0.1.0"
+description = "Web Health Auditor & Reconnaissance Tool (workspace root)"
+requires-python = ">=3.12,<3.13"
+dependencies = ["api", "engine"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["api", "engine"]
+
+[tool.uv.sources]
+api = { workspace = true }
+engine = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=1.4.0",
+  "httpx>=0.28.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["api/tests", "engine/tests"]
+markers = [
+  "integration: spawns real processes (deselect with '-m \"not integration\"')",
+]

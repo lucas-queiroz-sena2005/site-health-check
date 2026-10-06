@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -56,9 +57,11 @@ async def test_scheduler_triggers_due_scan(monkeypatch):
         )
         session.add(old_run)
         session.commit()
+        scan_id = scan.id
 
     # Run check_and_run_scheduled_scans
     await check_and_run_scheduled_scans(app_state)
+    await asyncio.sleep(0)  # let the create_task()'d run start
 
     # Verify a new run was created and triggered
     assert len(called_runs) == 1
@@ -67,6 +70,6 @@ async def test_scheduler_triggers_due_scan(monkeypatch):
     with Session(test_engine) as session:
         new_run = session.get(ScanRun, new_run_id)
         assert new_run is not None
-        assert new_run.scan_id == scan.id
+        assert new_run.scan_id == scan_id
         assert new_run.status == ScanRunStatus.PENDING
         assert new_run.started_at is not None

@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import signal
+import sys
 from datetime import datetime, timezone
 from typing import Any
 
@@ -202,7 +203,7 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
                 session.add(run)
                 session.commit()
 
-        cmd = ["python", "-u", "-m", "engine.cli"]
+        cmd = [sys.executable, "-u", "-m", "engine.cli"]
         
         targets = snapshot.get("targets", [])
         if targets:

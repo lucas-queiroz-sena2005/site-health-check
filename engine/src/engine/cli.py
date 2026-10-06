@@ -2,11 +2,15 @@
 
 import argparse
 import json
+import logging
+import signal
 import sys
 
 from engine.parsing import expand_target_ranges, parse_ports, validate_and_clean_target
 from engine.schemas.engine import TaskConfig, TaskFlags
 
+logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 def build_parser() -> argparse.ArgumentParser:
     """Construct the command-line argument parser."""
@@ -95,7 +99,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--push-url", help="Optional Webhook URL for observability tools"
     )
     parser.add_argument(
-        "-o", "--output", help="Save results to specified JSON file", default=None
+        "-o", "--output", help="Save results to specified JSON file (legacy, ignored)", default=None
     )
 
     return parser
@@ -107,7 +111,7 @@ def main(args: list | None = None) -> int:
     parsed_args = parser.parse_args(args)
     validation_result = validate_and_clean_target(parsed_args.target)
     if not validation_result.is_valid:
-        print(validation_result.error_message, file=sys.stderr)
+        logger.error(validation_result.error_message)
         return 1
 
     expanded_targets = expand_target_ranges(validation_result.segments)
@@ -135,25 +139,37 @@ def main(args: list | None = None) -> int:
         )
         json_payload.append(task.to_dict())
     
-    print("\n[*] Standardized Payload Built:")
-    print(json.dumps(json_payload, indent=2))
-    print("\n[*] Handing off to Core Engine...")
+    logger.info("\n[*] Standardized Payload Built:")
+    logger.info(json.dumps(json_payload, indent=2))
+    logger.info("\n[*] Handing off to Core Engine...")
     
+    from engine.engine import cancel_engine, run_engine
+    
+    aborted = False
+    
+    def handle_signal(signum, frame):
+        nonlocal aborted
+        if aborted:
+            return
+        aborted = True
+        logger.info(f"\n[!] Received signal {signum}, aborting engine...")
+        cancel_engine()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
     # --- The Engine Boundary ---
-    from engine.engine import run_engine
-    results = run_engine(json_payload, workers_count=parsed_args.workers)
+    run_engine(json_payload, workers_count=parsed_args.workers)
 
-    # Unified Terminal Output
-    print("\n[+] Scan Complete. Output State:")
-    print(json.dumps(results, indent=2))
-
-    # State Export
-    if parsed_args.output and results:
-        from engine.exporter import export_results
-        saved_path = export_results(results, parsed_args.output)
-        print(f"\n[+] Results saved to {saved_path}")
-
-    return 0
+    if aborted:
+        sys.stdout.write(json.dumps({"status": "aborted", "reason": "signal"}) + "\n")
+        sys.stdout.flush()
+        return 130 # standard exit code for SIGINT (128+2)
+    else:
+        sys.stdout.write(json.dumps({"status": "completed"}) + "\n")
+        sys.stdout.flush()
+        logger.info("\n[+] Scan Complete.")
+        return 0
 
 
 if __name__ == "__main__":

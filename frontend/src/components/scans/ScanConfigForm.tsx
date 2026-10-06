@@ -221,8 +221,8 @@ export function ScanConfigForm({
 
       <div className="flex justify-end gap-3 pt-6 border-t-2 border-border/50">
         {onCancel && (
-          <Button variant="ghost" className="hover:bg-muted" onClick={onCancel} disabled={isScanning}>
-            Cancel
+          <Button variant="ghost" className="hover:bg-muted" onClick={onCancel}>
+            {mode === 'live' ? 'Detach' : 'Cancel'}
           </Button>
         )}
         

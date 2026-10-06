@@ -90,11 +90,17 @@ export function RunHistorySheet({
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                   run.status === 'COMPLETED' ? 'bg-green-500/20 text-green-700 dark:text-green-400' :
                   run.status === 'FAILED' ? 'bg-red-500/20 text-red-700 dark:text-red-400' :
+                  run.status === 'ABORTED' ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400' :
                   'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
                 }`}>
                   {run.status}
                 </span>
               </div>
+              {run.status !== 'COMPLETED' && run.status !== 'PENDING' && run.status !== 'RUNNING' && (
+                <div className="text-[10px] bg-orange-500/10 text-orange-600 px-2 py-1 mb-2 rounded-sm border border-orange-500/30 font-bold uppercase tracking-widest w-fit">
+                  Partial Results
+                </div>
+              )}
               <div className="text-xs text-muted-foreground flex flex-col gap-1 font-mono">
                 <span>Targets: <strong className="text-foreground">{run.targets?.length || 0}</strong></span>
                 <span>Started: <strong className="text-foreground">{run.started_at ? new Date(run.started_at).toLocaleString() : 'N/A'}</strong></span>

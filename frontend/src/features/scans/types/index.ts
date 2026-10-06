@@ -47,3 +47,11 @@ export interface TreeNode {
   isExplicitFilter?: boolean
   originalNodeId?: string
 }
+
+export enum ScanRunStatus {
+  PENDING = 'PENDING',
+  RUNNING = 'RUNNING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  ABORTED = 'ABORTED'
+}

@@ -13,9 +13,8 @@
       devShells = forAllSystems (system: {
         default = pkgs.${system}.mkShellNoCC {
           packages = with pkgs.${system}; [
-            # Python / Backend
-            poetry
-            python311
+            # Python / Backend (uv provisions the interpreter from .python-version)
+            uv
             pyright
             ruff
 

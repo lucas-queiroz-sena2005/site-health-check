@@ -1,35 +1,26 @@
-[tool.poetry]
+[project]
 name = "engine"
 version = "0.1.0"
 description = "Web Health Auditor & Reconnaissance Tool"
-authors = ["Lucas Queiroz <author@example.com>"]
+authors = [{ name = "Lucas Queiroz", email = "author@example.com" }]
 readme = "README.md"
 license = "MIT"
-packages = [
-  { include = "engine", from = "src" }
+requires-python = ">=3.12"
+dependencies = [
+  "requests>=2.31.0,<3",
+  "cryptography>=50.0.0,<51",
+  "aiohttp>=3.8.0,<4",
+  "fastapi[standard]>=0.141.1,<0.142",
+  "sqlmodel>=0.0.42,<0.0.43",
+  "pydantic>=2.13.5,<3",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-requests = "^2.31.0"
-cryptography = "^50.0.0"
-aiohttp = "^3.8.0"
-fastapi = {extras = ["standard"], version = "^0.141.1"}
-sqlmodel = "^0.0.42"
-pydantic = "^2.13.5"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0.0"
-httpx = "^0.28.1"
-pytest-asyncio = "^1.4.0"
-
-[tool.poetry.scripts]
+[project.scripts]
 site-check = "engine.cli:main"
 
-[tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/engine"]
