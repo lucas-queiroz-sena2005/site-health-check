@@ -101,6 +101,8 @@ async def test_engine_enqueue_redirect():
 
     # We will cancel the worker task after a short delay
     engine_module.is_cancelled = False
+    engine_module.seen_tcp.clear()
+    engine_module.seen_http.clear()
     
     original_put = queue.put
     put_calls = []
@@ -135,4 +137,68 @@ async def test_engine_enqueue_redirect():
     assert new_task["ports"] == [443]  # derived from https
     assert new_task["depth"] == 0      # depth is passed from original task (0) to worker
     assert new_task["parent_ip"] == "127.0.0.1"
+
+
+@pytest.mark.asyncio
+async def test_engine_redirect_depth_limit():
+    """
+    Verifies that while the redirect enters the queue with depth=current_depth,
+    the worker properly increments the depth upon popping and resolving the new IP,
+    and drops it if it exceeds out_of_scope_depth.
+    """
+    queue = asyncio.Queue()
+    
+    # Initial task with 0 out_of_scope_depth
+    await queue.put({
+        "target": "127.0.0.1",
+        "ports": [80],
+        "flags": {"out_of_scope_depth": 0},
+        "depth": 0
+    })
+
+    async def mock_resolve_target(target):
+        if target == "login.example.com":
+            return "2.2.2.2", target, True
+        return "127.0.0.1", None, False
+
+    async def mock_check_tcp_and_tls(ip, port, server_hostname):
+        from engine.schemas.engine import PortState
+        return PortState(tcp_status="open")
+
+    async def mock_check_http_routing(ip, port, host_header, flags):
+        if ip == "127.0.0.1":
+            return HttpRoutingCheck(
+                status_code=302,
+                redirects_to_url="https://login.example.com/auth"
+            )
+        return HttpRoutingCheck(status_code=200)
+
+    engine_module.is_cancelled = False
+    engine_module.seen_tcp.clear()
+    engine_module.seen_http.clear()
+    
+    with patch.object(engine_module, 'resolve_target', side_effect=mock_resolve_target), \
+         patch.object(engine_module, 'check_tcp_and_tls', side_effect=mock_check_tcp_and_tls), \
+         patch.object(engine_module, 'check_http_routing', side_effect=mock_check_http_routing) as mock_http, \
+         patch('sys.stdout.write'), \
+         patch('sys.stdout.flush'):
+        
+        worker_task = asyncio.create_task(worker("test_worker", queue))
+        
+        # Wait until the queue is fully processed
+        await asyncio.sleep(0.1)
+        worker_task.cancel()
+        
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+        
+    # check_http_routing should only be called ONCE (for 127.0.0.1).
+    # The worker pops login.example.com, resolves it to 2.2.2.2.
+    # 2.2.2.2 != 127.0.0.1, so depth increments to 1.
+    # 1 > out_of_scope_depth (0), so it skips scanning 2.2.2.2 entirely!
+    assert mock_http.call_count == 1
+    # Verify it was indeed called for 127.0.0.1
+    assert mock_http.call_args[0][0] == "127.0.0.1"
 
