@@ -129,6 +129,23 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                     flags_obj = TaskFlags(**task.get("flags", {}))
                     http_result = await check_http_routing(state_key, port, host_header=host_header, flags=flags_obj)
                     local_state.ports[port].http_routing_checks[host_header_key] = http_result
+                    
+                    if http_result.redirects_to_url:
+                        import yarl
+                        try:
+                            parsed_url = yarl.URL(http_result.redirects_to_url)
+                            target_domain = parsed_url.host
+                            if target_domain:
+                                await queue.put({
+                                    "target": target_domain,
+                                    "ports": [parsed_url.port or (443 if parsed_url.scheme == "https" else 80)],
+                                    "flags": task.get("flags", {}),
+                                    "discovered_from": state_key,
+                                    "parent_ip": ip_address,
+                                    "depth": current_depth
+                                })
+                        except Exception as e:
+                            logger.warning(f"[Worker {worker_id}] Error parsing redirect URL {http_result.redirects_to_url}: {e}")
             
             # Emit NDJSON delta if we did any work
             if has_updates:
