@@ -31,6 +31,42 @@ class TaskConfig:
         """Serialize object to the standardized JSON payload."""
         return dataclasses.asdict(self)
 
+
+@dataclasses.dataclass
+class WorkerTask:
+    """Internal task tracking for the engine worker queue."""
+    target: str
+    ports: list[int]
+    flags: TaskFlags
+    discovered_from: str | None = None
+    parent_ip: str | None = None
+    depth: int = 0
+
+    @classmethod
+    def from_redirect_url(
+        cls, 
+        url: str, 
+        flags: TaskFlags, 
+        discovered_from: str, 
+        parent_ip: str, 
+        depth: int
+    ) -> 'WorkerTask':
+        import yarl
+        parsed = yarl.URL(url)
+        target_domain = parsed.host
+        if not target_domain:
+            raise ValueError(f"No host found in URL: {url}")
+        
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        return cls(
+            target=target_domain,
+            ports=[port],
+            flags=flags,
+            discovered_from=discovered_from,
+            parent_ip=parent_ip,
+            depth=depth
+        )
+
 @dataclasses.dataclass
 class HttpRoutingCheck:
     """Represents the result of a specific HTTP test against a domain."""

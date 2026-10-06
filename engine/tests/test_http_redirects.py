@@ -71,14 +71,15 @@ async def test_check_http_routing_with_redirect():
 @pytest.mark.asyncio
 async def test_engine_enqueue_redirect():
     queue = asyncio.Queue()
+    from engine.schemas.engine import WorkerTask, TaskFlags
     
     # Initial task
-    await queue.put({
-        "target": "127.0.0.1",
-        "ports": [80],
-        "flags": {"out_of_scope_depth": 1},
-        "depth": 0
-    })
+    await queue.put(WorkerTask(
+        target="127.0.0.1",
+        ports=[80],
+        flags=TaskFlags(out_of_scope_depth=1),
+        depth=0
+    ))
 
     async def mock_resolve_target(target):
         if target == "login.example.com":
@@ -133,10 +134,10 @@ async def test_engine_enqueue_redirect():
     assert len(put_calls) == 1
     new_task = put_calls[0]
     
-    assert new_task["target"] == "login.example.com"
-    assert new_task["ports"] == [443]  # derived from https
-    assert new_task["depth"] == 0      # depth is passed from original task (0) to worker
-    assert new_task["parent_ip"] == "127.0.0.1"
+    assert new_task.target == "login.example.com"
+    assert new_task.ports == [443]  # derived from https
+    assert new_task.depth == 0      # depth is passed from original task (0) to worker
+    assert new_task.parent_ip == "127.0.0.1"
 
 
 @pytest.mark.asyncio
@@ -147,14 +148,15 @@ async def test_engine_redirect_depth_limit():
     and drops it if it exceeds out_of_scope_depth.
     """
     queue = asyncio.Queue()
+    from engine.schemas.engine import WorkerTask, TaskFlags
     
     # Initial task with 0 out_of_scope_depth
-    await queue.put({
-        "target": "127.0.0.1",
-        "ports": [80],
-        "flags": {"out_of_scope_depth": 0},
-        "depth": 0
-    })
+    await queue.put(WorkerTask(
+        target="127.0.0.1",
+        ports=[80],
+        flags=TaskFlags(out_of_scope_depth=0),
+        depth=0
+    ))
 
     async def mock_resolve_target(target):
         if target == "login.example.com":
