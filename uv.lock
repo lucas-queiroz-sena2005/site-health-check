@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = "==3.12.*"
 
 [manifest]
@@ -340,6 +340,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "requests" },
     { name = "sqlmodel" },
+    { name = "yarl" },
 ]
 
 [package.metadata]
@@ -350,6 +351,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.5,<3" },
     { name = "requests", specifier = ">=2.31.0,<3" },
     { name = "sqlmodel", specifier = ">=0.0.42,<0.0.43" },
+    { name = "yarl", specifier = ">=1.25.1" },
 ]
 
 [[package]]

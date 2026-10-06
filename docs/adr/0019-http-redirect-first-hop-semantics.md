@@ -21,9 +21,8 @@ aiohttp follows redirects by default. As a result:
 - `status_code` is the status of the **first response from the scanned IP:port/vhost**.
 - For 3xx responses, `redirects_to_url` = the `Location` header resolved to an
   absolute URL.
-- We record **one hop only**. Following the chain is rejected: each hop can land on an
-  out-of-scope host, which would bypass `out_of_scope_depth`. If the destination
-  matters, it is a target in its own right (or a future discovery source, like SANs).
+- We record **one hop only**. Native following of the chain by the HTTP client is rejected.
+- Instead, the extracted `redirects_to_url` is enqueued as a new discovery task, subject to the engine's standard `out_of_scope_depth` tracking logic, just like SANs.
 
 ## Consequences
 

@@ -13,6 +13,7 @@ dependencies = [
   "fastapi[standard]>=0.141.1,<0.142",
   "sqlmodel>=0.0.42,<0.0.43",
   "pydantic>=2.13.5,<3",
+  "yarl>=1.25.1",
 ]
 
 [project.scripts]
