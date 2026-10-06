@@ -7,9 +7,7 @@ from typing import Any
 import aiohttp
 import aiohttp.abc
 
-from engine.catcher import validate_html
 from engine.schemas.engine import HttpRoutingCheck, TaskFlags
-
 
 class SingleIPResolver(aiohttp.abc.AbstractResolver):
     """
@@ -51,8 +49,10 @@ async def check_http_routing(ip: str, port: int, host_header: str | None, flags:
     connector = aiohttp.TCPConnector(resolver=resolver, ssl=ssl_context)
     
     headers = {}
-    if flags.spoof_user_agent:
-        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    if flags.user_agent:
+        headers["User-Agent"] = flags.user_agent
+    else:
+        headers["User-Agent"] = "site-health-check/1.0"
     
     try:
         async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
@@ -67,19 +67,6 @@ async def check_http_routing(ip: str, port: int, host_header: str | None, flags:
                     if location:
                         import yarl
                         result.redirects_to_url = str(response.url.join(yarl.URL(location)))
-                
-                if flags.expected_strings or flags.undesired_strings:
-                    body = await response.text()
-                    passed, message = validate_html(
-                        html_content=body,
-                        expected_strings=flags.expected_strings,
-                        undesired_strings=flags.undesired_strings,
-                        require_all_expected=True,
-                        reject_any_undesired=True
-                    )
-                    
-                    if not passed:
-                        result.notes = message
                             
     except asyncio.TimeoutError:
         result.notes = "HTTP Timeout"

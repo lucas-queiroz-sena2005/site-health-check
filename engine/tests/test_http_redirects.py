@@ -108,8 +108,8 @@ async def run_worker_with_task(initial_task: EngineTask):
          patch.object(queue, 'put', side_effect=mock_put), \
          patch('sys.stdout.write'), \
          patch('sys.stdout.flush'):
-        
-        worker_task = asyncio.create_task(worker("test_worker", queue))
+        limiter = engine_module.AsyncTokenBucket(0.0)
+        worker_task = asyncio.create_task(worker("test_worker", queue, limiter))
         await asyncio.sleep(0.1)
         worker_task.cancel()
         try:

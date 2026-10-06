@@ -23,17 +23,13 @@ export type FieldSchema = {
 }
 
 export const EXECUTION_FLAGS_SCHEMA: FieldSchema[] = [
-  { name: 'check_tcp', title: 'Check TCP/TLS', type: 'boolean', default: true },
   { name: 'check_http', title: 'Check HTTP Routing', type: 'boolean', default: true },
   { name: 'recursive_san', title: 'Recursive SAN Check', type: 'boolean', default: false },
   { name: 'out_of_scope_depth', title: 'Out-of-Scope Depth', type: 'number', default: 0 },
   { name: 'check_virtual_hosts', title: 'Check Virtual Hosts', type: 'boolean', default: false },
-  { name: 'spoof_user_agent', title: 'Spoof User Agent', type: 'boolean', default: false },
   { name: 'timeout', title: 'Timeout (seconds)', type: 'number', default: 10 },
-  { name: 'expected', title: 'Expected HTML Strings', type: 'list', default: null },
-  { name: 'undesired', title: 'Undesired HTML Strings', type: 'list', default: null },
   { name: 'workers', title: 'Workers', type: 'number', default: 100 },
-  { name: 'delay', title: 'Worker Delay', type: 'number', default: 0.0 },
+  { name: 'rate', title: 'Rate Limit (req/s)', type: 'number', default: 50.0 },
 ]
 
 export const DEFAULT_NEW_SCAN = {
@@ -41,7 +37,7 @@ export const DEFAULT_NEW_SCAN = {
   cron_expression: '0 0 * * *',
   targets: [],
   ports: [80, 443],
-  flags: { check_tcp: true, check_http: true, check_virtual_hosts: false, timeout: 10, workers: 100, delay: 0 },
+  flags: { check_http: true, check_virtual_hosts: false, timeout: 10, workers: 100, rate: 50.0 },
 }
 
 export function ScanConfigForm({ 

@@ -51,6 +51,29 @@ def test_create_and_get_scan(client: TestClient):
     assert scan["cron_expression"] == payload["cron_expression"]
     assert scan["next_run"] is not None
 
+def test_create_scan_legacy_flags_ignored(client: TestClient):
+    payload = {
+        "name": "Legacy Flags Scan",
+        "targets": ["example.com"],
+        "ports": [80],
+        "flags": {
+            "check_tcp": False,
+            "delay": 5,
+            "spoof_user_agent": True,
+            "expected": ["foo"],
+            "undesired": ["bar"],
+            "rate": 10.0
+        }
+    }
+    
+    post_resp = client.post("/api/scans", json=payload)
+    assert post_resp.status_code == 201
+    post_data = post_resp.json()
+    
+    # We should see the new rate flag kept, but others ignored if we were to return them, 
+    # but the API typically just accepts them gracefully.
+    assert "id" in post_data
+
 def test_update_scan(client: TestClient):
     payload = {
         "name": "Scan To Update",

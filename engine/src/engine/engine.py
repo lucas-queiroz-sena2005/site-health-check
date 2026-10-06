@@ -11,6 +11,31 @@ from engine.operations.network import resolve_target
 from engine.probes.http import check_http_routing
 from engine.probes.tcp import check_tcp_and_tls
 from engine.schemas.engine import IpState
+import time
+
+class AsyncTokenBucket:
+    def __init__(self, rate: float):
+        self.rate = rate
+        self.tokens = rate
+        self.last_update = time.monotonic()
+        self.lock = asyncio.Lock()
+        
+    async def acquire(self):
+        if self.rate <= 0:
+            return
+        while True:
+            now = time.monotonic()
+            async with self.lock:
+                elapsed = now - self.last_update
+                self.tokens += elapsed * self.rate
+                if self.tokens > self.rate:
+                    self.tokens = self.rate
+                self.last_update = now
+                
+                if self.tokens >= 1.0:
+                    self.tokens -= 1.0
+                    return
+            await asyncio.sleep(0.01)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +48,7 @@ is_cancelled = False
 cancel_event = None
 engine_loop: asyncio.AbstractEventLoop | None = None
 
-async def worker(worker_id: str, queue: asyncio.Queue):
+async def worker(worker_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket):
     """
     Asynchronous worker that pulls tasks from the queue and executes them.
     """
@@ -34,9 +59,6 @@ async def worker(worker_id: str, queue: asyncio.Queue):
             break
             
         try:
-            delay = task.context.flags.worker_delay
-            if delay > 0:
-                await asyncio.sleep(delay)
 
             target = task.target
             ports = task.ports
@@ -98,6 +120,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                     seen_tcp.add(tcp_cache_key)
                     has_updates = True
                     
+                    await limiter.acquire()
                     tcp_result = await check_tcp_and_tls(state_key, port, server_hostname=host_header)
                     
                     local_state.ports[port] = tcp_result
@@ -124,10 +147,11 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                                     )
                                 ))
                 
-                if not skip_http:
+                if not skip_http and task.context.flags.check_http:
                     seen_http.add(http_cache_key)
                     has_updates = True
                     
+                    await limiter.acquire()
                     http_result = await check_http_routing(state_key, port, host_header=host_header, flags=task.context.flags)
                     local_state.ports[port].http_routing_checks[host_header_key] = http_result
                     
@@ -189,10 +213,17 @@ async def async_main(payload: list[dict[str, Any]], workers_count: int = 100):
         )
         await queue.put(task)
         
+    # Get rate from the first task's flags (since flags are global to the run)
+    rate_limit = 50.0
+    if payload and "flags" in payload[0]:
+        rate_limit = payload[0]["flags"].get("rate", 50.0)
+    
+    limiter = AsyncTokenBucket(rate_limit)
+        
     workers = []
     
     for i in range(workers_count):
-        worker_task = asyncio.create_task(worker(f"W-{i}", queue))
+        worker_task = asyncio.create_task(worker(f"W-{i}", queue, limiter))
         workers.append(worker_task)
         
     # Wait until queue is empty or cancelled

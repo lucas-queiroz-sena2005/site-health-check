@@ -9,9 +9,9 @@ import pytest
 
 @pytest.mark.integration
 def test_engine_cli_abort_seam():
-    # Start the engine subprocess with a long worker delay so it doesn't finish immediately
+    # Start the engine subprocess with a tight rate limit so it doesn't finish immediately
     process = subprocess.Popen(
-        [sys.executable, "-m", "engine.cli", "127.0.0.1", "-p", "80", "--delay", "10.0"],
+        [sys.executable, "-m", "engine.cli", "127.0.0.1", "-p", "80", "--rate", "0.1"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True
@@ -46,3 +46,27 @@ def test_engine_cli_abort_seam():
         assert summary.get("status") == "aborted", "Summary line should indicate aborted status"
     except json.JSONDecodeError:
         assert False, "Last line of stdout is not valid JSON"
+
+@pytest.mark.integration
+def test_engine_cli_no_http_seam():
+    # Run the engine with --no-check-http
+    process = subprocess.Popen(
+        [sys.executable, "-m", "engine.cli", "127.0.0.1", "-p", "80", "--no-check-http"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    stdout, stderr = process.communicate(timeout=10)
+    
+    assert process.returncode == 0
+    lines = [line.strip() for line in stdout.split('\n') if line.strip()]
+    
+    # Check that none of the delta lines contain HTTP routing checks
+    for line in lines[:-1]:
+        try:
+            delta = json.loads(line)
+            for ip, state in delta.items():
+                for port, port_state in state.get("ports", {}).items():
+                    assert not port_state.get("http_routing_checks"), "HTTP checks ran despite --no-check-http"
+        except json.JSONDecodeError:
+            pass

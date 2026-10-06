@@ -19,10 +19,6 @@ class ScanRunStatus(str, Enum):
     ABORTED = "ABORTED"
 
 class ExecutionFlags(BaseModel):
-    check_tcp: bool = PydanticField(
-        default=True, title="Check TCP/TLS", 
-        json_schema_extra={"cli_arg": "--check-tcp", "is_switch": True}
-    )
     check_http: bool = PydanticField(
         default=True, title="Check HTTP Routing",
         json_schema_extra={"cli_arg": "--check-http", "is_switch": True}
@@ -39,29 +35,17 @@ class ExecutionFlags(BaseModel):
         default=True, title="Check Virtual Hosts",
         json_schema_extra={"cli_arg": "--check-virtual-hosts", "is_switch": True}
     )
-    spoof_user_agent: bool = PydanticField(
-        default=False, title="Spoof User Agent",
-        json_schema_extra={"cli_arg": "--spoof-user-agent", "is_switch": True}
-    )
     timeout: int = PydanticField(
         default=10, title="Timeout (seconds)",
         json_schema_extra={"cli_arg": "--timeout", "is_switch": False}
-    )
-    expected: list[str] | None = PydanticField(
-        default=None, title="Expected HTML Strings",
-        json_schema_extra={"cli_arg": "-e", "is_switch": False, "is_list": True}
-    )
-    undesired: list[str] | None = PydanticField(
-        default=None, title="Undesired HTML Strings",
-        json_schema_extra={"cli_arg": "-u", "is_switch": False, "is_list": True}
     )
     workers: int = PydanticField(
         default=100, title="Async Workers",
         json_schema_extra={"cli_arg": "-w", "is_switch": False}
     )
-    delay: float = PydanticField(
-        default=0.0, title="Worker Delay",
-        json_schema_extra={"cli_arg": "--delay", "is_switch": False}
+    rate: float = PydanticField(
+        default=50.0, title="Rate Limit (req/s)",
+        json_schema_extra={"cli_arg": "--rate", "is_switch": False}
     )
 
 class ExecutionConfig(BaseModel):

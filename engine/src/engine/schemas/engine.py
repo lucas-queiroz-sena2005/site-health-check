@@ -5,16 +5,13 @@ from typing import Any
 @dataclasses.dataclass
 class TaskFlags:
     """Configuration flags defining the depth and behavior of the scan."""
-    check_tcp: bool = True
     check_http: bool = True
     timeout_seconds: int = 10
-    expected_strings: list[str] | None = None
-    undesired_strings: list[str] | None = None
     recursive_san_check: bool = False
     check_virtual_hosts: bool = True
     out_of_scope_depth: int = 0
-    spoof_user_agent: bool = False
-    worker_delay: float = 0.0
+    rate: float = 50.0
+    user_agent: str | None = None
 
 @dataclasses.dataclass
 class TaskConfig:
