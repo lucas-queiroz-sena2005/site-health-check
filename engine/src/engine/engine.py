@@ -34,7 +34,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
             break
             
         try:
-            delay = task.flags.worker_delay
+            delay = task.context.flags.worker_delay
             if delay > 0:
                 await asyncio.sleep(delay)
 
@@ -50,8 +50,8 @@ async def worker(worker_id: str, queue: asyncio.Queue):
             state_key = ip_address
             
             # --- Depth and Scope Tracking ---
-            parent_ip = task.parent_ip
-            current_depth = task.depth
+            parent_ip = task.context.parent_ip
+            current_depth = task.context.depth
             
             if parent_ip is None:
                 # Seed task
@@ -59,7 +59,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
             elif ip_address != parent_ip:
                 current_depth += 1
                 
-            max_depth = task.flags.out_of_scope_depth
+            max_depth = task.context.flags.out_of_scope_depth
             if current_depth > max_depth:
                 logger.info(f"[Worker {worker_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
                 continue
@@ -70,8 +70,8 @@ async def worker(worker_id: str, queue: asyncio.Queue):
             local_state = IpState()
             if is_domain:
                 local_state.metadata.resolved_from = target
-            if task.discovered_from:
-                local_state.metadata.discovered_from.append(task.discovered_from)
+            if task.context.discovered_from:
+                local_state.metadata.discovered_from.append(task.context.discovered_from)
                 
             has_updates = False
             # Execute the probes for each port
@@ -80,7 +80,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                 host_header_key = host_header or state_key
                 http_cache_key = f"{state_key}:{port}:{host_header_key}"
                 
-                check_vhosts = task.flags.check_virtual_hosts
+                check_vhosts = task.context.flags.check_virtual_hosts
                 
                 skip_tcp = tcp_cache_key in seen_tcp
                 skip_http = http_cache_key in seen_http
@@ -103,7 +103,7 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                     local_state.ports[port] = tcp_result
                     
                     # If we found SANs, and recursive checking is enabled in the flags
-                    if tcp_result.tls_certificate and task.flags.recursive_san_check:
+                    if tcp_result.tls_certificate and task.context.flags.recursive_san_check:
                         for san in tcp_result.tls_certificate.domains_discovered_sans:
                             if "*" not in san:  # Avoid queuing wildcard domains directly
                                 try:
@@ -112,32 +112,36 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                                 except ValueError:
                                     discovered_from = None
                                     
-                                from engine.schemas.engine import WorkerTask
-                                await queue.put(WorkerTask(
+                                from engine.schemas.engine import EngineTask, TaskContext
+                                await queue.put(EngineTask(
                                     target=san, 
                                     ports=[port],
-                                    flags=task.flags,
-                                    discovered_from=discovered_from,
-                                    parent_ip=ip_address,
-                                    depth=current_depth
+                                    context=TaskContext(
+                                        flags=task.context.flags,
+                                        discovered_from=discovered_from,
+                                        parent_ip=ip_address,
+                                        depth=current_depth
+                                    )
                                 ))
                 
                 if not skip_http:
                     seen_http.add(http_cache_key)
                     has_updates = True
                     
-                    http_result = await check_http_routing(state_key, port, host_header=host_header, flags=task.flags)
+                    http_result = await check_http_routing(state_key, port, host_header=host_header, flags=task.context.flags)
                     local_state.ports[port].http_routing_checks[host_header_key] = http_result
                     
                     if http_result.redirects_to_url:
-                        from engine.schemas.engine import WorkerTask
+                        from engine.schemas.engine import EngineTask, TaskContext
                         try:
-                            redirect_task = WorkerTask.from_redirect_url(
+                            redirect_task = EngineTask.from_redirect_url(
                                 url=http_result.redirects_to_url,
-                                flags=task.flags,
-                                discovered_from=state_key,
-                                parent_ip=ip_address,
-                                depth=current_depth
+                                context=TaskContext(
+                                    flags=task.context.flags,
+                                    discovered_from=state_key,
+                                    parent_ip=ip_address,
+                                    depth=current_depth
+                                )
                             )
                             await queue.put(redirect_task)
                         except Exception as e:
@@ -170,14 +174,18 @@ async def async_main(payload: list[dict[str, Any]], workers_count: int = 100):
     queue = asyncio.Queue()
     
     # Seeding queue with JSON payload
-    from engine.schemas.engine import WorkerTask, TaskFlags
+    from engine.schemas.engine import EngineTask, TaskContext, TaskFlags
     for task_dict in payload:
         flags = TaskFlags(**task_dict.get("flags", {}))
-        task = WorkerTask(
+        task = EngineTask(
             target=task_dict["target"],
             ports=task_dict["ports"],
-            flags=flags,
-            discovered_from=task_dict.get("discovered_from")
+            context=TaskContext(
+                flags=flags,
+                discovered_from=task_dict.get("discovered_from"),
+                parent_ip=task_dict.get("parent_ip"),
+                depth=task_dict.get("depth", 0)
+            )
         )
         await queue.put(task)
         

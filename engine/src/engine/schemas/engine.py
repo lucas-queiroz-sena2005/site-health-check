@@ -33,24 +33,27 @@ class TaskConfig:
 
 
 @dataclasses.dataclass
-class WorkerTask:
-    """Internal task tracking for the engine worker queue."""
-    target: str
-    ports: list[int]
+class TaskContext:
+    """The implicit lineage context of a discovery task."""
     flags: TaskFlags
     discovered_from: str | None = None
     parent_ip: str | None = None
     depth: int = 0
 
+
+@dataclasses.dataclass
+class EngineTask:
+    """Internal task tracking for the engine queue."""
+    target: str
+    ports: list[int]
+    context: TaskContext
+
     @classmethod
     def from_redirect_url(
         cls, 
         url: str, 
-        flags: TaskFlags, 
-        discovered_from: str, 
-        parent_ip: str, 
-        depth: int
-    ) -> 'WorkerTask':
+        context: TaskContext
+    ) -> 'EngineTask':
         import yarl
         parsed = yarl.URL(url)
         target_domain = parsed.host
@@ -61,10 +64,7 @@ class WorkerTask:
         return cls(
             target=target_domain,
             ports=[port],
-            flags=flags,
-            discovered_from=discovered_from,
-            parent_ip=parent_ip,
-            depth=depth
+            context=context
         )
 
 @dataclasses.dataclass
