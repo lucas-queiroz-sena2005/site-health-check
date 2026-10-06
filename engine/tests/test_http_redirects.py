@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from engine.probes.http import check_http_routing
 from engine.schemas.engine import TaskFlags, HttpRoutingCheck
 import engine.engine as engine_module
-from engine.engine import worker
+from engine.engine import scanner_routine
 
 
 import asyncio
@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from engine.probes.http import check_http_routing
 from engine.schemas.engine import TaskFlags, HttpRoutingCheck, EngineTask, TaskContext
 import engine.engine as engine_module
-from engine.engine import worker
+from engine.engine import scanner_routine
 
 
 def create_mock_aiohttp_session(status_code: int, location: str = None, url: str = None):
@@ -108,8 +108,8 @@ async def run_worker_with_task(initial_task: EngineTask):
          patch.object(queue, 'put', side_effect=mock_put), \
          patch('sys.stdout.write'), \
          patch('sys.stdout.flush'):
-        limiter = engine_module.AsyncTokenBucket(0.0)
-        worker_task = asyncio.create_task(worker("test_worker", queue, limiter))
+        limiter = engine_module.AsyncTokenBucket(50.0)
+        worker_task = asyncio.create_task(scanner_routine("test_routine", queue, limiter))
         await asyncio.sleep(0.1)
         worker_task.cancel()
         try:

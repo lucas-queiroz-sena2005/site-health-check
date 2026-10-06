@@ -52,7 +52,7 @@ def test_create_and_get_scan(client: TestClient):
     assert scan["next_run"] is not None
 
 def test_create_scan_legacy_flags_ignored(client: TestClient):
-    payload = {
+    scan_request = {
         "name": "Legacy Flags Scan",
         "targets": ["example.com"],
         "ports": [80],
@@ -66,7 +66,7 @@ def test_create_scan_legacy_flags_ignored(client: TestClient):
         }
     }
     
-    post_resp = client.post("/api/scans", json=payload)
+    post_resp = client.post("/api/scans", json=scan_request)
     assert post_resp.status_code == 201
     post_data = post_resp.json()
     

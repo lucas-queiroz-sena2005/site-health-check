@@ -11,31 +11,7 @@ from engine.operations.network import resolve_target
 from engine.probes.http import check_http_routing
 from engine.probes.tcp import check_tcp_and_tls
 from engine.schemas.engine import IpState
-import time
-
-class AsyncTokenBucket:
-    def __init__(self, rate: float):
-        self.rate = rate
-        self.tokens = rate
-        self.last_update = time.monotonic()
-        self.lock = asyncio.Lock()
-        
-    async def acquire(self):
-        if self.rate <= 0:
-            return
-        while True:
-            now = time.monotonic()
-            async with self.lock:
-                elapsed = now - self.last_update
-                self.tokens += elapsed * self.rate
-                if self.tokens > self.rate:
-                    self.tokens = self.rate
-                self.last_update = now
-                
-                if self.tokens >= 1.0:
-                    self.tokens -= 1.0
-                    return
-            await asyncio.sleep(0.01)
+from engine.utils.rate_limit import AsyncTokenBucket
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +24,9 @@ is_cancelled = False
 cancel_event = None
 engine_loop: asyncio.AbstractEventLoop | None = None
 
-async def worker(worker_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket):
+async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket):
     """
-    Asynchronous worker that pulls tasks from the queue and executes them.
+    Asynchronous routine that pulls tasks from the queue and executes them.
     """
     while not is_cancelled:
         try:
@@ -66,7 +42,7 @@ async def worker(worker_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket
             # Normalize domain to ip
             ip_address, host_header, is_domain = await resolve_target(target)
             if not ip_address:
-                logger.error(f"[Worker {worker_id}] Error: Could not resolve domain {target}")
+                logger.error(f"[Routine {routine_id}] Error: Could not resolve domain {target}")
                 continue
 
             state_key = ip_address
@@ -83,10 +59,10 @@ async def worker(worker_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket
                 
             max_depth = task.context.flags.out_of_scope_depth
             if current_depth > max_depth:
-                logger.info(f"[Worker {worker_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
+                logger.info(f"[Routine {routine_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
                 continue
 
-            logger.info(f"[Worker {worker_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
+            logger.info(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
             
             # Initialize localized IpState for this task
             local_state = IpState()
@@ -169,7 +145,7 @@ async def worker(worker_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket
                             )
                             await queue.put(redirect_task)
                         except Exception as e:
-                            logger.warning(f"[Worker {worker_id}] Error parsing redirect URL {http_result.redirects_to_url}: {e}")
+                            logger.warning(f"[Routine {routine_id}] Error parsing redirect URL {http_result.redirects_to_url}: {e}")
             
             # Emit NDJSON delta if we did any work
             if has_updates:
@@ -182,14 +158,14 @@ async def worker(worker_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket
             break
         except Exception as e:
             import traceback
-            logger.error(f"[Worker {worker_id}] Unhandled exception processing task {getattr(task, 'target', 'unknown')}: {e}")
+            logger.error(f"[Routine {routine_id}] Unhandled exception processing task {getattr(task, 'target', 'unknown')}: {e}")
             logger.error(traceback.format_exc())
         finally:
             queue.task_done()
 
-async def async_main(payload: list[dict[str, Any]], workers_count: int = 100):
+async def async_main(tasks_data: list[dict[str, Any]], workers_count: int = 100):
     """
-    Initializes the BFS queue, spawns the workers, and blocks until finished.
+    Initializes the BFS queue, spawns the routines, and blocks until finished.
     """
     global cancel_event, engine_loop
     cancel_event = asyncio.Event()
@@ -197,9 +173,10 @@ async def async_main(payload: list[dict[str, Any]], workers_count: int = 100):
     
     queue = asyncio.Queue()
     
-    # Seeding queue with JSON payload
+    # Seeding queue with JSON input
     from engine.schemas.engine import EngineTask, TaskContext, TaskFlags
-    for task_dict in payload:
+    first_task = None
+    for task_dict in tasks_data:
         flags = TaskFlags(**task_dict.get("flags", {}))
         task = EngineTask(
             target=task_dict["target"],
@@ -211,19 +188,21 @@ async def async_main(payload: list[dict[str, Any]], workers_count: int = 100):
                 depth=task_dict.get("depth", 0)
             )
         )
+        if first_task is None:
+            first_task = task
         await queue.put(task)
         
-    # Get rate from the first task's flags (since flags are global to the run)
+    # Get rate from the first task's parsed flags to avoid primitive obsession
     rate_limit = 50.0
-    if payload and "flags" in payload[0]:
-        rate_limit = payload[0]["flags"].get("rate", 50.0)
+    if first_task and hasattr(first_task.context.flags, 'rate'):
+        rate_limit = first_task.context.flags.rate
     
     limiter = AsyncTokenBucket(rate_limit)
         
     workers = []
     
     for i in range(workers_count):
-        worker_task = asyncio.create_task(worker(f"W-{i}", queue, limiter))
+        worker_task = asyncio.create_task(scanner_routine(f"W-{i}", queue, limiter))
         workers.append(worker_task)
         
     # Wait until queue is empty or cancelled
@@ -252,7 +231,7 @@ def cancel_engine():
     if cancel_event is not None and engine_loop is not None and not engine_loop.is_closed():
         engine_loop.call_soon_threadsafe(cancel_event.set)
 
-def run_engine(payload: list[dict[str, Any]], workers_count: int = 100):
+def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100):
     """
     The synchronous boundary that the CLI calls.
     It triggers the asyncio event loop.
@@ -262,5 +241,5 @@ def run_engine(payload: list[dict[str, Any]], workers_count: int = 100):
     seen_http.clear()
     is_cancelled = False
     
-    logger.info(f"[*] Starting Asyncio Breadth-First Engine with {workers_count} workers...")
-    asyncio.run(async_main(payload, workers_count=workers_count))
+    logger.info(f"[*] Starting Asyncio Breadth-First Scanner Engine with {workers_count} concurrent routines...")
+    asyncio.run(async_main(tasks_data, workers_count=workers_count))
