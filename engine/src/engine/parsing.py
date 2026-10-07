@@ -7,7 +7,7 @@ from typing import Any
 
 from engine.schemas.parsing import TargetSegment, TargetValidationResult
 
-DOMAIN_REGEX = r"^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^localhost$"
+DOMAIN_REGEX = r"^(?:\*\.)?([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^localhost$"
 
 
 def exit_on_error(func: Callable) -> Callable:
@@ -221,3 +221,86 @@ def parse_ports(ports_arg: int | str = 80) -> list[int]:
                 raise ValueError(f"Port {port} out of valid range (1-65535)")
 
     return sorted(set(target_ports))
+
+class ScopeValidator:
+    """
+    Validates targets against whitelists and blacklists in O(1) time complexity.
+    Memory efficient: parses networks and bounds rather than expanding raw IPs.
+    """
+    def __init__(self, whitelist: str = "", blacklist: str = ""):
+        self.whitelist_empty = not bool(whitelist.strip())
+        
+        self.wl_ips, self.wl_ranges, self.wl_cidrs, self.wl_domains, self.wl_wildcards = self._parse(whitelist)
+        self.bl_ips, self.bl_ranges, self.bl_cidrs, self.bl_domains, self.bl_wildcards = self._parse(blacklist)
+
+    def _parse(self, target_string: str):
+        exact_ips = set()
+        ip_ranges = []
+        cidrs = []
+        exact_domains = set()
+        wildcard_domains = []
+
+        if not target_string.strip():
+            return exact_ips, ip_ranges, cidrs, exact_domains, wildcard_domains
+            
+        result = validate_and_clean_target(target_string)
+        if not result.is_valid:
+            raise ValueError(f"Invalid scope string: {result.error_message}")
+            
+        for seg in result.segments:
+            if seg.segment_type == "domain":
+                domain = seg.data.lower()
+                if domain.startswith("*."):
+                    wildcard_domains.append(domain[1:]) # keeps '.unicamp.br'
+                else:
+                    exact_domains.add(domain)
+            elif seg.segment_type == "ip":
+                if "-" in seg.data:
+                    start_str, end_str = seg.data.split("-")
+                    start_ip = int(ipaddress.IPv4Address(start_str))
+                    end_ip = int(ipaddress.IPv4Address(end_str))
+                    ip_ranges.append((start_ip, end_ip))
+                else:
+                    exact_ips.add(ipaddress.IPv4Address(seg.data))
+            elif seg.segment_type == "cidr":
+                if "-" in seg.data:
+                    start_str, end_str = seg.data.split("-")
+                    start_ip = int(ipaddress.IPv4Address(start_str))
+                    suffix = seg.suffix
+                    end_network = ipaddress.IPv4Network(f"{end_str}{suffix}", strict=False)
+                    end_ip_max = int(end_network.broadcast_address)
+                    ip_ranges.append((start_ip, end_ip_max))
+                else:
+                    cidrs.append(ipaddress.IPv4Network(f"{seg.data}{seg.suffix}", strict=False))
+
+        return exact_ips, ip_ranges, cidrs, exact_domains, wildcard_domains
+
+    def is_in_scope(self, target: str) -> bool:
+        if self._matches(target, self.bl_ips, self.bl_ranges, self.bl_cidrs, self.bl_domains, self.bl_wildcards):
+            return False
+        if self.whitelist_empty:
+            return True
+        return self._matches(target, self.wl_ips, self.wl_ranges, self.wl_cidrs, self.wl_domains, self.wl_wildcards)
+
+    def _matches(self, target: str, exact_ips, ip_ranges, cidrs, exact_domains, wildcard_domains) -> bool:
+        target = target.lower()
+        try:
+            ip_obj = ipaddress.IPv4Address(target)
+            if ip_obj in exact_ips:
+                return True
+            ip_int = int(ip_obj)
+            for start, end in ip_ranges:
+                if start <= ip_int <= end:
+                    return True
+            for network in cidrs:
+                if ip_obj in network:
+                    return True
+            return False
+        except ValueError:
+            if target in exact_domains:
+                return True
+            for wild in wildcard_domains:
+                if target.endswith(wild):
+                    return True
+            return False
+

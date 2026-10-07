@@ -25,19 +25,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-p", "--ports", default="443", help="Target port(s) (e.g., 443, 8000-8050)"
     )
-    parser.add_argument(
-        "-r",
-        "--recursive-san",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Recursively queue and scan discovered SANs from TLS certificates",
-    )
-    parser.add_argument(
-        "--out-of-scope-depth",
-        type=int,
-        default=0,
-        help="Depth of out-of-scope (different IP) recursive SAN resolution. 0 = strict same-IP only.",
-    )
+    
+    # Scoping Architecture
+    parser.add_argument("--whitelist", type=str, default="", help="Comma-separated IP/CIDR/Domain whitelists")
+    parser.add_argument("--blacklist", type=str, default="", help="Comma-separated IP/CIDR/Domain blacklists")
+    
+    parser.add_argument("-r", dest="follow_redirects", action="store_true", help="Follow Redirects (Strictly In-Scope)")
+    parser.add_argument("-R", dest="follow_redirects_oos", action="store_true", help="Follow Redirects (Allow Out-of-Scope)")
+    parser.add_argument("-s", dest="follow_sans", action="store_true", help="Discover SANs (Strictly In-Scope)")
+    parser.add_argument("-S", dest="follow_sans_oos", action="store_true", help="Discover SANs (Allow Out-of-Scope)")
+    parser.add_argument("-v", dest="force_vhost_origin", action="store_true", help="Force Vhost origin probing (DNS bypass)")
+    
+    parser.add_argument("--dr", type=int, default=3, help="Max hop depth for redirects")
+    parser.add_argument("--ds", type=int, default=1, help="Max hop depth for SANs")
    
     # HTTP Check Arguments
     parser.add_argument(
@@ -104,11 +104,18 @@ def main(args: list | None = None) -> int:
     flags = TaskFlags(
         check_http=parsed_args.check_http,
         timeout_seconds=parsed_args.timeout,
-        recursive_san_check=parsed_args.recursive_san,
         check_virtual_hosts=parsed_args.check_virtual_hosts,
-        out_of_scope_depth=parsed_args.out_of_scope_depth,
         rate=parsed_args.rate,
-        user_agent=parsed_args.user_agent
+        user_agent=parsed_args.user_agent,
+        whitelist=parsed_args.whitelist,
+        blacklist=parsed_args.blacklist,
+        follow_redirects=parsed_args.follow_redirects,
+        follow_redirects_out_of_scope=parsed_args.follow_redirects_oos,
+        follow_sans=parsed_args.follow_sans,
+        follow_sans_out_of_scope=parsed_args.follow_sans_oos,
+        force_vhost_origin=parsed_args.force_vhost_origin,
+        max_depth_redirects=parsed_args.dr,
+        max_depth_sans=parsed_args.ds
     )
     
     json_payload = []

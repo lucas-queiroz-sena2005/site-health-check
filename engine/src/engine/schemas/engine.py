@@ -7,11 +7,20 @@ class TaskFlags:
     """Configuration flags defining the depth and behavior of the scan."""
     check_http: bool = True
     timeout_seconds: int = 10
-    recursive_san_check: bool = False
     check_virtual_hosts: bool = True
-    out_of_scope_depth: int = 0
     rate: float = 50.0
     user_agent: str | None = None
+    
+    # New Scoping Architecture
+    whitelist: str = ""
+    blacklist: str = ""
+    follow_redirects: bool = False
+    follow_redirects_out_of_scope: bool = False
+    follow_sans: bool = False
+    follow_sans_out_of_scope: bool = False
+    force_vhost_origin: bool = False
+    max_depth_redirects: int = 3
+    max_depth_sans: int = 1
 
 @dataclasses.dataclass
 class TaskConfig:
@@ -35,7 +44,9 @@ class TaskContext:
     flags: TaskFlags
     discovered_from: str | None = None
     parent_ip: str | None = None
-    depth: int = 0
+    source_type: str = "seed"  # "seed", "redirect", or "san"
+    redirect_depth: int = 0
+    san_depth: int = 0
 
 
 @dataclasses.dataclass

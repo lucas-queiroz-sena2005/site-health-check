@@ -12,6 +12,7 @@ from engine.probes.http import check_http_routing
 from engine.probes.tcp import check_tcp_and_tls
 from engine.schemas.engine import IpState
 from engine.utils.rate_limit import AsyncTokenBucket
+from engine.parsing import ScopeValidator
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ is_cancelled = False
 cancel_event = None
 engine_loop: asyncio.AbstractEventLoop | None = None
 
-async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket):
+async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket, validator: ScopeValidator | None = None):
     """
     Asynchronous routine that pulls tasks from the queue and executes them.
     """
@@ -39,30 +40,52 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
             target = task.target
             ports = task.ports
             
-            # Normalize domain to ip
-            ip_address, host_header, is_domain = await resolve_target(target)
-            if not ip_address:
-                logger.error(f"[Routine {routine_id}] Error: Could not resolve domain {target}")
+            parent_ip = task.context.parent_ip
+            r_depth = task.context.redirect_depth
+            s_depth = task.context.san_depth
+            
+            # --- Vhost Probing (DNS Bypass) ---
+            if task.context.flags.force_vhost_origin:
+                ip_address = parent_ip or target
+                host_header = target
+                is_domain = True
+            else:
+                ip_address, host_header, is_domain = await resolve_target(target)
+                if not ip_address:
+                    logger.error(f"[Routine {routine_id}] Error: Could not resolve domain {target}")
+                    continue
+
+            # --- Scope Validation ---
+            if validator and not validator.is_in_scope(ip_address):
+                if task.context.source_type == "redirect" and not task.context.flags.follow_redirects_out_of_scope:
+                    logger.info(f"[Routine {routine_id}] Dropped {target} ({ip_address}) - Out of scope redirect")
+                    continue
+                if task.context.source_type == "san" and not task.context.flags.follow_sans_out_of_scope:
+                    logger.info(f"[Routine {routine_id}] Dropped {target} ({ip_address}) - Out of scope SAN")
+                    continue
+                if task.context.source_type == "seed":
+                    logger.info(f"[Routine {routine_id}] Dropped {target} ({ip_address}) - Out of scope seed")
+                    continue
+            
+            # --- Depth Tracking ---
+            if parent_ip is None:
+                parent_ip = ip_address
+            elif ip_address != parent_ip:
+                if task.context.source_type == "redirect":
+                    r_depth += 1
+                elif task.context.source_type == "san":
+                    s_depth += 1
+                    
+            if r_depth > task.context.flags.max_depth_redirects:
+                logger.info(f"[Routine {routine_id}] Skipping {target} (IP: {ip_address}) - Exceeds max redirect depth")
+                continue
+                
+            if s_depth > task.context.flags.max_depth_sans:
+                logger.info(f"[Routine {routine_id}] Skipping {target} (IP: {ip_address}) - Exceeds max SAN depth")
                 continue
 
             state_key = ip_address
-            
-            # --- Depth and Scope Tracking ---
-            parent_ip = task.context.parent_ip
-            current_depth = task.context.depth
-            
-            if parent_ip is None:
-                # Seed task
-                parent_ip = ip_address
-            elif ip_address != parent_ip:
-                current_depth += 1
-                
-            max_depth = task.context.flags.out_of_scope_depth
-            if current_depth > max_depth:
-                logger.info(f"[Routine {routine_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
-                continue
-
-            logger.info(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
+            logger.info(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports}")
             
             # Initialize localized IpState for this task
             local_state = IpState()
@@ -102,7 +125,7 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                     local_state.ports[port] = tcp_result
                     
                     # If we found SANs, and recursive checking is enabled in the flags
-                    if tcp_result.tls_certificate and task.context.flags.recursive_san_check:
+                    if tcp_result.tls_certificate and task.context.flags.follow_sans:
                         for san in tcp_result.tls_certificate.domains_discovered_sans:
                             if "*" not in san:  # Avoid queuing wildcard domains directly
                                 try:
@@ -119,7 +142,9 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                                         flags=task.context.flags,
                                         discovered_from=discovered_from,
                                         parent_ip=ip_address,
-                                        depth=current_depth
+                                        source_type="san",
+                                        redirect_depth=r_depth,
+                                        san_depth=s_depth
                                     )
                                 ))
                 
@@ -131,7 +156,7 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                     http_result = await check_http_routing(state_key, port, host_header=host_header, flags=task.context.flags)
                     local_state.ports[port].http_routing_checks[host_header_key] = http_result
                     
-                    if http_result.redirects_to_url:
+                    if http_result.redirects_to_url and task.context.flags.follow_redirects:
                         from engine.schemas.engine import EngineTask, TaskContext
                         try:
                             redirect_task = EngineTask.from_redirect_url(
@@ -140,7 +165,9 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                                     flags=task.context.flags,
                                     discovered_from=state_key,
                                     parent_ip=ip_address,
-                                    depth=current_depth
+                                    source_type="redirect",
+                                    redirect_depth=r_depth,
+                                    san_depth=s_depth
                                 )
                             )
                             await queue.put(redirect_task)
@@ -185,12 +212,21 @@ async def async_main(tasks_data: list[dict[str, Any]], workers_count: int = 100)
                 flags=flags,
                 discovered_from=task_dict.get("discovered_from"),
                 parent_ip=task_dict.get("parent_ip"),
-                depth=task_dict.get("depth", 0)
+                source_type="seed",
+                redirect_depth=0,
+                san_depth=0
             )
         )
         if first_task is None:
             first_task = task
         await queue.put(task)
+        
+    validator = None
+    if first_task:
+        validator = ScopeValidator(
+            whitelist=first_task.context.flags.whitelist,
+            blacklist=first_task.context.flags.blacklist
+        )
         
     # Get rate from the first task's parsed flags to avoid primitive obsession
     rate_limit = 50.0
@@ -202,7 +238,7 @@ async def async_main(tasks_data: list[dict[str, Any]], workers_count: int = 100)
     workers = []
     
     for i in range(workers_count):
-        worker_task = asyncio.create_task(scanner_routine(f"W-{i}", queue, limiter))
+        worker_task = asyncio.create_task(scanner_routine(f"W-{i}", queue, limiter, validator))
         workers.append(worker_task)
         
     # Wait until queue is empty or cancelled
