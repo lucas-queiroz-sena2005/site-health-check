@@ -196,14 +196,15 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                     lines = []
                     for port, port_state in local_state.ports.items():
                         tcp = port_state.tcp_status.upper()
+                        target_col = f"{state_key}:{port}"
                         if not port_state.http_routing_checks:
-                            lines.append(f"{state_key}:{port} {tcp} NONE NONE NONE -> NONE")
+                            lines.append(f"{target_col:<22} {tcp:<6} {'NONE':<35} {'NONE':<9} {'NONE':<20} NONE")
                         else:
                             for host, http in port_state.http_routing_checks.items():
                                 status = f"HTTP_{http.status_code}" if http.status_code else "NONE"
                                 server = (http.server_header or "NONE").replace(" ", "_")
                                 redir = http.redirects_to_url or "NONE"
-                                lines.append(f"{state_key}:{port} {tcp} {host} {status} {server} -> {redir}")
+                                lines.append(f"{target_col:<22} {tcp:<6} {host[:34]:<35} {status:<9} {server[:19]:<20} {redir}")
                     if lines:
                         sys.stdout.write("\n".join(lines) + "\n")
                         sys.stdout.flush()
@@ -315,6 +316,10 @@ def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100, outpu
         global_outfile_handle = open(outfile, "a", encoding="utf-8")
     else:
         global_outfile_handle = None
+        
+    if output_format == "classic":
+        sys.stdout.write(f"{'TARGET':<22} {'TCP':<6} {'HOST_HEADER':<35} {'HTTP':<9} {'SERVER':<20} REDIRECT\n")
+        sys.stdout.flush()
     
     try:
         logger.info(f"[*] Starting Asyncio Breadth-First Scanner Engine with {workers_count} concurrent routines...")
