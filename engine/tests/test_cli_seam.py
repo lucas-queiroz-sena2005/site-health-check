@@ -83,6 +83,7 @@ def test_engine_cli_new_flags_seam():
             "--blacklist", "10.0.5.0/24",
             "--dr", "5",
             "--ds", "2",
+            "--debug"
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

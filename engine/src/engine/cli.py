@@ -9,7 +9,7 @@ import sys
 from engine.parsing import expand_target_ranges, parse_ports, validate_and_clean_target
 from engine.schemas.engine import TaskConfig, TaskFlags
 
-logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(message)s")
+logging.basicConfig(level=logging.WARNING, stream=sys.stderr, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 def build_parser() -> argparse.ArgumentParser:
@@ -83,7 +83,13 @@ def build_parser() -> argparse.ArgumentParser:
     
     # Observability & Output
     parser.add_argument(
-        "-o", "--output", help="Save results to specified JSON file (legacy, ignored)", default=None
+        "--debug", action="store_true", help="Enable verbose logging to stderr"
+    )
+    parser.add_argument(
+        "--outfile", help="Save JSON results to specified file", default=None
+    )
+    parser.add_argument(
+        "-o", "--output", choices=["json", "classic"], default="json", help="Output format for stdout (default: json)"
     )
 
     return parser
@@ -93,6 +99,10 @@ def main(args: list | None = None) -> int:
     """Main CLI entrypoint."""
     parser = build_parser()
     parsed_args = parser.parse_args(args)
+    
+    if parsed_args.debug:
+        logging.getLogger().setLevel(logging.INFO)
+        
     validation_result = validate_and_clean_target(parsed_args.target)
     if not validation_result.is_valid:
         logger.error(validation_result.error_message)
@@ -140,14 +150,14 @@ def main(args: list | None = None) -> int:
         if aborted:
             return
         aborted = True
-        logger.info(f"\n[!] Received signal {signum}, aborting engine...")
+        logger.warning(f"\n[!] Received signal {signum}, aborting engine...")
         cancel_engine()
 
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
     # --- The Engine Boundary ---
-    run_engine(json_payload, workers_count=parsed_args.workers)
+    run_engine(json_payload, workers_count=parsed_args.workers, output_format=parsed_args.output, outfile=parsed_args.outfile)
 
     if aborted:
         sys.stdout.write(json.dumps({"status": "aborted", "reason": "signal"}) + "\n")

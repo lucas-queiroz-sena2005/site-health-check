@@ -24,6 +24,9 @@ seen_http = set()
 is_cancelled = False
 cancel_event = None
 engine_loop: asyncio.AbstractEventLoop | None = None
+global_output_format = "json"
+global_outfile_path = None
+global_outfile_handle = None
 
 async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket, validator: ScopeValidator | None = None):
     """
@@ -178,8 +181,33 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
             if has_updates:
                 import dataclasses
                 delta = {state_key: dataclasses.asdict(local_state)}
-                sys.stdout.write(json.dumps(delta) + "\n")
-                sys.stdout.flush()
+                json_str = json.dumps(delta)
+                
+                # Write to --outfile if specified (always JSON)
+                if global_outfile_handle:
+                    global_outfile_handle.write(json_str + "\n")
+                    global_outfile_handle.flush()
+                
+                # Write to stdout based on format
+                if global_output_format == "classic":
+                    lines = []
+                    for port, port_state in local_state.ports.items():
+                        tcp = port_state.tcp_status.upper()
+                        if not port_state.http_routing_checks:
+                            lines.append(f"{state_key}:{port} {tcp} NONE NONE NONE -> NONE")
+                        else:
+                            for host, http in port_state.http_routing_checks.items():
+                                status = f"HTTP_{http.status_code}" if http.status_code else "NONE"
+                                server = (http.server_header or "NONE").replace(" ", "_")
+                                redir = http.redirects_to_url or "NONE"
+                                lines.append(f"{state_key}:{port} {tcp} {host} {status} {server} -> {redir}")
+                    if lines:
+                        sys.stdout.write("\n".join(lines) + "\n")
+                        sys.stdout.flush()
+                else:
+                    # Default JSON
+                    sys.stdout.write(json_str + "\n")
+                    sys.stdout.flush()
                 
         except asyncio.CancelledError:
             break
@@ -267,15 +295,27 @@ def cancel_engine():
     if cancel_event is not None and engine_loop is not None and not engine_loop.is_closed():
         engine_loop.call_soon_threadsafe(cancel_event.set)
 
-def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100):
+def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100, output_format: str = "json", outfile: str | None = None):
     """
     The synchronous boundary that the CLI calls.
     It triggers the asyncio event loop.
     """
-    global seen_tcp, seen_http, is_cancelled
+    global seen_tcp, seen_http, is_cancelled, global_output_format, global_outfile_path, global_outfile_handle
     seen_tcp.clear()
     seen_http.clear()
     is_cancelled = False
     
-    logger.info(f"[*] Starting Asyncio Breadth-First Scanner Engine with {workers_count} concurrent routines...")
-    asyncio.run(async_main(tasks_data, workers_count=workers_count))
+    global_output_format = output_format
+    global_outfile_path = outfile
+    
+    if outfile:
+        global_outfile_handle = open(outfile, "a", encoding="utf-8")
+    else:
+        global_outfile_handle = None
+    
+    try:
+        logger.info(f"[*] Starting Asyncio Breadth-First Scanner Engine with {workers_count} concurrent routines...")
+        asyncio.run(async_main(tasks_data, workers_count=workers_count))
+    finally:
+        if global_outfile_handle:
+            global_outfile_handle.close()
