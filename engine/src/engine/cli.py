@@ -119,9 +119,9 @@ def main(args: list | None = None) -> int:
         user_agent=parsed_args.user_agent,
         whitelist=parsed_args.whitelist,
         blacklist=parsed_args.blacklist,
-        follow_redirects=parsed_args.follow_redirects,
+        follow_redirects=parsed_args.follow_redirects or parsed_args.follow_redirects_oos,
         follow_redirects_out_of_scope=parsed_args.follow_redirects_oos,
-        follow_sans=parsed_args.follow_sans,
+        follow_sans=parsed_args.follow_sans or parsed_args.follow_sans_oos,
         follow_sans_out_of_scope=parsed_args.follow_sans_oos,
         force_vhost_origin=parsed_args.force_vhost_origin,
         max_depth_redirects=parsed_args.dr,
@@ -160,12 +160,14 @@ def main(args: list | None = None) -> int:
     run_engine(json_payload, workers_count=parsed_args.workers, output_format=parsed_args.output, outfile=parsed_args.outfile)
 
     if aborted:
-        sys.stdout.write(json.dumps({"status": "aborted", "reason": "signal"}) + "\n")
-        sys.stdout.flush()
+        if parsed_args.output == "json":
+            sys.stdout.write(json.dumps({"status": "aborted", "reason": "signal"}) + "\n")
+            sys.stdout.flush()
         return 130 # standard exit code for SIGINT (128+2)
     else:
-        sys.stdout.write(json.dumps({"status": "completed"}) + "\n")
-        sys.stdout.flush()
+        if parsed_args.output == "json":
+            sys.stdout.write(json.dumps({"status": "completed"}) + "\n")
+            sys.stdout.flush()
         logger.info("\n[+] Scan Complete.")
         return 0
 

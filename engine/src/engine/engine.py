@@ -17,7 +17,7 @@ from engine.parsing import ScopeValidator
 logger = logging.getLogger(__name__)
 
 # Track seen combinations to avoid duplicate probes
-seen_tcp = set()
+seen_tcp = {}
 seen_http = set()
 
 # Global to handle cancellation gracefully
@@ -119,13 +119,14 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                 local_state.ports[port] = PortState()
                 
                 if not skip_tcp:
-                    seen_tcp.add(tcp_cache_key)
+                    seen_tcp[tcp_cache_key] = "open"  # placeholder to prevent duplicate probes
                     has_updates = True
                     
                     await limiter.acquire()
                     tcp_result = await check_tcp_and_tls(state_key, port, server_hostname=host_header)
                     
                     local_state.ports[port] = tcp_result
+                    seen_tcp[tcp_cache_key] = tcp_result.tcp_status
                     
                     # If we found SANs, and recursive checking is enabled in the flags
                     if tcp_result.tls_certificate and task.context.flags.follow_sans:
@@ -150,6 +151,8 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                                         san_depth=s_depth
                                     )
                                 ))
+                else:
+                    local_state.ports[port].tcp_status = seen_tcp.get(tcp_cache_key, "closed")
                 
                 if not skip_http and task.context.flags.check_http:
                     seen_http.add(http_cache_key)
