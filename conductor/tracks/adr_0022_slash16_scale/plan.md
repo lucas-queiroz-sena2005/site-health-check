@@ -7,7 +7,7 @@
 - [x] Task: Implement DB and API changes
   - [x] Add `subrun_id` column to `HostState` schema
   - [x] Update API routers to accept/filter by `subrun_id`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint [checkpoint: e195cd2]
 
 ## Phase 2: Engine Architecture (Memory & Scale)
 - [ ] Task: Write Tests for Engine Generation & Memory
