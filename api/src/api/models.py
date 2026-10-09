@@ -164,6 +164,7 @@ class HostState(SQLModel, table=True):
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     scan_run_id: str = Field(foreign_key="scan_runs.id")
     ip_address: str = Field(index=True)
+    subrun_id: str | None = Field(default=None, index=True)
     
     metadata_resolved_from: str | None = None
     metadata_discovered_from_json: list[str] = Field(default_factory=list, sa_column=Column(JSON))

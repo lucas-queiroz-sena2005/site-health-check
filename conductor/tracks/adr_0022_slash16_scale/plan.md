@@ -1,12 +1,12 @@
 # Implementation Plan: ADR 0022 - Slash16 Scale Strategy
 
 ## Phase 1: Database Schema & API Contract
-- [ ] Task: Write Tests for DB and API changes
-  - [ ] Write failing test for `HostState` accepting `subrun_id`
-  - [ ] Write failing test for API fetching by `run_id` + `subrun_id`
-- [ ] Task: Implement DB and API changes
-  - [ ] Add `subrun_id` column to `HostState` schema
-  - [ ] Update API routers to accept/filter by `subrun_id`
+- [x] Task: Write Tests for DB and API changes
+  - [x] Write failing test for `HostState` accepting `subrun_id`
+  - [x] Write failing test for API fetching by `run_id` + `subrun_id`
+- [x] Task: Implement DB and API changes
+  - [x] Add `subrun_id` column to `HostState` schema
+  - [x] Update API routers to accept/filter by `subrun_id`
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Engine Architecture (Memory & Scale)

@@ -46,7 +46,8 @@ GhostWindowDep = Annotated[timedelta | None, Depends(parse_ghost_window)]
 @router.get("/summary")
 def get_results_summary(
     session: SessionDep,
-    run_id: str | None = None
+    run_id: str | None = None,
+    subrun_id: str | None = None
 ) -> list[TargetSummary]:
     statement = (
         select(
@@ -62,6 +63,8 @@ def get_results_summary(
     
     if run_id is not None:
         statement = statement.where(HostState.scan_run_id == run_id)
+    if subrun_id is not None:
+        statement = statement.where(HostState.subrun_id == subrun_id)
         
     statement = statement.group_by(HostState.metadata_resolved_from)
     results = session.exec(statement).all()
@@ -81,6 +84,7 @@ def get_results(
     session: SessionDep,
     ghost_window: GhostWindowDep,
     run_id: str | None = None,
+    subrun_id: str | None = None,
     ip_address: str | None = None,
     resolved_from: str | None = None,
     status: str | None = None
@@ -88,6 +92,8 @@ def get_results(
     statement = select(HostState)
     if run_id is not None:
         statement = statement.where(HostState.scan_run_id == run_id)
+    if subrun_id is not None:
+        statement = statement.where(HostState.subrun_id == subrun_id)
     if ip_address is not None:
         statement = statement.where(HostState.ip_address == ip_address)
     if resolved_from is not None:
