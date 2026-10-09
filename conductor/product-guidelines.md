@@ -12,3 +12,7 @@
 ## UI / Branding
 - **Design System:** Rely on `shadcn/ui` components for a clean, modern, and accessible interface.
 - **Status Indicators:** Use standard conventions (e.g., green for healthy, red for errors, gray for void) consistently.
+
+## Domain Rules & Terminology
+- **Strict Glossary Compliance:** When naming domain concepts (in issue titles, refactor proposals, hypotheses, test names, etc.), always use the precise terms defined in `CONTEXT.md`. Do not drift to synonyms the glossary explicitly avoids.
+- **Architectural Respect:** If a proposed solution contradicts an existing ADR (located in `conductor/adr/`), explicitly flag it (e.g., "Contradicts ADR-NNNN, but worth reopening because...") rather than silently overriding it.

@@ -161,7 +161,7 @@ def expand_range(start_val: str, end_val: str | None, range_type: str) -> list[s
             else:
                 # Single CIDR block generation
                 network = ipaddress.IPv4Network(start_val, strict=False)
-                return [str(ip) for ip in network.hosts()]
+                return [str(ip) for ip in network]
         except ValueError as e:
             raise ValueError(f"Invalid CIDR block or range: {e}")
             

@@ -10,3 +10,13 @@
 
 -   [Workflow](./workflow.md)
 -   [Code Style Guides](./code_styleguides/)
+
+## Architecture
+
+-   [Architecture Documents](./architecture/)
+-   [Architectural Decision Records (ADRs)](./adr/)
+
+## Tracks
+
+-   [Tracks Registry](./tracks.md)
+-   [Tracks Directory](./tracks/)

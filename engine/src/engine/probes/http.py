@@ -30,6 +30,10 @@ class SingleIPResolver(aiohttp.abc.AbstractResolver):
     async def close(self):
         pass
 
+_SSL_CONTEXT = ssl.create_default_context()
+_SSL_CONTEXT.check_hostname = False
+_SSL_CONTEXT.verify_mode = ssl.CERT_NONE
+
 async def check_http_routing(ip: str, port: int, host_header: str | None, flags: TaskFlags) -> HttpRoutingCheck:
     """
     Validates HTTP payloads for a given Virtual Host (domain) on a specific IP.
@@ -42,11 +46,7 @@ async def check_http_routing(ip: str, port: int, host_header: str | None, flags:
     
     resolver = SingleIPResolver(target_ip=ip)
     
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-
-    connector = aiohttp.TCPConnector(resolver=resolver, ssl=ssl_context)
+    connector = aiohttp.TCPConnector(resolver=resolver, ssl=_SSL_CONTEXT)
     
     headers = {}
     if flags.user_agent:

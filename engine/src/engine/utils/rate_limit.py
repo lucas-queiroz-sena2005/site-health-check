@@ -23,10 +23,10 @@ class AsyncTokenBucket:
                 await asyncio.sleep(86400)
                 
         while True:
-            now = time.monotonic()
             wait_time = 0.0
-            
+
             async with self.lock:
+                now = time.monotonic()
                 elapsed = now - self.last_update
                 self.tokens += elapsed * self.rate
                 if self.tokens > self.rate:
