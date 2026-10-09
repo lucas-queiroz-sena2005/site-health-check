@@ -1,0 +1,28 @@
+# Implementation Plan: ADR 0022 - Slash16 Scale Strategy
+
+## Phase 1: Database Schema & API Contract
+- [ ] Task: Write Tests for DB and API changes
+  - [ ] Write failing test for `HostState` accepting `subrun_id`
+  - [ ] Write failing test for API fetching by `run_id` + `subrun_id`
+- [ ] Task: Implement DB and API changes
+  - [ ] Add `subrun_id` column to `HostState` schema
+  - [ ] Update API routers to accept/filter by `subrun_id`
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 2: Engine Architecture (Memory & Scale)
+- [ ] Task: Write Tests for Engine Generation & Memory
+  - [ ] Write failing test for round-robin target generator
+  - [ ] Write failing test to verify `asyncio.Queue` respects maxsize=1000 bounds
+- [ ] Task: Implement Engine changes
+  - [ ] Implement round-robin logic for interleaving `/24` target blocks
+  - [ ] Refactor engine loop to use bounded queue
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 3: Frontend Representation
+- [ ] Task: Write Tests for UI Data Fetching
+  - [ ] Write failing unit test for `HostTablePage` rendering Subrun Nodes natively
+  - [ ] Write failing test for on-demand fetch behavior when `[FETCH]` is clicked
+- [ ] Task: Implement Frontend changes
+  - [ ] Add Subrun Node layer to the Canonical Hierarchical Tree
+  - [ ] Implement `[FETCH]` button and partial data loading API calls
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

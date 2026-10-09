@@ -9,3 +9,4 @@
 - [x] **Track: adr-0020-flags-reduction** *Link: [./tracks/adr_0020_flags_reduction/index.md](./tracks/adr_0020_flags_reduction/index.md)*
 - [x] **Track: docs-review** *Link: [./tracks/docs_review/index.md](./tracks/docs_review/index.md)*
 - [x] **Track: integration** *Link: [./tracks/integration/index.md](./tracks/integration/index.md)*
+- [ ] **Track: Implementation of ADR 0022 - Slash16 Scale Strategy** *Link: [./tracks/adr_0022_slash16_scale/index.md](./tracks/adr_0022_slash16_scale/index.md)*
