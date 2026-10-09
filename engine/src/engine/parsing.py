@@ -189,7 +189,7 @@ def expand_target_ranges(segments: list[TargetSegment]) -> list[str]:
                 start, end = seg.data.split("-")
                 final_targets.extend(str(t) for t in expand_range(f"{start}{seg.suffix}", f"{end}{seg.suffix}", "cidr"))
             else:
-                final_targets.extend(str(t) for t in expand_range(f"{seg.data}{seg.suffix}", None, "cidr"))
+                final_targets.append(f"{seg.data}{seg.suffix}")
     return final_targets
 
 

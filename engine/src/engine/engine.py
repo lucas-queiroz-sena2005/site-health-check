@@ -163,6 +163,53 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
         finally:
             queue.task_done()
 
+def generate_targets_round_robin(blocks: list[str]):
+    import ipaddress
+    generators = []
+    for block in blocks:
+        try:
+            net = ipaddress.ip_network(block, strict=False)
+            if net.prefixlen < 24:
+                for subnet in net.subnets(new_prefix=24):
+                    generators.append((str(ip) for ip in subnet))
+            else:
+                generators.append((str(ip) for ip in net))
+        except ValueError:
+            generators.append(iter([block]))
+            
+    while generators:
+        for gen in list(generators):
+            try:
+                yield next(gen)
+            except StopIteration:
+                generators.remove(gen)
+
+async def _producer_routine(queue: asyncio.Queue, tasks_data: list[dict[str, Any]]):
+    from engine.schemas.engine import EngineTask, TaskContext, TaskFlags
+    if not tasks_data:
+        return
+        
+    first_task_dict = tasks_data[0]
+    flags = TaskFlags(**first_task_dict.get("flags", {}))
+    context = TaskContext(
+        flags=flags,
+        discovered_from=first_task_dict.get("discovered_from"),
+        parent_ip=first_task_dict.get("parent_ip"),
+        depth=first_task_dict.get("depth", 0)
+    )
+    ports = first_task_dict.get("ports", [])
+    
+    blocks = [t["target"] for t in tasks_data]
+    for ip in generate_targets_round_robin(blocks):
+        if is_cancelled:
+            break
+        task = EngineTask(
+            target=ip,
+            ports=ports,
+            context=context
+        )
+        await queue.put(task)
+
 async def async_main(tasks_data: list[dict[str, Any]], workers_count: int = 100):
     """
     Initializes the BFS queue, spawns the routines, and blocks until finished.
@@ -171,46 +218,33 @@ async def async_main(tasks_data: list[dict[str, Any]], workers_count: int = 100)
     cancel_event = asyncio.Event()
     engine_loop = asyncio.get_running_loop()
     
-    queue = asyncio.Queue()
+    queue = asyncio.Queue(maxsize=1000)
     
-    # Seeding queue with JSON input
-    from engine.schemas.engine import EngineTask, TaskContext, TaskFlags
-    first_task = None
-    for task_dict in tasks_data:
-        flags = TaskFlags(**task_dict.get("flags", {}))
-        task = EngineTask(
-            target=task_dict["target"],
-            ports=task_dict["ports"],
-            context=TaskContext(
-                flags=flags,
-                discovered_from=task_dict.get("discovered_from"),
-                parent_ip=task_dict.get("parent_ip"),
-                depth=task_dict.get("depth", 0)
-            )
-        )
-        if first_task is None:
-            first_task = task
-        await queue.put(task)
-        
-    # Get rate from the first task's parsed flags to avoid primitive obsession
+    # Get rate from the first task's parsed flags
+    from engine.schemas.engine import TaskFlags
     rate_limit = 50.0
-    if first_task and hasattr(first_task.context.flags, 'rate'):
-        rate_limit = first_task.context.flags.rate
-    
+    if tasks_data:
+        flags = TaskFlags(**tasks_data[0].get("flags", {}))
+        rate_limit = flags.rate
+        
     limiter = AsyncTokenBucket(rate_limit)
         
     workers = []
-    
     for i in range(workers_count):
         worker_task = asyncio.create_task(scanner_routine(f"W-{i}", queue, limiter))
         workers.append(worker_task)
         
-    # Wait until queue is empty or cancelled
-    queue_task = asyncio.create_task(queue.join())
+    producer_task = asyncio.create_task(_producer_routine(queue, tasks_data))
+        
+    async def wait_for_completion():
+        await producer_task
+        await queue.join()
+
+    completion_task = asyncio.create_task(wait_for_completion())
     cancel_task = asyncio.create_task(cancel_event.wait())
     
     done, pending = await asyncio.wait(
-        [queue_task, cancel_task],
+        [completion_task, cancel_task],
         return_when=asyncio.FIRST_COMPLETED
     )
     for p in pending:

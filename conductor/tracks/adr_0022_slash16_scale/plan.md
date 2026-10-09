@@ -10,12 +10,12 @@
 - [x] Task: Phase Verification & Checkpoint [checkpoint: e195cd2]
 
 ## Phase 2: Engine Architecture (Memory & Scale)
-- [ ] Task: Write Tests for Engine Generation & Memory
-  - [ ] Write failing test for round-robin target generator
-  - [ ] Write failing test to verify `asyncio.Queue` respects maxsize=1000 bounds
-- [ ] Task: Implement Engine changes
-  - [ ] Implement round-robin logic for interleaving `/24` target blocks
-  - [ ] Refactor engine loop to use bounded queue
+- [x] Task: Write Tests for Engine Generation & Memory
+  - [x] Write failing test for round-robin target generator
+  - [x] Write failing test to verify `asyncio.Queue` respects maxsize=1000 bounds
+- [x] Task: Implement Engine changes
+  - [x] Implement round-robin logic for interleaving `/24` target blocks
+  - [x] Refactor engine loop to use bounded queue
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Frontend Representation
