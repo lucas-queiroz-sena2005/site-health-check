@@ -29,7 +29,7 @@ const RenderTreeNodeInner = ({
   onStatusClick?: (nodeId: string, status: string) => void
   onClearFilter?: (nodeId: string) => void
 }) => {
-  const { toggleDetail } = useTableDispatchContext()
+  const { toggleDetail, fetchSubrun } = useTableDispatchContext()
   // Reactive Visual Compression logic
   let displayLabel = node.label
   let displayType = node.type
@@ -158,6 +158,18 @@ const RenderTreeNodeInner = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
             </svg>
           </button>
+          
+          {node.type === 'Subrun' && node.rawPayload?.isFetched === false && (
+             <button
+               onClick={(e) => { 
+                 e.stopPropagation(); 
+                 if (fetchSubrun) fetchSubrun(node.rawPayload.subrun_id);
+               }}
+               className="ml-2 bg-primary/20 hover:bg-primary/30 text-primary px-3 py-1 rounded text-xs font-bold transition-colors"
+             >
+               [FETCH]
+             </button>
+          )}
         </div>
       </HierarchicalTable.Cell>
     </HierarchicalTable.Row>

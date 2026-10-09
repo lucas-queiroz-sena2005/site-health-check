@@ -74,15 +74,29 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
   return node.status
 }
 
-export function buildTreeData(hosts: any[]): TreeNode[] {
-  const cidrGroups = new Map<string, any[]>()
+export function buildTreeData(hosts: any[], summaries: any[] = []): TreeNode[] {
+  // First, map summaries by target and subrun_id
+  const targetToSubruns = new Map<string, Map<string, any>>()
+  summaries.forEach(s => {
+    if (!targetToSubruns.has(s.target)) {
+      targetToSubruns.set(s.target, new Map())
+    }
+    targetToSubruns.get(s.target)!.set(s.subrun_id, s)
+  })
+
+  // We group hosts by subrun_id, then we nest them under their resolved_from (target)
+  const cidrGroups = new Map<string, Map<string, any[]>>()
   const rogueHosts: any[] = []
   
   hosts.forEach(host => {
     const cidr = host.metadata?.resolved_from
+    const subrun_id = host.metadata?.subrun_id || cidr // Fallback to cidr if no subrun_id
+
     if (cidr) {
-      if (!cidrGroups.has(cidr)) cidrGroups.set(cidr, [])
-      cidrGroups.get(cidr)!.push(host)
+      if (!cidrGroups.has(cidr)) cidrGroups.set(cidr, new Map())
+      const subrunMap = cidrGroups.get(cidr)!
+      if (!subrunMap.has(subrun_id)) subrunMap.set(subrun_id, [])
+      subrunMap.get(subrun_id)!.push(host)
     } else {
       rogueHosts.push(host)
     }
@@ -90,119 +104,160 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
 
   const rootNodes: TreeNode[] = []
 
-  for (const [cidr, groupHosts] of cidrGroups.entries()) {
-    const hostNodes: TreeNode[] = []
+  // Get all targets that exist in either summaries or hosts
+  const allTargets = new Set([...cidrGroups.keys(), ...targetToSubruns.keys()])
 
-    groupHosts.forEach((host, hostIdx) => {
-      const isVoidAgg = host.ip_address?.startsWith('Void')
-      
-      if (isVoidAgg) {
-        const match = host.ip_address.match(/\d+/)
-        const numVoid = match ? parseInt(match[0], 10) : 1
-        hostNodes.push({
-          id: `host-${cidr}-${hostIdx}-void`,
-          type: 'Void',
-          label: host.ip_address,
-          status: 'neutral',
-          nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: numVoid },
-          children: []
-        })
-        return
-      }
+  for (const cidr of allTargets) {
+    const subrunNodes: TreeNode[] = []
+    const isCidr = cidr.includes('/')
 
-      const ipLabel = host.ip_address || 'Unknown IP'
-      const hostNode: TreeNode = {
-        id: `host-${cidr}-${host.ip_address}-${hostIdx}`,
-        type: 'Host',
-        label: ipLabel,
-        status: 'neutral',
-        children: [],
-        rawPayload: { ...host, ports: undefined }
-      }
+    const subrunMap = cidrGroups.get(cidr) || new Map()
+    const summariesMap = targetToSubruns.get(cidr) || new Map()
 
-      const portsArray = host.ports ? Object.entries(host.ports).map(([pn, pData]) => ({ port_number: pn, ...(pData as any) })) : []
-      
-      portsArray.forEach((port: any) => {
-        const portIdStr = `port-${hostNode.id}-${port.port_number}`
-        let portStatus: TreeNodeStatus = port.tcp_status === 'open' ? 'success' : 'error'
+    const allSubruns = new Set([...subrunMap.keys(), ...summariesMap.keys()])
+
+    for (const subrun_id of allSubruns) {
+      const groupHosts = subrunMap.get(subrun_id) || []
+      const summary = summariesMap.get(subrun_id)
+
+      const isFetched = groupHosts.length > 0 || !summary // If no summary, assume it's legacy/fetched
+
+      const hostNodes: TreeNode[] = []
+
+      groupHosts.forEach((host: any, hostIdx: number) => {
+        const isVoidAgg = host.ip_address?.startsWith('Void')
         
-        let tlsInfoStr = undefined
-        if (port.tls_certificate) {
-          tlsInfoStr = port.tls_certificate.valid ? `${port.tls_certificate.expires_in_days}d` : 'Invalid'
-          if (port.tls_certificate.valid === false) {
-            portStatus = 'warning'
-          } else if (port.tls_certificate.expires_in_days < 30) {
-            portStatus = 'warning'
+        if (isVoidAgg) {
+          const match = host.ip_address.match(/\d+/)
+          const numVoid = match ? parseInt(match[0], 10) : 1
+          hostNodes.push({
+            id: `host-${subrun_id}-${hostIdx}-void`,
+            type: 'Void',
+            label: host.ip_address,
+            status: 'neutral',
+            nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: numVoid },
+            children: []
+          })
+          return
+        }
+
+        const ipLabel = host.ip_address || 'Unknown IP'
+        const hostNode: TreeNode = {
+          id: `host-${subrun_id}-${host.ip_address}-${hostIdx}`,
+          type: 'Host',
+          label: ipLabel,
+          status: 'neutral',
+          children: [],
+          rawPayload: { ...host, ports: undefined }
+        }
+
+        const portsArray = host.ports ? Object.entries(host.ports).map(([pn, pData]) => ({ port_number: pn, ...(pData as any) })) : []
+        
+        portsArray.forEach((port: any) => {
+          const portIdStr = `port-${hostNode.id}-${port.port_number}`
+          let portStatus: TreeNodeStatus = port.tcp_status === 'open' ? 'success' : 'error'
+          
+          let tlsInfoStr = undefined
+          if (port.tls_certificate) {
+            tlsInfoStr = port.tls_certificate.valid ? `${port.tls_certificate.expires_in_days}d` : 'Invalid'
+            if (port.tls_certificate.valid === false) {
+              portStatus = 'warning'
+            } else if (port.tls_certificate.expires_in_days < 30) {
+              portStatus = 'warning'
+            }
+          }
+
+          const portNode: TreeNode = {
+            id: portIdStr,
+            type: 'Port',
+            label: `${port.port_number}/tcp`,
+            status: portStatus,
+            latencyMs: port.tcp_latency_ms,
+            tlsInfo: tlsInfoStr,
+            children: [],
+            rawPayload: { ...port, http_routing_checks: undefined }
+          }
+
+          if (port.http_routing_checks) {
+            Object.entries(port.http_routing_checks).forEach(([domain, http]: [string, any], httpIdx) => {
+              let httpStatus: TreeNodeStatus = 'error'
+              let statusCodeStr = 'Error'
+              
+              if (http.status_code) {
+                statusCodeStr = `HTTP ${http.status_code}`
+                if (http.status_code >= 200 && http.status_code < 300) httpStatus = 'success'
+                else if (http.status_code >= 300 && http.status_code < 400) httpStatus = 'neutral'
+                else httpStatus = 'error'
+              }
+
+              portNode.children.push({
+                id: `http-${portIdStr}-${domain}-${httpIdx}`,
+                type: 'HTTP',
+                label: `${statusCodeStr} (${domain})`,
+                status: httpStatus,
+                latencyMs: http.http_latency_ms,
+                children: [],
+                rawPayload: http
+              })
+            })
+          }
+          hostNode.children.push(portNode)
+        })
+        hostNodes.push(hostNode)
+      })
+
+      const totalPossibleHosts = summary ? summary.total_ips : (groupHosts[0]?.metadata?.total_hosts || groupHosts.length)
+      const totalVoid = Math.max(0, totalPossibleHosts - groupHosts.length)
+      
+      if (totalVoid > 0 && isFetched) {
+        hostNodes.push({
+          id: `void-${subrun_id}`,
+          type: 'Void',
+          label: `Void Space (${totalVoid} IPs)`,
+          status: 'neutral',
+          nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: totalVoid },
+          children: [],
+          rawPayload: { description: `${totalVoid} IPs did not respond to the scan.` }
+        })
+      }
+
+      if (subrun_id && subrun_id !== cidr) {
+        // It's a true Subrun Node
+        const subrunNode: TreeNode = {
+          id: `subrun-${subrun_id}`,
+          type: 'Subrun',
+          label: subrun_id,
+          status: 'neutral',
+          children: hostNodes,
+          rawPayload: { 
+            target: cidr, 
+            subrun_id: subrun_id, 
+            total_hosts: totalPossibleHosts,
+            isFetched: isFetched 
           }
         }
-
-        const portNode: TreeNode = {
-          id: portIdStr,
-          type: 'Port',
-          label: `${port.port_number}/tcp`,
-          status: portStatus,
-          latencyMs: port.tcp_latency_ms,
-          tlsInfo: tlsInfoStr,
-          children: [],
-          rawPayload: { ...port, http_routing_checks: undefined }
-        }
-
-
-        if (port.http_routing_checks) {
-          Object.entries(port.http_routing_checks).forEach(([domain, http]: [string, any], httpIdx) => {
-            let httpStatus: TreeNodeStatus = 'error'
-            let statusCodeStr = 'Error'
-            
-            if (http.status_code) {
-              statusCodeStr = `HTTP ${http.status_code}`
-              if (http.status_code >= 200 && http.status_code < 300) httpStatus = 'success'
-              else if (http.status_code >= 300 && http.status_code < 400) httpStatus = 'neutral'
-              else httpStatus = 'error'
-            }
-
-            portNode.children.push({
-              id: `http-${portIdStr}-${domain}-${httpIdx}`,
-              type: 'HTTP',
-              label: `${statusCodeStr} (${domain})`,
-              status: httpStatus,
-              latencyMs: http.http_latency_ms,
-              children: [],
-              rawPayload: http
-            })
-          })
-        }
-        hostNode.children.push(portNode)
-      })
-      hostNodes.push(hostNode)
-    })
-    const totalPossibleHosts = groupHosts[0]?.metadata?.total_hosts || groupHosts.length
-    const totalVoid = Math.max(0, totalPossibleHosts - groupHosts.length)
-    
-    if (totalVoid > 0) {
-      hostNodes.push({
-        id: `void-${cidr}`,
-        type: 'Void',
-        label: `Void Space (${totalVoid} IPs)`,
-        status: 'neutral',
-        nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: totalVoid },
-        children: [],
-        rawPayload: { description: `${totalVoid} IPs did not respond to the scan.` }
-      })
+        subrunNodes.push(subrunNode)
+      } else {
+        // Legacy or single IP targets don't get Subrun Nodes wrapper
+        subrunNodes.push(...hostNodes)
+      }
     }
 
-    const isCidr = cidr.includes('/')
-    
-    if (!isCidr && hostNodes.length === 1 && hostNodes[0].label === cidr) {
-      rootNodes.push(hostNodes[0])
+    if (!isCidr && subrunNodes.length === 1 && subrunNodes[0].label === cidr) {
+      rootNodes.push(subrunNodes[0])
     } else {
       const targetType = isCidr ? 'CIDR Target' : 'Target'
+      const targetTotal = summariesMap.size > 0 
+        ? Array.from(summariesMap.values()).reduce((sum, s) => sum + (s.total_ips || 0), 0)
+        : (subrunNodes.length > 0 ? subrunNodes[0].rawPayload?.total_hosts : 0)
+
       const targetNode: TreeNode = {
         id: `target-${cidr}`,
         type: targetType,
         label: cidr,
         status: 'neutral',
-        children: hostNodes,
-        rawPayload: { target: cidr, total_hosts: totalPossibleHosts }
+        children: subrunNodes,
+        rawPayload: { target: cidr, total_hosts: targetTotal }
       }
       rootNodes.push(targetNode)
     }

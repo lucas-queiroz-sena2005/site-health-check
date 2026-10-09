@@ -36,6 +36,8 @@ class TaskContext:
     discovered_from: str | None = None
     parent_ip: str | None = None
     depth: int = 0
+    subrun_id: str | None = None
+    root_target: str | None = None
 
 
 @dataclasses.dataclass
@@ -99,6 +101,8 @@ class IpMetadata:
     """Metadata detailing the origin of this IP state."""
     resolved_from: str | None = None
     discovered_from: list[str] = dataclasses.field(default_factory=list)
+    subrun_id: str | None = None
+    root_target: str | None = None
 
 @dataclasses.dataclass
 class IpState:

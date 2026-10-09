@@ -19,10 +19,10 @@
 - [x] Task: Phase Verification & Checkpoint [checkpoint: 44acc69]
 
 ## Phase 3: Frontend Representation
-- [ ] Task: Write Tests for UI Data Fetching
-  - [ ] Write failing unit test for `HostTablePage` rendering Subrun Nodes natively
-  - [ ] Write failing test for on-demand fetch behavior when `[FETCH]` is clicked
-- [ ] Task: Implement Frontend changes
-  - [ ] Add Subrun Node layer to the Canonical Hierarchical Tree
-  - [ ] Implement `[FETCH]` button and partial data loading API calls
+- [x] Task: Write Tests for UI Data Fetching
+  - [x] Write failing unit test for `HostTablePage` rendering Subrun Nodes natively
+  - [x] Write failing test for on-demand fetch behavior when `[FETCH]` is clicked
+- [x] Task: Implement Frontend changes
+  - [x] Add Subrun Node layer to the Canonical Hierarchical Tree
+  - [x] Implement `[FETCH]` button and partial data loading API calls
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

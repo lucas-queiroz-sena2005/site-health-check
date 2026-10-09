@@ -17,6 +17,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 class TargetSummary(BaseModel):
     target: str
+    subrun_id: str | None
     total_ips: int
     active_ips: int
 
@@ -52,6 +53,7 @@ def get_results_summary(
     statement = (
         select(
             HostState.metadata_resolved_from,
+            HostState.subrun_id,
             func.count(col(HostState.id).distinct()).label("total_ips"),
             func.count(col(PortState.id).distinct()).label("active_ports")
         )
@@ -66,14 +68,15 @@ def get_results_summary(
     if subrun_id is not None:
         statement = statement.where(HostState.subrun_id == subrun_id)
         
-    statement = statement.group_by(HostState.metadata_resolved_from)
+    statement = statement.group_by(HostState.metadata_resolved_from, HostState.subrun_id)
     results = session.exec(statement).all()
     
     summaries = []
     for row in results:
-        target, total, active = row
+        target, subrun, total, active = row
         summaries.append(TargetSummary(
             target=target or "unknown",
+            subrun_id=subrun,
             total_ips=total,
             active_ips=active
         ))

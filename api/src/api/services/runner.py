@@ -31,12 +31,14 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
             scan_run_id=run_id,
             ip_address=ip,
             metadata_resolved_from=metadata.get("resolved_from"),
-            metadata_discovered_from_json=metadata.get("discovered_from", [])
+            metadata_discovered_from_json=metadata.get("discovered_from", []),
+            subrun_id=metadata.get("subrun_id")
         ).on_conflict_do_update(
             index_elements=["scan_run_id", "ip_address"],
             set_={
                 "metadata_resolved_from": metadata.get("resolved_from"),
-                "metadata_discovered_from_json": metadata.get("discovered_from", [])
+                "metadata_discovered_from_json": metadata.get("discovered_from", []),
+                "subrun_id": metadata.get("subrun_id")
             }
         ).returning(HostState.id)
         

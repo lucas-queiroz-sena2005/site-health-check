@@ -68,8 +68,16 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
             local_state = IpState()
             if is_domain:
                 local_state.metadata.resolved_from = target
+            else:
+                # If not a domain, we map root_target to resolved_from so the UI categorizes it cleanly under the root block
+                local_state.metadata.resolved_from = task.context.root_target or target
+                
             if task.context.discovered_from:
                 local_state.metadata.discovered_from.append(task.context.discovered_from)
+            if task.context.subrun_id:
+                local_state.metadata.subrun_id = task.context.subrun_id
+            if task.context.root_target:
+                local_state.metadata.root_target = task.context.root_target
                 
             has_updates = False
             # Execute the probes for each port
@@ -166,16 +174,20 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
 def generate_targets_round_robin(blocks: list[str]):
     import ipaddress
     generators = []
+    
+    def make_gen(target_net, label, root_block):
+        return ((str(ip), str(label), root_block) for ip in target_net)
+        
     for block in blocks:
         try:
             net = ipaddress.ip_network(block, strict=False)
             if net.prefixlen < 24:
                 for subnet in net.subnets(new_prefix=24):
-                    generators.append((str(ip) for ip in subnet))
+                    generators.append(make_gen(subnet, subnet, block))
             else:
-                generators.append((str(ip) for ip in net))
+                generators.append(make_gen(net, net, block))
         except ValueError:
-            generators.append(iter([block]))
+            generators.append(iter([(block, block, block)]))
             
     while generators:
         for gen in list(generators):
@@ -200,13 +212,21 @@ async def _producer_routine(queue: asyncio.Queue, tasks_data: list[dict[str, Any
     ports = first_task_dict.get("ports", [])
     
     blocks = [t["target"] for t in tasks_data]
-    for ip in generate_targets_round_robin(blocks):
+    for ip, subrun_id, root_target in generate_targets_round_robin(blocks):
         if is_cancelled:
             break
+        task_ctx = TaskContext(
+            flags=flags,
+            discovered_from=context.discovered_from,
+            parent_ip=context.parent_ip,
+            depth=context.depth,
+            subrun_id=subrun_id,
+            root_target=root_target
+        )
         task = EngineTask(
             target=ip,
             ports=ports,
-            context=context
+            context=task_ctx
         )
         await queue.put(task)
 

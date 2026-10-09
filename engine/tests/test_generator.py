@@ -10,10 +10,10 @@ async def test_round_robin_generator():
     blocks = ["10.0.0.0/24", "10.0.1.0/24"]
     gen = generate_targets_round_robin(blocks)
     
-    assert next(gen) == "10.0.0.0"
-    assert next(gen) == "10.0.1.0"
-    assert next(gen) == "10.0.0.1"
-    assert next(gen) == "10.0.1.1"
+    assert next(gen) == ("10.0.0.0", "10.0.0.0/24", "10.0.0.0/24")
+    assert next(gen) == ("10.0.1.0", "10.0.1.0/24", "10.0.1.0/24")
+    assert next(gen) == ("10.0.0.1", "10.0.0.0/24", "10.0.0.0/24")
+    assert next(gen) == ("10.0.1.1", "10.0.1.0/24", "10.0.1.0/24")
 
 @pytest.mark.asyncio
 async def test_engine_queue_maxsize():
