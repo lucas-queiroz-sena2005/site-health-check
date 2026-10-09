@@ -16,7 +16,7 @@
 - [x] Task: Implement Engine changes
   - [x] Implement round-robin logic for interleaving `/24` target blocks
   - [x] Refactor engine loop to use bounded queue
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint [checkpoint: 44acc69]
 
 ## Phase 3: Frontend Representation
 - [ ] Task: Write Tests for UI Data Fetching
