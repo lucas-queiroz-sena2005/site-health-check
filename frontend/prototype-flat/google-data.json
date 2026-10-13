@@ -1,0 +1,3026 @@
+[
+ {
+  "ip": "142.251.134.174",
+  "depth": 0,
+  "names": [
+   "google.com"
+  ],
+  "root": "google.com",
+  "ports": [
+   {
+    "port": 80,
+    "tcp": "open",
+    "lat": 106,
+    "tls": null,
+    "http": [
+     {
+      "domain": "google.com",
+      "status": 301,
+      "lat": 63,
+      "redirect": "http://www.google.com/",
+      "server": "gws",
+      "notes": null
+     }
+    ]
+   },
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 68,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "google.com",
+      "status": 301,
+      "lat": 129,
+      "redirect": "https://www.google.com/",
+      "server": "gws",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.153.119",
+  "depth": 1,
+  "names": [
+   "www.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 80,
+    "tcp": "open",
+    "lat": 108,
+    "tls": null,
+    "http": [
+     {
+      "domain": "www.google.com",
+      "status": 200,
+      "lat": 107,
+      "redirect": null,
+      "server": "gws",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.28.132",
+  "depth": 1,
+  "names": [
+   "android.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 57,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "android.com",
+      "status": 301,
+      "lat": 69,
+      "redirect": "https://www.android.com/",
+      "server": "sffe",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.162.164",
+  "depth": 1,
+  "names": [
+   "google-analytics.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 70,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "google-analytics.com",
+      "status": 301,
+      "lat": 124,
+      "redirect": "https://www.google.com/analytics/",
+      "server": "Golfe2",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.133.206",
+  "depth": 1,
+  "names": [
+   "music.youtube.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 60,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "music.youtube.com",
+      "status": 200,
+      "lat": 159,
+      "redirect": null,
+      "server": "ESF",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.30.142",
+  "depth": 1,
+  "names": [
+   "youtube.com",
+   "service.urchin.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 60,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "youtube.com",
+      "status": 301,
+      "lat": 141,
+      "redirect": "https://www.youtube.com/",
+      "server": "ESF",
+      "notes": null
+     },
+     {
+      "domain": "service.urchin.com",
+      "status": 301,
+      "lat": 119,
+      "redirect": "https://www.google.com/analytics/",
+      "server": "Golfe2",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.28.206",
+  "depth": 1,
+  "names": [
+   "goo.gl",
+   "yt.be",
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 60,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "goo.gl",
+      "status": 400,
+      "lat": 258,
+      "redirect": null,
+      "server": "ESF",
+      "notes": null
+     },
+     {
+      "domain": "yt.be",
+      "status": 301,
+      "lat": 85,
+      "redirect": "https://www.youtube.com/",
+      "server": "sffe",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.250.219.206",
+  "depth": 1,
+  "names": [
+   "youtu.be",
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 61,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "youtu.be",
+      "status": 303,
+      "lat": 174,
+      "redirect": "https://www.youtube.com/?feature=youtu.be",
+      "server": "ESF",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.250.78.142",
+  "depth": 1,
+  "names": [
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 67,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "android.clients.google.com",
+      "status": 404,
+      "lat": 171,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.29.164",
+  "depth": 1,
+  "names": [
+   "urchin.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 63,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "urchin.com",
+      "status": 301,
+      "lat": 73,
+      "redirect": "https://www.google.com/analytics/",
+      "server": "sffe",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.250.78.110",
+  "depth": 1,
+  "names": [
+   "g.co",
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 58,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "g.co",
+      "status": 200,
+      "lat": 122,
+      "redirect": null,
+      "server": "sffe",
+      "notes": null
+     },
+     {
+      "domain": "android.clients.google.com",
+      "status": 404,
+      "lat": 167,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.250.219.238",
+  "depth": 1,
+  "names": [
+   "googlecommerce.com",
+   "youtubekids.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 61,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "googlecommerce.com",
+      "status": 404,
+      "lat": 171,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.29.238",
+  "depth": 1,
+  "names": [
+   "youtubeeducation.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 65,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "youtubeeducation.com",
+      "status": 301,
+      "lat": 121,
+      "redirect": "https://www.youtubeeducation.com/",
+      "server": "ESF",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.134.46",
+  "depth": 2,
+  "names": [
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 62,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "android.clients.google.com",
+      "status": 404,
+      "lat": 166,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.162.14",
+  "depth": 1,
+  "names": [
+   "app-analytics-services-att.com",
+   "www.goo.gl"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 65,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.goo.gl",
+      "status": 404,
+      "lat": 920,
+      "redirect": null,
+      "server": "ESF",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.28.142",
+  "depth": 2,
+  "names": [
+   "www.google-analytics.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 61,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.google-analytics.com",
+      "status": 301,
+      "lat": 135,
+      "redirect": "https://www.google.com/analytics/",
+      "server": "Golfe2",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.30.232",
+  "depth": 2,
+  "names": [
+   "googletagmanager.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 56,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "googletagmanager.com",
+      "status": 404,
+      "lat": 119,
+      "redirect": null,
+      "server": "Google Tag Manager",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "216.239.36.21",
+  "depth": 1,
+  "names": [
+   "ai.android"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 461,
+    "tls": {
+     "valid": true,
+     "days": 68,
+     "issuer": "CN=WR3,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "ai.android"
+     ]
+    },
+    "http": [
+     {
+      "domain": "ai.android",
+      "status": 200,
+      "lat": 449,
+      "redirect": null,
+      "server": "Google Frontend",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.172.168",
+  "depth": 2,
+  "names": [
+   "www.googletagmanager.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 55,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.googletagmanager.com",
+      "status": 404,
+      "lat": 129,
+      "redirect": null,
+      "server": "Google Tag Manager",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "64.233.190.97",
+  "depth": 2,
+  "names": [
+   "ssl.google-analytics.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 110,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "ssl.google-analytics.com",
+      "status": 301,
+      "lat": 188,
+      "redirect": "https://www.google.com/analytics/",
+      "server": "Golfe2",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.152.119",
+  "depth": 2,
+  "names": [
+   "www.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 61,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "www.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.google.com",
+      "status": 200,
+      "lat": 156,
+      "redirect": null,
+      "server": "gws",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.150.119",
+  "depth": 1,
+  "names": [
+   "www.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 66,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "www.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.google.com",
+      "status": 200,
+      "lat": 159,
+      "redirect": null,
+      "server": "gws",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.128.142",
+  "depth": 2,
+  "names": [
+   "app-analytics-services.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 100,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WE2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "app-analytics-services.com",
+      "status": 404,
+      "lat": 237,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.156.4",
+  "depth": 2,
+  "names": [
+   "www.youtube.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 65,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.youtube.com",
+      "status": 200,
+      "lat": 167,
+      "redirect": null,
+      "server": "ESF",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.30.78",
+  "depth": 2,
+  "names": [
+   "www.android.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 63,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "www.android.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.android.com",
+      "status": 200,
+      "lat": 128,
+      "redirect": null,
+      "server": "sffe",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.250.0.101",
+  "depth": 2,
+  "names": [
+   "app-measurement.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 127,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "app-measurement.com",
+      "status": 404,
+      "lat": 154,
+      "redirect": null,
+      "server": "sffe",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.0.102",
+  "depth": 2,
+  "names": [
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 118,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "android.clients.google.com",
+      "status": 404,
+      "lat": 258,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.154.4",
+  "depth": 2,
+  "names": [
+   "www.youtube.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 108,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.youtube.com",
+      "status": 200,
+      "lat": 196,
+      "redirect": null,
+      "server": "ESF",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.250.0.139",
+  "depth": 2,
+  "names": [
+   "app-measurement.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 110,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "app-measurement.com",
+      "status": 404,
+      "lat": 189,
+      "redirect": null,
+      "server": "sffe",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "216.239.34.21",
+  "depth": 2,
+  "names": [
+   "ai.android"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 219,
+    "tls": {
+     "valid": true,
+     "days": 68,
+     "issuer": "CN=WR3,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "ai.android"
+     ]
+    },
+    "http": [
+     {
+      "domain": "ai.android",
+      "status": 200,
+      "lat": 571,
+      "redirect": null,
+      "server": "Google Frontend",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.28.14",
+  "depth": 2,
+  "names": [
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 105,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WE2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "android.clients.google.com",
+      "status": 404,
+      "lat": 227,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "216.239.38.21",
+  "depth": 2,
+  "names": [
+   "ai.android"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 224,
+    "tls": {
+     "valid": true,
+     "days": 68,
+     "issuer": "CN=WR3,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "ai.android"
+     ]
+    },
+    "http": [
+     {
+      "domain": "ai.android",
+      "status": 200,
+      "lat": 532,
+      "redirect": null,
+      "server": "Google Frontend",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "216.239.32.27",
+  "depth": 2,
+  "names": [
+   "fps.goog"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 129,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "fps.goog",
+      "status": 400,
+      "lat": 171,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "216.239.32.36",
+  "depth": 2,
+  "names": [
+   "region1.app-measurement.com",
+   "att.app-measurement.com",
+   "region1.app-analytics-services-att.com",
+   "region1.analytics.app-measurement.com",
+   "region1.att.app-measurement.com",
+   "analytics.app-measurement.com",
+   "region1.app-analytics-services.com",
+   "region1.analytics.google.com",
+   "region1.google-analytics.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 398,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "analytics.app-measurement.com",
+      "status": 404,
+      "lat": 695,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     },
+     {
+      "domain": "region1.app-analytics-services.com",
+      "status": 404,
+      "lat": 696,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.28.174",
+  "depth": 2,
+  "names": [
+   "www.youtubekids.com",
+   "www.googleoptimize.com",
+   "android.clients.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 62,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.youtubekids.com",
+      "status": 200,
+      "lat": 140,
+      "redirect": null,
+      "server": "ESF",
+      "notes": null
+     },
+     {
+      "domain": "www.googleoptimize.com",
+      "status": 404,
+      "lat": 169,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     },
+     {
+      "domain": "android.clients.google.com",
+      "status": 404,
+      "lat": 162,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "216.239.34.36",
+  "depth": 2,
+  "names": [
+   "region1.app-measurement.com",
+   "region1.app-analytics-services.com",
+   "att.app-measurement.com",
+   "region1.analytics.app-measurement.com",
+   "analytics.app-measurement.com",
+   "region1.google-analytics.com",
+   "region1.analytics.google.com",
+   "region1.att.app-measurement.com",
+   "region1.app-analytics-services-att.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 395,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "region1.google-analytics.com",
+      "status": 404,
+      "lat": 695,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.172.46",
+  "depth": 2,
+  "names": [
+   "googleoptimize.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 60,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google-analytics.com",
+      "region1.app-measurement.com",
+      "app-measurement.com",
+      "region1.att.app-measurement.com",
+      "att.app-measurement.com",
+      "region1.analytics.app-measurement.com",
+      "analytics.app-measurement.com",
+      "region1.app-analytics-services-att.com",
+      "app-analytics-services-att.com",
+      "region1.app-analytics-services.com",
+      "app-analytics-services.com",
+      "google-analytics.com",
+      "region1.google-analytics.com",
+      "ssl.google-analytics.com",
+      "www.google-analytics.com",
+      "region1.analytics.google.com",
+      "googletagmanager.com",
+      "www.googletagmanager.com",
+      "urchin.com",
+      "service.urchin.com",
+      "fps.goog",
+      "*.fps.goog",
+      "googleoptimize.com",
+      "www.googleoptimize.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "googleoptimize.com",
+      "status": 404,
+      "lat": 172,
+      "redirect": null,
+      "server": null,
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "142.251.157.119",
+  "depth": 2,
+  "names": [
+   "www.google.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 60,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "www.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.google.com",
+      "status": 200,
+      "lat": 149,
+      "redirect": null,
+      "server": "gws",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "64.233.186.190",
+  "depth": 2,
+  "names": [
+   "www.youtubeeducation.com"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 109,
+    "tls": {
+     "valid": true,
+     "days": 59,
+     "issuer": "CN=WR2,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "*.google.com",
+      "*.appengine.google.com",
+      "*.bdn.dev",
+      "*.origin-test.bdn.dev",
+      "*.cloud.google.com",
+      "*.crowdsource.google.com",
+      "*.datacompute.google.com",
+      "*.google.ca",
+      "*.google.cl",
+      "*.google.co.in",
+      "*.google.co.jp",
+      "*.google.co.uk",
+      "*.google.com.ar",
+      "*.google.com.au",
+      "*.google.com.br",
+      "*.google.com.co",
+      "*.google.com.mx",
+      "*.google.com.tr",
+      "*.google.com.vn",
+      "*.google.de",
+      "*.google.es",
+      "*.google.fr",
+      "*.google.hu",
+      "*.google.it",
+      "*.google.nl",
+      "*.google.pl",
+      "*.google.pt",
+      "*.gemini.cloud.google.com",
+      "*.gstatic.com",
+      "*.metric.gstatic.com",
+      "*.gvt1.com",
+      "*.gcpcdn.gvt1.com",
+      "*.gvt2.com",
+      "*.gcp.gvt2.com",
+      "*.url.google.com",
+      "*.youtube-nocookie.com",
+      "*.ytimg.com",
+      "ai.android",
+      "android.com",
+      "*.android.com",
+      "*.flash.android.com",
+      "g.co",
+      "*.g.co",
+      "goo.gl",
+      "www.goo.gl",
+      "google-analytics.com",
+      "*.google-analytics.com",
+      "google.com",
+      "googlecommerce.com",
+      "*.googlecommerce.com",
+      "urchin.com",
+      "*.urchin.com",
+      "youtu.be",
+      "youtube.com",
+      "*.youtube.com",
+      "music.youtube.com",
+      "*.music.youtube.com",
+      "youtubeeducation.com",
+      "*.youtubeeducation.com",
+      "youtubekids.com",
+      "*.youtubekids.com",
+      "yt.be",
+      "*.yt.be",
+      "android.clients.google.com",
+      "*.aistudio.google.com"
+     ]
+    },
+    "http": [
+     {
+      "domain": "www.youtubeeducation.com",
+      "status": 404,
+      "lat": 180,
+      "redirect": null,
+      "server": "ESF",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "216.239.32.21",
+  "depth": 2,
+  "names": [
+   "ai.android"
+  ],
+  "root": null,
+  "ports": [
+   {
+    "port": 443,
+    "tcp": "open",
+    "lat": 233,
+    "tls": {
+     "valid": true,
+     "days": 68,
+     "issuer": "CN=WR3,O=Google Trust Services,C=US",
+     "version": "TLSv1.3",
+     "sans": [
+      "ai.android"
+     ]
+    },
+    "http": [
+     {
+      "domain": "ai.android",
+      "status": 200,
+      "lat": 531,
+      "redirect": null,
+      "server": "Google Frontend",
+      "notes": null
+     }
+    ]
+   }
+  ],
+  "skipped": null
+ },
+ {
+  "ip": "172.217.162.174",
+  "depth": null,
+  "names": [
+   "android.clients.google.com",
+   "www.youtubeeducation.com"
+  ],
+  "root": null,
+  "ports": [],
+  "skipped": {
+   "depth": 3,
+   "max": 2
+  }
+ },
+ {
+  "ip": "142.251.156.119",
+  "depth": null,
+  "names": [
+   "www.google.com"
+  ],
+  "root": null,
+  "ports": [],
+  "skipped": {
+   "depth": 3,
+   "max": 2
+  }
+ },
+ {
+  "ip": "142.250.0.100",
+  "depth": null,
+  "names": [
+   "app-measurement.com"
+  ],
+  "root": null,
+  "ports": [],
+  "skipped": {
+   "depth": 3,
+   "max": 2
+  }
+ },
+ {
+  "ip": "142.250.0.113",
+  "depth": null,
+  "names": [
+   "app-measurement.com"
+  ],
+  "root": null,
+  "ports": [],
+  "skipped": {
+   "depth": 3,
+   "max": 2
+  }
+ },
+ {
+  "ip": "142.251.155.119",
+  "depth": null,
+  "names": [
+   "www.google.com"
+  ],
+  "root": null,
+  "ports": [],
+  "skipped": {
+   "depth": 3,
+   "max": 2
+  }
+ },
+ {
+  "ip": "142.250.0.138",
+  "depth": null,
+  "names": [
+   "app-measurement.com"
+  ],
+  "root": null,
+  "ports": [],
+  "skipped": {
+   "depth": 3,
+   "max": 2
+  }
+ },
+ {
+  "ip": "142.251.151.119",
+  "depth": null,
+  "names": [
+   "www.google.com"
+  ],
+  "root": null,
+  "ports": [],
+  "skipped": {
+   "depth": 3,
+   "max": 2
+  }
+ }
+]

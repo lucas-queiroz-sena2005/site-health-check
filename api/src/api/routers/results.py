@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -63,11 +63,11 @@ def get_results_summary(
         ))
     )
     
+    assert HostState.subrun_id
     if run_id is not None:
         statement = statement.where(HostState.scan_run_id == run_id)
     if subrun_id is not None:
         statement = statement.where(HostState.subrun_id == subrun_id)
-        
     statement = statement.group_by(HostState.metadata_resolved_from, HostState.subrun_id)
     results = session.exec(statement).all()
     
@@ -109,7 +109,7 @@ def get_results(
     
     historical_active_ips = set()
     if ghost_window is not None:
-        cutoff = datetime.now(timezone.utc) - ghost_window
+        cutoff = datetime.now(UTC) - ghost_window
         from api.models import ScanRunStatus
         historical_stmt = (
             select(HostState.ip_address)

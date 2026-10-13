@@ -1,14 +1,13 @@
 import asyncio
 import json
-import os
-import signal
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi.sse import ServerSentEvent
-from sqlmodel import Session, select
+from sqlalchemy import column
 from sqlalchemy.dialects.sqlite import insert
+from sqlmodel import Session, delete, select
 
 from api.database import engine as db_engine
 from api.models import (
@@ -21,13 +20,14 @@ from api.models import (
     TlsCertificate,
 )
 
+
 def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
     """Sync function to upsert a single NDJSON delta into the DB using SQLite ON CONFLICT DO UPDATE"""
     with Session(db_engine) as session:
-        # Upsert HostState
+        # 1. Upsert HostState
         metadata = data.get("metadata", {})
         stmt_host = insert(HostState).values(
-            id=f"{run_id}_{ip}", # Deterministic ID is best, but we are using uuid4 default. Wait, we can let sqlite generate UUID or just use insert().on_conflict_do_update.
+            id=f"{run_id}_{ip}",
             scan_run_id=run_id,
             ip_address=ip,
             metadata_resolved_from=metadata.get("resolved_from"),
@@ -40,11 +40,12 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
                 "metadata_discovered_from_json": metadata.get("discovered_from", []),
                 "subrun_id": metadata.get("subrun_id")
             }
-        ).returning(HostState.id)
+        ).returning(column("id"))
         
         result_host = session.exec(stmt_host).first()
-        host_id = result_host[0] if hasattr(result_host, "_mapping") or isinstance(result_host, tuple) else result_host
+        host_id: str = f"{run_id}_{ip}" if result_host is None else str(result_host[0])
 
+        # 2. Upsert PortState
         ports = data.get("ports", {})
         for port_str, port_data in ports.items():
             port_num = int(port_str)
@@ -60,16 +61,17 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
                     "tcp_status": port_data.get("tcp_status", "closed"),
                     "tcp_latency_ms": port_data.get("tcp_latency_ms")
                 }
-            ).returning(PortState.id)
+            ).returning(column("id"))
             
             result_port = session.exec(stmt_port).first()
-            port_id = result_port[0] if hasattr(result_port, "_mapping") or isinstance(result_port, tuple) else result_port
+            port_id: str = f"{host_id}_{port_num}" if result_port is None else str(result_port[0])
 
+            # 3. Handle TLS Certificates
             tls = port_data.get("tls_certificate")
             if tls:
-                # We can just delete existing TLS and insert new for simplicity, 
-                # or use a unique constraint. Let's assume one-to-one so we can just delete old ones.
-                session.exec(TlsCertificate.__table__.delete().where(TlsCertificate.port_state_id == port_id))
+                session.exec(
+                    delete(TlsCertificate).where(column(TlsCertificate.port_state_id) == port_id)
+                )
                 tls_cert = TlsCertificate(
                     port_state_id=port_id,
                     valid=tls.get("valid", False),
@@ -80,6 +82,7 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
                 )
                 session.add(tls_cert)
 
+            # 4. Handle Routing
             routing = port_data.get("http_routing_checks", {})
             for domain, r_data in routing.items():
                 stmt_route = insert(HttpRoutingCheck).values(
@@ -139,7 +142,7 @@ def _finalize_run(run_id: str, returncode: int):
         if not run:
             return
             
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         
         if returncode == 130 or returncode == 143:
             run.status = ScanRunStatus.ABORTED
@@ -153,7 +156,7 @@ def _finalize_run(run_id: str, returncode: int):
         if run.started_at and run.finished_at:
             started_at = run.started_at
             if started_at.tzinfo is None:
-                started_at = started_at.replace(tzinfo=timezone.utc)
+                started_at = started_at.replace(tzinfo=UTC)
             duration = round((run.finished_at - started_at).total_seconds(), 2)
             
         # Anomalies
@@ -201,7 +204,7 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
             if run:
                 run.status = ScanRunStatus.RUNNING
                 if not run.started_at:
-                    run.started_at = datetime.now(timezone.utc)
+                    run.started_at = datetime.now(UTC)
                 session.add(run)
                 session.commit()
 
@@ -272,19 +275,19 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
         # Determine status
         rc = process.returncode if process.returncode is not None else 1
         if rc == 130 or rc == 143:
-            await broadcast(ServerSentEvent(data={"message": f"Run aborted by user"}, event="status"))
+            await broadcast(ServerSentEvent(data={"message": "Run aborted by user"}, event="status"))
         else:
             await broadcast(ServerSentEvent(data={"message": f"Run finished with code {rc}"}, event="status"))
 
         await asyncio.to_thread(_finalize_run, run_id, rc)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await broadcast(ServerSentEvent(data={"message": f"Engine error: {e!s}"}, event="error"))
         with Session(db_engine) as session:
             run = session.get(ScanRun, run_id)
             if run:
                 run.status = ScanRunStatus.FAILED
-                run.finished_at = datetime.now(timezone.utc)
+                run.finished_at = datetime.now(UTC)
                 session.commit()
     finally:
         if run_id in app_state.processes:

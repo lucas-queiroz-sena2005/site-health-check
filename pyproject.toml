@@ -3,7 +3,10 @@ name = "site-health-check"
 version = "0.1.0"
 description = "Web Health Auditor & Reconnaissance Tool (workspace root)"
 requires-python = ">=3.12,<3.13"
-dependencies = ["api", "engine"]
+dependencies = [
+    "api",
+    "engine",
+]
 
 [tool.uv]
 package = false
@@ -12,8 +15,8 @@ package = false
 members = ["api", "engine"]
 
 [tool.uv.sources]
-api = { workspace = true }
 engine = { workspace = true }
+api = { workspace = true }
 
 [dependency-groups]
 dev = [
