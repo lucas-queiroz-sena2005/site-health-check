@@ -70,7 +70,7 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
             tls = port_data.get("tls_certificate")
             if tls:
                 session.exec(
-                    delete(TlsCertificate).where(column(TlsCertificate.port_state_id) == port_id)
+                    delete(TlsCertificate).where(column("port_state_id") == port_id)
                 )
                 tls_cert = TlsCertificate(
                     port_state_id=port_id,

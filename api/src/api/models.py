@@ -135,7 +135,7 @@ class PortState(SQLModel, table=True):
     __tablename__: str = "port_states"  # type: ignore
     __table_args__ = (UniqueConstraint("host_state_id", "port_number"),)
     
-    id: int = Field(default_factory=generate_uuid, primary_key=True)
+    id: str = Field(default_factory=generate_uuid, primary_key=True)
     host_state_id: str = Field(foreign_key="host_states.id", exclude=True)
     
     port_number: int

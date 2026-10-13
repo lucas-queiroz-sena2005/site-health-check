@@ -10,7 +10,7 @@ from api.models import Scan, ScanRun, ScanRunStatus
 from api.routers.runs import run_engine_cli
 
 # 1. Import your newly created alert logic
-from api.services.alerts import evaluate_and_alert
+# from api.services.alerts import evaluate_and_alert
 
 logger = logging.getLogger("scheduler")
 
@@ -20,10 +20,10 @@ async def run_scheduled_scan_with_alerts(run_id: str, snapshot: dict, app_state)
     # Await the scan execution completely
     await run_engine_cli(run_id, snapshot, app_state)
     
-    try:
-        await evaluate_and_alert(run_id, app_state)
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Failed to process alerts for scheduled scan {run_id}: {e}")
+    # try:
+    #     await evaluate_and_alert(run_id, app_state)
+    # except Exception as e:  # noqa: BLE001
+    #     logger.error(f"Failed to process alerts for scheduled scan {run_id}: {e}")
 
 async def check_and_run_scheduled_scans(app_state):
     with Session(engine) as session:
