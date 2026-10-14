@@ -1,11 +1,10 @@
 import asyncio
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
-
-import httpx
 
 from api.database import engine
 from api.routers import results, runs, scans, schemas, views
@@ -22,6 +21,7 @@ async def lifespan(app: FastAPI):
     app.state.processes = {}
     
     from sqlmodel import Session, select
+
     from api.models import ScanRun, ScanRunStatus
     with Session(engine) as session:
         runs = session.exec(select(ScanRun).where(ScanRun.status.in_([ScanRunStatus.PENDING, ScanRunStatus.RUNNING]))).all()
@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI):
 
 import anyio
 from starlette.types import ASGIApp, Receive, Scope, Send
+
 
 class SuppressDisconnectMiddleware:
     def __init__(self, app: ASGIApp):
