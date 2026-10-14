@@ -22,12 +22,12 @@
   - [x] Configure `APP_BASE_URL` in `api/config.py` with environment fallback
 - [x] Task: Phase Verification & Checkpoint [checkpoint: 81ee000]
 
-## Phase 3: Frontend UI Configuration
-- [ ] Task: Write Tests for Scan Configuration Form
-  - [ ] Write unit test for `ScanConfigForm` rendering evaluation settings (Ghost Window, TLS days) in both modes
-  - [ ] Write unit test for `ScanConfigForm` rendering alert checklist and `[ Test Webhook ]` button in schedule mode
-- [ ] Task: Implement Frontend UI Changes
-  - [ ] Add Evaluation Settings section to `ScanConfigForm`
-  - [ ] Add Alert Configuration section with URL input, trigger checklist, and `[ Test Webhook ]` action
-  - [ ] Integrate test webhook API mutation with loading and feedback toasts
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 3: Frontend UI Configuration [checkpoint: d4ed637]
+- [x] Task: Write Tests for Scan Configuration Form [checkpoint: d4ed637]
+  - [x] Write unit test for `ScanConfigForm` rendering evaluation settings (Ghost Window, TLS days) in both modes
+  - [x] Write unit test for `ScanConfigForm` rendering alert checklist and `[ Test Webhook ]` button in schedule mode
+- [x] Task: Implement Frontend UI Changes [checkpoint: d4ed637]
+  - [x] Add Evaluation Settings section to `ScanConfigForm`
+  - [x] Add Alert Configuration section with URL input, trigger checklist, and `[ Test Webhook ]` action
+  - [x] Integrate test webhook API mutation with loading and feedback toasts
+- [x] Task: Phase Verification & Checkpoint [checkpoint: d4ed637]
