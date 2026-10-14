@@ -9,7 +9,6 @@ export interface HierarchicalTableProps {
   sortBy?: 'latency' | 'tls' | null
   sortDir?: 'asc' | 'desc'
   onSortChange?: (by: 'latency' | 'tls' | null, dir: 'asc' | 'desc') => void
-  onFetchSubrun?: (subrunId: string) => void
 }
 
 export function HierarchicalTable({ 
@@ -19,8 +18,7 @@ export function HierarchicalTable({
   onToggleRow,
   sortBy,
   sortDir,
-  onSortChange,
-  onFetchSubrun
+  onSortChange
 }: HierarchicalTableProps) {
   const handleSortClick = (field: 'latency' | 'tls') => {
     if (!onSortChange) return
@@ -37,7 +35,7 @@ export function HierarchicalTable({
     return <span className="ml-1.5 font-mono text-base text-primary font-bold leading-none">{sortDir === 'asc' ? '↑' : '↓'}</span>
   }
   return (
-    <TableProvider expandedRowIds={expandedRowIds} onToggleRow={onToggleRow} onFetchSubrun={onFetchSubrun}>
+    <TableProvider expandedRowIds={expandedRowIds} onToggleRow={onToggleRow}>
       <div className="w-full h-full overflow-x-auto flex flex-col">
         <div className="min-w-[1200px] flex flex-col flex-1 h-full">
           <div className="flex text-sm whitespace-nowrap bg-muted/10 text-muted-foreground border-y border-border shrink-0 font-medium">

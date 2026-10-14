@@ -2,7 +2,6 @@ import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { 
   useScanResults, 
-  useScanSummary,
   HierarchicalTable, 
   buildTreeData,
   RenderTreeNode,
@@ -138,10 +137,7 @@ export function HostTablePage() {
     }
   }, [selectedRunId, latestRuns])
 
-  const { data, isLoading: hostsLoading, error, fetchSubrun } = useScanResults(selectedRunId || undefined)
-  const { data: summaryData, isLoading: summaryLoading } = useScanSummary(selectedRunId || undefined)
-  const isLoading = hostsLoading || summaryLoading
-
+  const { data, isLoading, error } = useScanResults(selectedRunId || undefined)
   const [explicitFilters, setExplicitFilters] = useState<Record<string, string[]>>({
     'global-root-id': ['all']
   })
@@ -292,9 +288,9 @@ export function HostTablePage() {
 
   // Build tree
   const rawTree = useMemo(() => {
-    if (!data?.hosts && !summaryData) return []
-    return buildTreeData(data?.hosts || [], summaryData || [])
-  }, [data, summaryData])
+    if (!data?.hosts) return []
+    return buildTreeData(data.hosts)
+  }, [data])
 
   const filteredTreeData = useMemo(() => {
     const filtered = filterTree(rawTree, explicitFilters, ['all'], globalSearch)
@@ -689,7 +685,6 @@ export function HostTablePage() {
             setSortBy(by)
             setSortDir(dir)
           }}
-          onFetchSubrun={(subrunId) => fetchSubrun.mutate(subrunId)}
         >
           {filteredTreeData.map(node => (
             <RenderTreeNode 

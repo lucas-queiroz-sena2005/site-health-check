@@ -8,7 +8,6 @@ export interface TableStateContextType {
 export interface TableDispatchContextType {
   toggleRow: (id: string) => void
   toggleDetail: (id: string) => void
-  fetchSubrun?: (subrunId: string) => void
 }
 
 const TableStateContext = createContext<TableStateContextType | undefined>(undefined)
@@ -18,10 +17,9 @@ export interface TableProviderProps {
   children: ReactNode
   expandedRowIds?: Set<string>
   onToggleRow?: (id: string) => void
-  onFetchSubrun?: (subrunId: string) => void
 }
 
-export function TableProvider({ children, expandedRowIds: controlledExpanded, onToggleRow: controlledToggle, onFetchSubrun }: TableProviderProps) {
+export function TableProvider({ children, expandedRowIds: controlledExpanded, onToggleRow: controlledToggle }: TableProviderProps) {
   const [internalExpanded, setInternalExpanded] = useState<Set<string>>(new Set())
   const [expandedDetailIds, setExpandedDetailIds] = useState<Set<string>>(new Set())
   
@@ -66,9 +64,8 @@ export function TableProvider({ children, expandedRowIds: controlledExpanded, on
 
   const dispatchValue = useMemo(() => ({
     toggleRow,
-    toggleDetail,
-    fetchSubrun: onFetchSubrun
-  }), [toggleRow, toggleDetail, onFetchSubrun])
+    toggleDetail
+  }), [toggleRow, toggleDetail])
 
   return (
     <TableStateContext.Provider value={stateValue}>
