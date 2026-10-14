@@ -18,11 +18,8 @@
   - [x] Refactor engine loop to use bounded queue
 - [x] Task: Phase Verification & Checkpoint [checkpoint: 44acc69]
 
-## Phase 3: Frontend Representation
-- [x] Task: Write Tests for UI Data Fetching
-  - [x] Write failing unit test for `HostTablePage` rendering Subrun Nodes natively
-  - [x] Write failing test for on-demand fetch behavior when `[FETCH]` is clicked
-- [x] Task: Implement Frontend changes
-  - [x] Add Subrun Node layer to the Canonical Hierarchical Tree
-  - [x] Implement `[FETCH]` button and partial data loading API calls
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 3: Frontend Representation (Cancelled / Stepped Back) [checkpoint: 3c21e76]
+> [!NOTE]
+> Frontend changes to the table were stepped back per user decision and reverted in commit `3c21e76`.
+
+- [x] Task: Step back and revert frontend table changes [checkpoint: 3c21e76]

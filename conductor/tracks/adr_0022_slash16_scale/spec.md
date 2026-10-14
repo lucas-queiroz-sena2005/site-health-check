@@ -9,6 +9,6 @@
 - **Schema Update:** Add an explicit `subrun_id` column to the `HostState` model.
 - **Run Metadata:** Remove `run_id` from pure metadata; use `run_id` + `subrun_id` in `HostState`.
 
-## 3. Frontend Representation
-- **Canonical Tree Hierarchy:** `GlobalRoot ➔ Subrun Node (e.g. 10.0.0.0/24) ➔ Host ➔ Port`.
-- **On-Demand Fetching:** Subrun nodes will display a `[FETCH]` button to load data on request.
+## 3. Frontend Representation (Discarded / Stepped Back)
+> [!NOTE]
+> Frontend changes to the table (Subrun node hierarchy and on-demand fetch controls) were stepped back and discarded per user decision. The frontend retains its canonical table structure without Subrun nodes.
