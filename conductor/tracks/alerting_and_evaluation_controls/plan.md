@@ -1,12 +1,12 @@
 # Implementation Plan: Alerting System & Scan Evaluation Controls
 
 ## Phase 1: Backend Data Models & Evaluation Parameters
-- [ ] Task: Write Tests for Model & Evaluation Configuration
-  - [ ] Write failing test for `Scan` and `ExecutionConfig` accepting `ghost_window`, `tls_warning_days`, and `alert_config`
-  - [ ] Write failing test for API scan CRUD endpoints with alert and evaluation parameters
-- [ ] Task: Implement Model & API Contract Updates
-  - [ ] Add `ghost_window`, `tls_warning_days`, and `alert_config_json` to `Scan` and `ExecutionConfig` models
-  - [ ] Update `api/routers/scans.py` and `api/routers/runs.py` schema serialization
+- [x] Task: Write Tests for Model & Evaluation Configuration [checkpoint: 696f35a]
+  - [x] Write failing test for `Scan` and `ExecutionConfig` accepting `ghost_window`, `tls_warning_days`, and `alert_config`
+  - [x] Write failing test for API scan CRUD endpoints with alert and evaluation parameters
+- [x] Task: Implement Model & API Contract Updates [checkpoint: 696f35a]
+  - [x] Add `ghost_window`, `tls_warning_days`, and `alert_config_json` to `Scan` and `ExecutionConfig` models
+  - [x] Update `api/routers/scans.py` and `api/routers/runs.py` schema serialization
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Alert Evaluation & Webhook Dispatch Service
