@@ -48,10 +48,20 @@ class ExecutionFlags(BaseModel):
         json_schema_extra={"cli_arg": "--rate", "is_switch": False}
     )
 
+class AlertConfig(BaseModel):
+    webhook_url: str | None = PydanticField(default=None, title="Webhook URL")
+    alert_on_failure: bool = PydanticField(default=True, title="Alert on Failures")
+    alert_on_ghost: bool = PydanticField(default=True, title="Alert on Ghost Hosts")
+    alert_on_warning: bool = PydanticField(default=True, title="Alert on Warnings")
+    alert_on_abort: bool = PydanticField(default=True, title="Alert on Run Abort/Crash")
+    notify_on_healthy: bool = PydanticField(default=False, title="Notify on Healthy Runs")
+
 class ExecutionConfig(BaseModel):
     targets: list[str] = PydanticField(default_factory=list, title="Targets")
     ports: list[str | int] = PydanticField(default_factory=list, title="Ports")
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
+    ghost_window: str = PydanticField(default="7d", title="Ghost Window")
+    tls_warning_days: int = PydanticField(default=30, title="TLS Expiry Warning Threshold (days)")
     
 class ScanTargetGroupLink(SQLModel, table=True):
     __tablename__: str = "scan_target_groups"  # type: ignore
@@ -77,6 +87,9 @@ class Scan(SQLModel, table=True):
     
     ports_json: list[str | int] = Field(sa_column=Column(JSON))
     flags_json: dict[str, Any] = Field(sa_column=Column(JSON))
+    ghost_window: str = Field(default="7d")
+    tls_warning_days: int = Field(default=30)
+    alert_config_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     
     deleted_at: datetime | None = None
     

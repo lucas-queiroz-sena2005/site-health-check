@@ -98,7 +98,9 @@ async def launch_run(
         metrics_json=run.metrics_json,
         targets=snapshot.get("targets", []),
         ports=snapshot.get("ports", []),
-        flags=ExecutionFlags.model_validate(snapshot.get("flags", {}))
+        flags=ExecutionFlags.model_validate(snapshot.get("flags", {})),
+        ghost_window=snapshot.get("ghost_window", "7d"),
+        tls_warning_days=snapshot.get("tls_warning_days", 30),
     )
 
 @router.get("")
@@ -146,7 +148,9 @@ def list_runs(
                 metrics_json=run.metrics_json,
                 targets=config.get("targets", []),
                 ports=config.get("ports", []),
-                flags=ExecutionFlags.model_validate(config.get("flags", {}))
+                flags=ExecutionFlags.model_validate(config.get("flags", {})),
+                ghost_window=config.get("ghost_window", "7d"),
+                tls_warning_days=config.get("tls_warning_days", 30),
             )
         )
     return runs

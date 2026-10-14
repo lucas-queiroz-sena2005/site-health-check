@@ -8,6 +8,7 @@ from sqlmodel import desc, select
 
 from api.database import SessionDep
 from api.models import (
+    AlertConfig,
     ExecutionConfig,
     ExecutionFlags,
     Scan,
@@ -23,6 +24,7 @@ router = APIRouter(prefix="/scans", tags=["scans"])
 class ScanCreateRequest(ExecutionConfig):
     name: str
     cron_expression: str | None = None
+    alert_config: AlertConfig | None = None
 
 class ScanResponse(ExecutionConfig):
     id: str
@@ -32,6 +34,7 @@ class ScanResponse(ExecutionConfig):
     last_run: datetime | None = None
     next_run: datetime | None = None
     metrics: dict[str, Any] | None = None
+    alert_config: AlertConfig | None = None
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse:
@@ -48,7 +51,10 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         name=request.name,
         cron_expression=request.cron_expression,
         ports_json=request.ports,
-        flags_json=request.flags.model_dump()
+        flags_json=request.flags.model_dump(),
+        ghost_window=request.ghost_window,
+        tls_warning_days=request.tls_warning_days,
+        alert_config_json=request.alert_config.model_dump() if request.alert_config else None
     )
     session.add(scan)
     
@@ -81,7 +87,10 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         metrics=None,
         targets=request.targets,
         ports=scan.ports_json,
-        flags=ExecutionFlags.model_validate(scan.flags_json)
+        flags=ExecutionFlags.model_validate(scan.flags_json),
+        ghost_window=scan.ghost_window,
+        tls_warning_days=scan.tls_warning_days,
+        alert_config=AlertConfig.model_validate(scan.alert_config_json) if scan.alert_config_json else None
     )
 
 @router.get("")
@@ -120,7 +129,10 @@ def list_scans(session: SessionDep) -> list[ScanResponse]:
             metrics=metrics,
             targets=targets,
             ports=s.ports_json,
-            flags=ExecutionFlags.model_validate(s.flags_json)
+            flags=ExecutionFlags.model_validate(s.flags_json),
+            ghost_window=s.ghost_window,
+            tls_warning_days=s.tls_warning_days,
+            alert_config=AlertConfig.model_validate(s.alert_config_json) if s.alert_config_json else None
         ))
     return responses
 
@@ -134,6 +146,9 @@ def update_scan(id: Annotated[str, Path()], request: ScanCreateRequest, session:
     scan.cron_expression = request.cron_expression
     scan.ports_json = request.ports
     scan.flags_json = request.flags.model_dump()
+    scan.ghost_window = request.ghost_window
+    scan.tls_warning_days = request.tls_warning_days
+    scan.alert_config_json = request.alert_config.model_dump() if request.alert_config else None
     session.add(scan)
     
     # Update targets (delete old links, recreate ad-hoc)
@@ -182,7 +197,10 @@ def update_scan(id: Annotated[str, Path()], request: ScanCreateRequest, session:
         metrics=metrics,
         targets=request.targets,
         ports=scan.ports_json,
-        flags=ExecutionFlags.model_validate(scan.flags_json)
+        flags=ExecutionFlags.model_validate(scan.flags_json),
+        ghost_window=scan.ghost_window,
+        tls_warning_days=scan.tls_warning_days,
+        alert_config=AlertConfig.model_validate(scan.alert_config_json) if scan.alert_config_json else None
     )
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -213,7 +231,10 @@ async def launch_scheduled_scan(
     snapshot = {
         "targets": targets,
         "ports": scan.ports_json or [80, 443],
-        "flags": scan.flags_json or {}
+        "flags": scan.flags_json or {},
+        "ghost_window": scan.ghost_window,
+        "tls_warning_days": scan.tls_warning_days,
+        "alert_config": scan.alert_config_json,
     }
     
     run = ScanRun(
@@ -238,6 +259,8 @@ async def launch_scheduled_scan(
         metrics_json=run.metrics_json,
         targets=targets,
         ports=scan.ports_json or [80, 443],
-        flags=ExecutionFlags.model_validate(scan.flags_json or {})
+        flags=ExecutionFlags.model_validate(scan.flags_json or {}),
+        ghost_window=scan.ghost_window,
+        tls_warning_days=scan.tls_warning_days,
     )
 
