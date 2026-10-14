@@ -9,18 +9,18 @@
   - [x] Update `api/routers/scans.py` and `api/routers/runs.py` schema serialization
 - [x] Task: Phase Verification & Checkpoint [checkpoint: 696f35a]
 
-## Phase 2: Alert Evaluation & Webhook Dispatch Service
-- [~] Task: Write Tests for Alert Evaluation & Webhook Dispatch
-  - [ ] Write failing unit test for Google Chat Cards v2 payload builder (Schedule, Run ID, Triggers, Summary, Button)
-  - [ ] Write failing unit test for Slack Block Kit payload builder
-  - [ ] Write failing unit test for alert trigger condition evaluator (`failure`, `ghost`, `warning`, `abort`, `healthy`)
-  - [ ] Write failing test for `POST /api/alerts/test` endpoint
-- [ ] Task: Implement Alert Service & Webhook Integration
-  - [ ] Implement `api/services/alerts.py` with provider detection and payload formatters
-  - [ ] Hook `evaluate_and_dispatch_alert` into the scan completion lifecycle in `api/services/scheduler.py`
-  - [ ] Add `POST /api/alerts/test` endpoint with safe error reporting
-  - [ ] Configure `APP_BASE_URL` in `api/config.py` with environment fallback
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 2: Alert Evaluation & Webhook Dispatch Service [checkpoint: 81ee000]
+- [x] Task: Write Tests for Alert Evaluation & Webhook Dispatch [checkpoint: 81ee000]
+  - [x] Write failing unit test for Google Chat Cards v2 payload builder (Schedule, Run ID, Triggers, Summary, Button)
+  - [x] Write failing unit test for Slack Block Kit payload builder
+  - [x] Write failing unit test for alert trigger condition evaluator (`failure`, `ghost`, `warning`, `abort`, `healthy`)
+  - [x] Write failing test for `POST /api/alerts/test` endpoint
+- [x] Task: Implement Alert Service & Webhook Integration [checkpoint: 81ee000]
+  - [x] Implement `api/services/alerts.py` with provider detection and payload formatters
+  - [x] Hook `evaluate_and_dispatch_alert` into the scan completion lifecycle in `api/services/scheduler.py`
+  - [x] Add `POST /api/alerts/test` endpoint with safe error reporting
+  - [x] Configure `APP_BASE_URL` in `api/config.py` with environment fallback
+- [x] Task: Phase Verification & Checkpoint [checkpoint: 81ee000]
 
 ## Phase 3: Frontend UI Configuration
 - [ ] Task: Write Tests for Scan Configuration Form
