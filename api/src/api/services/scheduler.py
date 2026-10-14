@@ -8,22 +8,19 @@ from sqlmodel import Session, col, desc, select
 from api.database import engine
 from api.models import Scan, ScanRun, ScanRunStatus
 from api.routers.runs import run_engine_cli
-
-# 1. Import your newly created alert logic
-# from api.services.alerts import evaluate_and_alert
+from api.services.alerts import evaluate_and_dispatch_alert
 
 logger = logging.getLogger("scheduler")
 
-# 2. Add the async wrapper to handle sequential execution in the background
 async def run_scheduled_scan_with_alerts(run_id: str, snapshot: dict, app_state):
     """Runs the engine and evaluates alerts sequentially in the background."""
-    # Await the scan execution completely
     await run_engine_cli(run_id, snapshot, app_state)
     
-    # try:
-    #     await evaluate_and_alert(run_id, app_state)
-    # except Exception as e:  # noqa: BLE001
-    #     logger.error(f"Failed to process alerts for scheduled scan {run_id}: {e}")
+    try:
+        with Session(engine) as session:
+            await evaluate_and_dispatch_alert(run_id, session)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Failed to process alerts for scheduled scan {run_id}: {e}")
 
 async def check_and_run_scheduled_scans(app_state):
     with Session(engine) as session:
@@ -89,7 +86,10 @@ async def check_and_run_scheduled_scans(app_state):
                     snapshot = {
                         "targets": targets,
                         "ports": scan.ports_json or [80, 443],
-                        "flags": scan.flags_json or {}
+                        "flags": scan.flags_json or {},
+                        "ghost_window": scan.ghost_window,
+                        "tls_warning_days": scan.tls_warning_days,
+                        "alert_config": scan.alert_config_json,
                     }
                     
                     run = ScanRun(

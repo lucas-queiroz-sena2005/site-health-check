@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
 from api.database import engine
-from api.routers import results, runs, scans, schemas, views
+from api.routers import alerts, results, runs, scans, schemas, views
 from api.services.scheduler import scheduler_loop
 
 
@@ -81,5 +81,6 @@ api_router.include_router(scans.router)
 api_router.include_router(schemas.router)
 api_router.include_router(results.router)
 api_router.include_router(views.router)
+api_router.include_router(alerts.router)
 
 app.include_router(api_router)

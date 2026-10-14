@@ -18,6 +18,7 @@ from api.models import (
     TargetGroup,
 )
 from api.routers.runs import ScanRunResponse, run_engine_cli
+from api.services.scheduler import run_scheduled_scan_with_alerts
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
@@ -247,7 +248,7 @@ async def launch_scheduled_scan(
     session.commit()
     session.refresh(run)
     
-    asyncio.create_task(run_engine_cli(run.id, snapshot, request.app.state))
+    asyncio.create_task(run_scheduled_scan_with_alerts(run.id, snapshot, request.app.state))
     
     return ScanRunResponse(
         id=run.id,

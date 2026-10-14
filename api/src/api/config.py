@@ -7,5 +7,8 @@ class Settings(BaseSettings):
     # Default window to consider an IP as a Ghost if it was active previously
     # Format: <int>[s|m|h|d], e.g., "7d", "24h"
     default_ghost_window: str = "7d"
+    
+    # Base URL for frontend dashboard links in alerts
+    app_base_url: str = "http://localhost:5173"
 
 settings = Settings()
