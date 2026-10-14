@@ -1,16 +1,16 @@
 # Implementation Plan: Alerting System & Scan Evaluation Controls
 
-## Phase 1: Backend Data Models & Evaluation Parameters
+## Phase 1: Backend Data Models & Evaluation Parameters [checkpoint: 696f35a]
 - [x] Task: Write Tests for Model & Evaluation Configuration [checkpoint: 696f35a]
   - [x] Write failing test for `Scan` and `ExecutionConfig` accepting `ghost_window`, `tls_warning_days`, and `alert_config`
   - [x] Write failing test for API scan CRUD endpoints with alert and evaluation parameters
 - [x] Task: Implement Model & API Contract Updates [checkpoint: 696f35a]
   - [x] Add `ghost_window`, `tls_warning_days`, and `alert_config_json` to `Scan` and `ExecutionConfig` models
   - [x] Update `api/routers/scans.py` and `api/routers/runs.py` schema serialization
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint [checkpoint: 696f35a]
 
 ## Phase 2: Alert Evaluation & Webhook Dispatch Service
-- [ ] Task: Write Tests for Alert Evaluation & Webhook Dispatch
+- [~] Task: Write Tests for Alert Evaluation & Webhook Dispatch
   - [ ] Write failing unit test for Google Chat Cards v2 payload builder (Schedule, Run ID, Triggers, Summary, Button)
   - [ ] Write failing unit test for Slack Block Kit payload builder
   - [ ] Write failing unit test for alert trigger condition evaluator (`failure`, `ghost`, `warning`, `abort`, `healthy`)
