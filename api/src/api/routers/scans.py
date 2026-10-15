@@ -228,7 +228,7 @@ def get_mute_scan_alerts(
     if not was_muted:
         background_tasks.add_task(dispatch_mute_status_notification, scan, True)
     unmute_url = f"/api/scans/{scan.id}/alerts/unmute"
-    dashboard_url = f"{settings.app_base_url}/schedules"
+    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
     html_content = (
         "<!DOCTYPE html>"
         "<html>"
@@ -264,7 +264,7 @@ def get_unmute_scan_alerts(
     if was_muted:
         background_tasks.add_task(dispatch_mute_status_notification, scan, False)
     mute_url = f"/api/scans/{scan.id}/alerts/mute"
-    dashboard_url = f"{settings.app_base_url}/schedules"
+    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
     html_content = (
         "<!DOCTYPE html>"
         "<html>"
