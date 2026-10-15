@@ -10,4 +10,4 @@
 - [x] **Track: docs-review** *Link: [./tracks/docs_review/index.md](./tracks/docs_review/index.md)*
 - [x] **Track: integration** *Link: [./tracks/integration/index.md](./tracks/integration/index.md)*
 - [x] **Track: Implementation of ADR 0022 - Slash16 Scale Strategy** *Link: [./tracks/adr_0022_slash16_scale/index.md](./tracks/adr_0022_slash16_scale/index.md)*
-- [ ] **Track: Scan Alert Stopper & Quick Controls** *Link: [./tracks/scan_alert_stopper_and_quick_controls/index.md](./tracks/scan_alert_stopper_and_quick_controls/index.md)*
+- [~] **Track: Scan Alert Stopper & Quick Controls** *Link: [./tracks/scan_alert_stopper_and_quick_controls/index.md](./tracks/scan_alert_stopper_and_quick_controls/index.md)*
