@@ -46,27 +46,32 @@ def test_build_google_chat_card():
         timestamp_str="2026-10-14 18:00:00 UTC",
         triggers=["2 Service Failures", "1 Ghost Host"],
         summary_stats=summary,
-        table_url="http://localhost:5173/#/?run_id=run-12345",
+        table_url="http://localhost:8080/?run=run-12345",
         is_healthy=False,
     )
 
     assert "cardsV2" in card_payload
     card = card_payload["cardsV2"][0]["card"]
-    assert "🔴 Alert" in card["header"]["title"]
+    assert "Scan Alert: Issues Detected" in card["header"]["title"]
     assert "Production Core Subnet" in card["header"]["subtitle"]
 
-    # Verify widgets
-    widgets = card["sections"][0]["widgets"]
-    labels = [w.get("decoratedText", {}).get("topLabel") for w in widgets if "decoratedText" in w]
-    assert "Schedule" in labels
-    assert "Run ID" in labels
-    assert "Trigger" in labels
-    assert "Summary" in labels
+    # Verify sections
+    assert len(card["sections"]) == 3
+    sec_overview, sec_metrics, sec_actions = card["sections"]
 
-    # Verify button link
-    button_widget = next(w for w in widgets if "buttonList" in w)
-    button = button_widget["buttonList"]["buttons"][0]
-    assert button["onClick"]["openLink"]["url"] == "http://localhost:5173/#/?run_id=run-12345"
+    # Overview widgets
+    labels = [
+        w.get("decoratedText", {}).get("topLabel")
+        for w in sec_overview["widgets"]
+        if "decoratedText" in w
+    ]
+    assert "Health Status" in labels
+    assert "Active Triggers" in labels
+
+    # Actions widgets: buttonList and text link
+    btn = sec_actions["widgets"][0]["buttonList"]["buttons"][0]
+    assert btn["onClick"]["openLink"]["url"] == "http://localhost:8080/?run=run-12345"
+    assert "Open Results Table" in sec_actions["widgets"][1]["textParagraph"]["text"]
 
 
 def test_build_slack_blocks():
@@ -77,19 +82,19 @@ def test_build_slack_blocks():
         timestamp_str="2026-10-14 18:00:00 UTC",
         triggers=["All systems operational"],
         summary_stats=summary,
-        table_url="http://localhost:5173/#/?run_id=run-999",
+        table_url="http://localhost:8080/?run=run-999",
         is_healthy=True,
     )
 
     assert "blocks" in slack_payload
     blocks = slack_payload["blocks"]
     assert blocks[0]["type"] == "header"
-    assert "🟢" in blocks[0]["text"]["text"]
+    assert "Scan Report: All Systems Operational" in blocks[0]["text"]["text"]
 
     # Action button
     action_block = next(b for b in blocks if b["type"] == "actions")
     btn = action_block["elements"][0]
-    assert btn["url"] == "http://localhost:5173/#/?run_id=run-999"
+    assert btn["url"] == "http://localhost:8080/?run=run-999"
 
 
 def test_build_alert_payload_auto_detection():

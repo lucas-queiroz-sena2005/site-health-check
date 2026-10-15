@@ -45,9 +45,9 @@ async def test_webhook(request: TestWebhookRequest) -> TestWebhookResponse:
         schedule_name="Site Health Check - Webhook Test",
         run_id="test-ping",
         timestamp_str="Just now",
-        triggers=["🔔 Webhook verification ping successful"],
+        triggers=["Webhook verification ping successful"],
         summary_stats=summary_stats,
-        table_url=settings.app_base_url,
+        table_url=f"{settings.app_base_url}/",
         is_healthy=True,
     )
 

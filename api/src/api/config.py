@@ -9,6 +9,6 @@ class Settings(BaseSettings):
     default_ghost_window: str = "7d"
     
     # Base URL for frontend dashboard links in alerts
-    app_base_url: str = "http://localhost:5173"
+    app_base_url: str = "http://localhost:8080"
 
 settings = Settings()

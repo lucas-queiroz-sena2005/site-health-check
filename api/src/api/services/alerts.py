@@ -29,7 +29,7 @@ def build_google_chat_card(
     table_url: str,
     is_healthy: bool = False,
 ) -> dict[str, Any]:
-    """Constructs a Google Chat Cards v2 webhook payload.
+    """Constructs a professional Google Chat Cards v2 webhook payload.
 
     Args:
         schedule_name: Name of the scheduled scan.
@@ -43,36 +43,106 @@ def build_google_chat_card(
     Returns:
         Dictionary representation of the Cards v2 payload.
     """
-    if is_healthy:
-        title = "🟢 Scan Complete: All Healthy"
-    else:
-        title = "🔴 Alert: Scan Issues Detected"
-    trigger_text = ", ".join(triggers) if triggers else "None"
-    summary_text = (
-        f"Active: {summary_stats.get('active', 0)} | "
-        f"Warning: {summary_stats.get('warning', 0)} | "
-        f"Failed: {summary_stats.get('failed', 0)} | "
-        f"Ghost: {summary_stats.get('ghost', 0)} | "
-        f"Void: {summary_stats.get('void', 0)}"
+    title = (
+        "Scan Report: All Systems Operational"
+        if is_healthy
+        else "Scan Alert: Issues Detected"
     )
+    status_label = "OPERATIONAL" if is_healthy else "ATTENTION REQUIRED"
+    status_color = "#137333" if is_healthy else "#c5221f"
+    trigger_text = ", ".join(triggers) if triggers else "None"
 
-    widgets = [
-        {"decoratedText": {"topLabel": "Schedule", "text": schedule_name}},
-        {"decoratedText": {"topLabel": "Run ID", "text": run_id}},
-        {"decoratedText": {"topLabel": "Time", "text": timestamp_str}},
-        {"decoratedText": {"topLabel": "Trigger", "text": trigger_text}},
-        {"decoratedText": {"topLabel": "Summary", "text": summary_text}},
-        {
-            "buttonList": {
-                "buttons": [
-                    {
-                        "text": "View Results Table",
-                        "onClick": {"openLink": {"url": table_url}},
-                    }
-                ]
+    active_cnt = summary_stats.get("active", 0)
+    warning_cnt = summary_stats.get("warning", 0)
+    failed_cnt = summary_stats.get("failed", 0)
+    ghost_cnt = summary_stats.get("ghost", 0)
+
+    section_overview = {
+        "header": "Execution Overview",
+        "widgets": [
+            {
+                "decoratedText": {
+                    "topLabel": "Health Status",
+                    "text": (
+                        f"<b><font color='{status_color}'>"
+                        f"{status_label}</font></b>"
+                    ),
+                    "bottomLabel": f"Time: {timestamp_str}",
+                }
+            },
+            {
+                "decoratedText": {
+                    "topLabel": "Active Triggers",
+                    "text": f"<b>{trigger_text}</b>",
+                }
+            },
+        ],
+    }
+
+    section_metrics = {
+        "header": "Host & Service Breakdown",
+        "widgets": [
+            {
+                "columns": {
+                    "columnItems": [
+                        {
+                            "horizontalSizeStyle": "FILL_AVAILABLE_SPACE",
+                            "horizontalAlignment": "START",
+                            "verticalAlignment": "CENTER",
+                            "widgets": [
+                                {
+                                    "textParagraph": {
+                                        "text": (
+                                            f"<b>Active Hosts:</b> {active_cnt}<br>"
+                                            f"<b>Warnings:</b> "
+                                            f"<font color='#b06000'>{warning_cnt}</font>"
+                                        )
+                                    }
+                                }
+                            ],
+                        },
+                        {
+                            "horizontalSizeStyle": "FILL_AVAILABLE_SPACE",
+                            "horizontalAlignment": "START",
+                            "verticalAlignment": "CENTER",
+                            "widgets": [
+                                {
+                                    "textParagraph": {
+                                        "text": (
+                                            f"<b>Failures:</b> "
+                                            f"<font color='#c5221f'>{failed_cnt}</font><br>"
+                                            f"<b>Ghost Hosts:</b> "
+                                            f"<font color='#70757a'>{ghost_cnt}</font>"
+                                        )
+                                    }
+                                }
+                            ],
+                        },
+                    ]
+                }
             }
-        },
-    ]
+        ],
+    }
+
+    section_actions = {
+        "widgets": [
+            {
+                "buttonList": {
+                    "buttons": [
+                        {
+                            "text": "View Results Table",
+                            "onClick": {"openLink": {"url": table_url}},
+                        }
+                    ]
+                }
+            },
+            {
+                "textParagraph": {
+                    "text": f"<a href='{table_url}'>Open Results Table in Dashboard &rarr;</a>"
+                }
+            },
+        ]
+    }
 
     return {
         "cardsV2": [
@@ -81,9 +151,16 @@ def build_google_chat_card(
                 "card": {
                     "header": {
                         "title": title,
-                        "subtitle": f"Schedule: {schedule_name}",
+                        "subtitle": (
+                            f"Schedule: {schedule_name} | "
+                            f"Run: {run_id[:8]}"
+                        ),
                     },
-                    "sections": [{"widgets": widgets}],
+                    "sections": [
+                        section_overview,
+                        section_metrics,
+                        section_actions,
+                    ],
                 },
             }
         ]
@@ -99,7 +176,7 @@ def build_slack_blocks(
     table_url: str,
     is_healthy: bool = False,
 ) -> dict[str, Any]:
-    """Constructs a Slack Block Kit webhook payload.
+    """Constructs a professional Slack Block Kit webhook payload.
 
     Args:
         schedule_name: Name of the scheduled scan.
@@ -113,18 +190,18 @@ def build_slack_blocks(
     Returns:
         Dictionary representation of the Slack Block Kit payload.
     """
-    if is_healthy:
-        title = "🟢 Scan Complete: All Healthy"
-    else:
-        title = "🔴 Alert: Scan Issues Detected"
-    trigger_text = ", ".join(triggers) if triggers else "None"
-    summary_text = (
-        f"Active: {summary_stats.get('active', 0)} | "
-        f"Warning: {summary_stats.get('warning', 0)} | "
-        f"Failed: {summary_stats.get('failed', 0)} | "
-        f"Ghost: {summary_stats.get('ghost', 0)} | "
-        f"Void: {summary_stats.get('void', 0)}"
+    title = (
+        "Scan Report: All Systems Operational"
+        if is_healthy
+        else "Scan Alert: Issues Detected"
     )
+    status_label = "OPERATIONAL" if is_healthy else "ATTENTION REQUIRED"
+    trigger_text = ", ".join(triggers) if triggers else "None"
+
+    active_cnt = summary_stats.get("active", 0)
+    warning_cnt = summary_stats.get("warning", 0)
+    failed_cnt = summary_stats.get("failed", 0)
+    ghost_cnt = summary_stats.get("ghost", 0)
 
     blocks = [
         {
@@ -134,15 +211,24 @@ def build_slack_blocks(
         {
             "type": "section",
             "fields": [
+                {"type": "mrkdwn", "text": f"*Status:*\n`{status_label}`"},
                 {"type": "mrkdwn", "text": f"*Schedule:*\n{schedule_name}"},
-                {"type": "mrkdwn", "text": f"*Run ID:*\n`{run_id}`"},
+                {"type": "mrkdwn", "text": f"*Run ID:*\n`{run_id[:8]}`"},
                 {"type": "mrkdwn", "text": f"*Time:*\n{timestamp_str}"},
-                {"type": "mrkdwn", "text": f"*Trigger:*\n{trigger_text}"},
             ],
         },
         {
             "type": "section",
-            "text": {"type": "mrkdwn", "text": f"*Summary:*\n{summary_text}"},
+            "text": {"type": "mrkdwn", "text": f"*Active Triggers:*\n{trigger_text}"},
+        },
+        {
+            "type": "section",
+            "fields": [
+                {"type": "mrkdwn", "text": f"*Active Hosts:*\n{active_cnt}"},
+                {"type": "mrkdwn", "text": f"*Failed Services:*\n{failed_cnt}"},
+                {"type": "mrkdwn", "text": f"*Warnings:*\n{warning_cnt}"},
+                {"type": "mrkdwn", "text": f"*Ghost Hosts:*\n{ghost_cnt}"},
+            ],
         },
         {
             "type": "actions",
@@ -154,7 +240,16 @@ def build_slack_blocks(
                         "text": "View Results Table",
                     },
                     "url": table_url,
-                    "style": "primary",
+                    "style": "primary" if is_healthy else "danger",
+                }
+            ],
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"Direct link: <{table_url}|Open Results Table in Dashboard>",
                 }
             ],
         },
@@ -213,13 +308,13 @@ def build_alert_payload(
         )
     else:
         if is_healthy:
-            title = "🟢 Scan Complete: All Healthy"
+            title = "Scan Report: All Systems Operational"
         else:
-            title = "🔴 Alert: Scan Issues Detected"
+            title = "Scan Alert: Issues Detected"
         msg_lines = [
             title,
             f"Schedule: {schedule_name}",
-            f"Run ID: {run_id}",
+            f"Run ID: {run_id[:8]}",
             f"Triggers: {', '.join(triggers)}",
             f"Link: {table_url}",
         ]
@@ -446,7 +541,7 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
         return
 
     timestamp_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
-    table_url = f"{settings.app_base_url}/#/?run_id={run.id}"
+    table_url = f"{settings.app_base_url}/?run={run.id}"
 
     payload = build_alert_payload(
         webhook_url=alert_config.webhook_url,
