@@ -13,21 +13,21 @@
 - [x] Task: Phase Verification & Checkpoint [checkpoint: 362e595]
 
 ## Phase 2: Chat Card Mute Links & Automated Chat Confirmation
-- [ ] Task: Write Tests for Card Actions & Webhook Confirmation Messages
-  - [ ] Write unit tests for `build_google_chat_card` and `build_slack_blocks` rendering "Turn Off Alerts" action link
-  - [ ] Write unit test for automated chat notification dispatched when alerts are muted or resumed
-  - [ ] Write unit test verifying concurrent clicks in chat do not invert state
-- [ ] Task: Implement Card Actions & Webhook Confirmation Dispatch
-  - [ ] Update alert payload builders in `api/src/api/services/alerts.py` to include the mute action link
-  - [ ] Implement automated webhook confirmation dispatch upon mute/unmute
-- [ ] Task: Phase Verification & Checkpoint
+- [x] Task: Write Tests for Card Actions & Webhook Confirmation Messages [checkpoint: 80953b5]
+  - [x] Write unit tests for `build_google_chat_card` and `build_slack_blocks` rendering "Turn Off Alerts" action link
+  - [x] Write unit test for automated chat notification dispatched when alerts are muted or resumed
+  - [x] Write unit test verifying concurrent clicks in chat do not invert state
+- [x] Task: Implement Card Actions & Webhook Confirmation Dispatch [checkpoint: da6aaf1]
+  - [x] Update alert payload builders in `api/src/api/services/alerts.py` to include the mute action link
+  - [x] Implement automated webhook confirmation dispatch upon mute/unmute
+- [x] Task: Phase Verification & Checkpoint [checkpoint: da6aaf1]
 
 ## Phase 3: Frontend Dashboard Integration (Zero Page Reload)
-- [ ] Task: Write Tests for Schedule Table & In-Place Stopper Controls
-  - [ ] Write tests for `ScheduledScansPage` rendering the "Alerts" column (`Bell` when active, `BellOff` when muted, empty if no triggers)
-  - [ ] Write tests for the in-place stopper button toggling status without route change or page reload
-- [ ] Task: Implement Schedule View Column & In-Place Stopper Button
-  - [ ] Add "Alerts" table column with `Bell` and `BellOff` icons in `ScheduledScansPage.tsx`
-  - [ ] Add stopper button between "Edit Schedule" and "Delete" in the expanded actions panel
-  - [ ] Connect stopper button to TanStack React Query mutation for instant, in-place cache updates
-- [ ] Task: Phase Verification & Checkpoint
+- [x] Task: Write Tests for Schedule Table & In-Place Stopper Controls [checkpoint: 3179b47]
+  - [x] Write tests for `ScheduledScansPage` rendering the "Alerts" column (`Bell` when active, `BellOff` when muted, empty if no triggers)
+  - [x] Write tests for the in-place stopper button toggling status without route change or page reload
+- [x] Task: Implement Schedule View Column & In-Place Stopper Button [checkpoint: 56d7642]
+  - [x] Add "Alerts" table column with `Bell` and `BellOff` icons in `ScheduledScansPage.tsx`
+  - [x] Add stopper button between "Edit Schedule" and "Delete" in the expanded actions panel
+  - [x] Connect stopper button to TanStack React Query mutation for instant, in-place cache updates
+- [x] Task: Phase Verification & Checkpoint [checkpoint: 56d7642]
