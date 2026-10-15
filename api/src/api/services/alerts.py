@@ -43,12 +43,8 @@ def build_google_chat_card(
     Returns:
         Dictionary representation of the Cards v2 payload.
     """
-    title = (
-        "Scan Report: All Systems Operational"
-        if is_healthy
-        else "Scan Alert: Issues Detected"
-    )
-    status_label = "OPERATIONAL" if is_healthy else "ATTENTION REQUIRED"
+    title = "Scan: Healthy" if is_healthy else "Scan: Issues Detected"
+    status_label = "Healthy" if is_healthy else "Issues Detected"
     status_color = "#137333" if is_healthy else "#c5221f"
     trigger_text = ", ".join(triggers) if triggers else "None"
 
@@ -57,75 +53,28 @@ def build_google_chat_card(
     failed_cnt = summary_stats.get("failed", 0)
     ghost_cnt = summary_stats.get("ghost", 0)
 
-    section_overview = {
-        "header": "Execution Overview",
-        "widgets": [
-            {
-                "decoratedText": {
-                    "topLabel": "Health Status",
-                    "text": (
-                        f"<b><font color='{status_color}'>"
-                        f"{status_label}</font></b>"
-                    ),
-                    "bottomLabel": f"Time: {timestamp_str}",
-                }
-            },
-            {
-                "decoratedText": {
-                    "topLabel": "Active Triggers",
-                    "text": f"<b>{trigger_text}</b>",
-                }
-            },
-        ],
-    }
+    summary_text = (
+        f"Active: {active_cnt} | Warning: {warning_cnt} | "
+        f"Failed: {failed_cnt} | Ghost: {ghost_cnt}"
+    )
 
-    section_metrics = {
-        "header": "Host & Service Breakdown",
-        "widgets": [
-            {
-                "columns": {
-                    "columnItems": [
-                        {
-                            "horizontalSizeStyle": "FILL_AVAILABLE_SPACE",
-                            "horizontalAlignment": "START",
-                            "verticalAlignment": "CENTER",
-                            "widgets": [
-                                {
-                                    "textParagraph": {
-                                        "text": (
-                                            f"<b>Active Hosts:</b> {active_cnt}<br>"
-                                            f"<b>Warnings:</b> "
-                                            f"<font color='#b06000'>{warning_cnt}</font>"
-                                        )
-                                    }
-                                }
-                            ],
-                        },
-                        {
-                            "horizontalSizeStyle": "FILL_AVAILABLE_SPACE",
-                            "horizontalAlignment": "START",
-                            "verticalAlignment": "CENTER",
-                            "widgets": [
-                                {
-                                    "textParagraph": {
-                                        "text": (
-                                            f"<b>Failures:</b> "
-                                            f"<font color='#c5221f'>{failed_cnt}</font><br>"
-                                            f"<b>Ghost Hosts:</b> "
-                                            f"<font color='#70757a'>{ghost_cnt}</font>"
-                                        )
-                                    }
-                                }
-                            ],
-                        },
-                    ]
-                }
-            }
-        ],
-    }
+    is_https = table_url.startswith("https://")
+    link_html = f"<a href='{table_url}'>View Results Table</a>"
 
-    section_actions = {
-        "widgets": [
+    body_lines = [
+        f"<b>Status:</b> <font color='{status_color}'>{status_label}</font>",
+        f"<b>Schedule:</b> {schedule_name}",
+        f"<b>Run:</b> {run_id[:8]}",
+        f"<b>Time:</b> {timestamp_str}",
+        f"<b>Triggers:</b> {trigger_text}",
+        f"<b>Summary:</b> {summary_text}",
+    ]
+
+    widgets: list[dict[str, Any]] = []
+
+    if is_https:
+        widgets.append({"textParagraph": {"text": "<br>".join(body_lines)}})
+        widgets.append(
             {
                 "buttonList": {
                     "buttons": [
@@ -135,14 +84,15 @@ def build_google_chat_card(
                         }
                     ]
                 }
-            },
-            {
-                "textParagraph": {
-                    "text": f"<a href='{table_url}'>Open Results Table in Dashboard &rarr;</a>"
-                }
-            },
-        ]
-    }
+            }
+        )
+    else:
+        # In Google Chat Cards v2, openLink buttons strictly require HTTPS.
+        # HTTP URLs are rejected by Google Chat button handlers and do nothing.
+        # We render a direct HTML hyperlink instead of a non-functional button.
+        body_lines.append("")
+        body_lines.append(link_html)
+        widgets.append({"textParagraph": {"text": "<br>".join(body_lines)}})
 
     return {
         "cardsV2": [
@@ -151,15 +101,12 @@ def build_google_chat_card(
                 "card": {
                     "header": {
                         "title": title,
-                        "subtitle": (
-                            f"Schedule: {schedule_name} | "
-                            f"Run: {run_id[:8]}"
-                        ),
+                        "subtitle": f"{schedule_name} | Run: {run_id[:8]}",
                     },
                     "sections": [
-                        section_overview,
-                        section_metrics,
-                        section_actions,
+                        {
+                            "widgets": widgets,
+                        }
                     ],
                 },
             }
@@ -176,7 +123,7 @@ def build_slack_blocks(
     table_url: str,
     is_healthy: bool = False,
 ) -> dict[str, Any]:
-    """Constructs a professional Slack Block Kit webhook payload.
+    """Constructs a clean Slack Block Kit webhook payload.
 
     Args:
         schedule_name: Name of the scheduled scan.
@@ -190,18 +137,19 @@ def build_slack_blocks(
     Returns:
         Dictionary representation of the Slack Block Kit payload.
     """
-    title = (
-        "Scan Report: All Systems Operational"
-        if is_healthy
-        else "Scan Alert: Issues Detected"
-    )
-    status_label = "OPERATIONAL" if is_healthy else "ATTENTION REQUIRED"
+    title = "Scan: Healthy" if is_healthy else "Scan: Issues Detected"
+    status_label = "Healthy" if is_healthy else "Issues Detected"
     trigger_text = ", ".join(triggers) if triggers else "None"
 
     active_cnt = summary_stats.get("active", 0)
     warning_cnt = summary_stats.get("warning", 0)
     failed_cnt = summary_stats.get("failed", 0)
     ghost_cnt = summary_stats.get("ghost", 0)
+
+    summary_text = (
+        f"Active: {active_cnt} | Warning: {warning_cnt} | "
+        f"Failed: {failed_cnt} | Ghost: {ghost_cnt}"
+    )
 
     blocks = [
         {
@@ -210,25 +158,17 @@ def build_slack_blocks(
         },
         {
             "type": "section",
-            "fields": [
-                {"type": "mrkdwn", "text": f"*Status:*\n`{status_label}`"},
-                {"type": "mrkdwn", "text": f"*Schedule:*\n{schedule_name}"},
-                {"type": "mrkdwn", "text": f"*Run ID:*\n`{run_id[:8]}`"},
-                {"type": "mrkdwn", "text": f"*Time:*\n{timestamp_str}"},
-            ],
-        },
-        {
-            "type": "section",
-            "text": {"type": "mrkdwn", "text": f"*Active Triggers:*\n{trigger_text}"},
-        },
-        {
-            "type": "section",
-            "fields": [
-                {"type": "mrkdwn", "text": f"*Active Hosts:*\n{active_cnt}"},
-                {"type": "mrkdwn", "text": f"*Failed Services:*\n{failed_cnt}"},
-                {"type": "mrkdwn", "text": f"*Warnings:*\n{warning_cnt}"},
-                {"type": "mrkdwn", "text": f"*Ghost Hosts:*\n{ghost_cnt}"},
-            ],
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*Status:* {status_label}\n"
+                    f"*Schedule:* {schedule_name}\n"
+                    f"*Run:* `{run_id[:8]}`\n"
+                    f"*Time:* {timestamp_str}\n"
+                    f"*Triggers:* {trigger_text}\n"
+                    f"*Summary:* {summary_text}"
+                ),
+            },
         },
         {
             "type": "actions",
@@ -241,15 +181,6 @@ def build_slack_blocks(
                     },
                     "url": table_url,
                     "style": "primary" if is_healthy else "danger",
-                }
-            ],
-        },
-        {
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": f"Direct link: <{table_url}|Open Results Table in Dashboard>",
                 }
             ],
         },
@@ -307,15 +238,23 @@ def build_alert_payload(
             is_healthy=is_healthy,
         )
     else:
-        if is_healthy:
-            title = "Scan Report: All Systems Operational"
-        else:
-            title = "Scan Alert: Issues Detected"
+        title = "Scan: Healthy" if is_healthy else "Scan: Issues Detected"
+        status_label = "Healthy" if is_healthy else "Issues Detected"
+        trigger_text = ", ".join(triggers) if triggers else "None"
+        summary_text = (
+            f"Active: {summary_stats.get('active', 0)} | "
+            f"Warning: {summary_stats.get('warning', 0)} | "
+            f"Failed: {summary_stats.get('failed', 0)} | "
+            f"Ghost: {summary_stats.get('ghost', 0)}"
+        )
         msg_lines = [
             title,
+            f"Status: {status_label}",
             f"Schedule: {schedule_name}",
             f"Run ID: {run_id[:8]}",
-            f"Triggers: {', '.join(triggers)}",
+            f"Time: {timestamp_str}",
+            f"Triggers: {trigger_text}",
+            f"Summary: {summary_text}",
             f"Link: {table_url}",
         ]
         return {
@@ -370,7 +309,7 @@ def evaluate_alert_triggers(
         and summary_stats.get("ghost", 0) == 0
     )
     if alert_config.notify_on_healthy and is_healthy:
-        return (True, ["All checks passed successfully"], True)
+        return (True, [], True)
 
     return (False, [], True)
 

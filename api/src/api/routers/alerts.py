@@ -42,10 +42,10 @@ async def test_webhook(request: TestWebhookRequest) -> TestWebhookResponse:
     }
     payload = build_alert_payload(
         webhook_url=url,
-        schedule_name="Site Health Check - Webhook Test",
+        schedule_name="Webhook Test",
         run_id="test-ping",
         timestamp_str="Just now",
-        triggers=["Webhook verification ping successful"],
+        triggers=["Test ping verified"],
         summary_stats=summary_stats,
         table_url=f"{settings.app_base_url}/",
         is_healthy=True,

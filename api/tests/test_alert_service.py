@@ -38,7 +38,7 @@ def client_fixture(session: Session):
     app.dependency_overrides.clear()
 
 
-def test_build_google_chat_card():
+def test_build_google_chat_card_http():
     summary = {"active": 10, "warning": 1, "failed": 2, "ghost": 1, "void": 240}
     card_payload = build_google_chat_card(
         schedule_name="Production Core Subnet",
@@ -52,26 +52,44 @@ def test_build_google_chat_card():
 
     assert "cardsV2" in card_payload
     card = card_payload["cardsV2"][0]["card"]
-    assert "Scan Alert: Issues Detected" in card["header"]["title"]
-    assert "Production Core Subnet" in card["header"]["subtitle"]
+    assert card["header"]["title"] == "Scan: Issues Detected"
+    assert card["header"]["subtitle"] == "Production Core Subnet | Run: run-1234"
 
-    # Verify sections
-    assert len(card["sections"]) == 3
-    sec_overview, sec_metrics, sec_actions = card["sections"]
+    # Single section with uniform textParagraph and direct hyperlink (no dead button on HTTP)
+    assert len(card["sections"]) == 1
+    widgets = card["sections"][0]["widgets"]
+    assert len(widgets) == 1
+    text = widgets[0]["textParagraph"]["text"]
+    assert "Issues Detected" in text
+    assert "Active: 10 | Warning: 1 | Failed: 2 | Ghost: 1" in text
+    assert "<a href='http://localhost:8080/?run=run-12345'>View Results Table</a>" in text
+    assert "buttonList" not in widgets[0]
 
-    # Overview widgets
-    labels = [
-        w.get("decoratedText", {}).get("topLabel")
-        for w in sec_overview["widgets"]
-        if "decoratedText" in w
-    ]
-    assert "Health Status" in labels
-    assert "Active Triggers" in labels
 
-    # Actions widgets: buttonList and text link
-    btn = sec_actions["widgets"][0]["buttonList"]["buttons"][0]
-    assert btn["onClick"]["openLink"]["url"] == "http://localhost:8080/?run=run-12345"
-    assert "Open Results Table" in sec_actions["widgets"][1]["textParagraph"]["text"]
+def test_build_google_chat_card_https():
+    summary = {"active": 5, "warning": 0, "failed": 0, "ghost": 0, "void": 0}
+    card_payload = build_google_chat_card(
+        schedule_name="Daily Health Check",
+        run_id="run-999",
+        timestamp_str="2026-10-14 18:00:00 UTC",
+        triggers=[],
+        summary_stats=summary,
+        table_url="https://health.example.com/?run=run-999",
+        is_healthy=True,
+    )
+
+    card = card_payload["cardsV2"][0]["card"]
+    assert card["header"]["title"] == "Scan: Healthy"
+    assert card["header"]["subtitle"] == "Daily Health Check | Run: run-999"
+
+    widgets = card["sections"][0]["widgets"]
+    assert len(widgets) == 2
+    button_widget = widgets[1]
+    assert "buttonList" in button_widget
+    assert (
+        button_widget["buttonList"]["buttons"][0]["onClick"]["openLink"]["url"]
+        == "https://health.example.com/?run=run-999"
+    )
 
 
 def test_build_slack_blocks():
@@ -80,7 +98,7 @@ def test_build_slack_blocks():
         schedule_name="Daily Health Check",
         run_id="run-999",
         timestamp_str="2026-10-14 18:00:00 UTC",
-        triggers=["All systems operational"],
+        triggers=[],
         summary_stats=summary,
         table_url="http://localhost:8080/?run=run-999",
         is_healthy=True,
@@ -89,7 +107,7 @@ def test_build_slack_blocks():
     assert "blocks" in slack_payload
     blocks = slack_payload["blocks"]
     assert blocks[0]["type"] == "header"
-    assert "Scan Report: All Systems Operational" in blocks[0]["text"]["text"]
+    assert blocks[0]["text"]["text"] == "Scan: Healthy"
 
     # Action button
     action_block = next(b for b in blocks if b["type"] == "actions")
