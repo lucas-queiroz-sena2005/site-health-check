@@ -31,3 +31,6 @@
   - [x] Add Alert Configuration section with URL input, trigger checklist, and `[ Test Webhook ]` action
   - [x] Integrate test webhook API mutation with loading and feedback toasts
 - [x] Task: Phase Verification & Checkpoint [checkpoint: d4ed637]
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions 060341f
