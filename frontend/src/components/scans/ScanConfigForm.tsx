@@ -87,8 +87,9 @@ export function ScanConfigForm({
       } else {
         setTestStatus({ success: false, message: `✗ Failed: ${data.error || 'Unknown error'}` })
       }
-    } catch (err: any) {
-      setTestStatus({ success: false, message: `✗ Network error: ${err.message}` })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setTestStatus({ success: false, message: `✗ Network error: ${msg}` })
     } finally {
       setTestingWebhook(false)
     }
@@ -361,6 +362,20 @@ export function ScanConfigForm({
                   onCheckedChange={(c) => setForm({
                     ...form,
                     alert_config: { ...(form.alert_config || {}), alert_on_warning: c }
+                  })}
+                />
+              </div>
+
+              <div className={switchWrapperClass}>
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-semibold">Alert on Abort / Crash</Label>
+                  <p className="text-xs text-muted-foreground">Scan process terminated or crashed</p>
+                </div>
+                <Switch
+                  checked={form?.alert_config?.alert_on_abort ?? true}
+                  onCheckedChange={(c) => setForm({
+                    ...form,
+                    alert_config: { ...(form.alert_config || {}), alert_on_abort: c }
                   })}
                 />
               </div>

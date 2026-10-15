@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from api.config import settings
 from api.services.alerts import build_alert_payload, dispatch_webhook
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -17,6 +18,14 @@ class TestWebhookResponse(BaseModel):
 
 @router.post("/test", response_model=TestWebhookResponse)
 async def test_webhook(request: TestWebhookRequest) -> TestWebhookResponse:
+    """Dispatches a test notification ping to verify webhook connectivity.
+
+    Args:
+        request: TestWebhookRequest containing the target webhook_url.
+
+    Returns:
+        TestWebhookResponse with success boolean and optional error message.
+    """
     url = request.webhook_url.strip()
     if not url.startswith("http://") and not url.startswith("https://"):
         return TestWebhookResponse(
@@ -24,7 +33,13 @@ async def test_webhook(request: TestWebhookRequest) -> TestWebhookResponse:
             error="Invalid URL format. Must start with http:// or https://",
         )
 
-    summary_stats = {"active": 1, "warning": 0, "failed": 0, "ghost": 0, "void": 0}
+    summary_stats = {
+        "active": 1,
+        "warning": 0,
+        "failed": 0,
+        "ghost": 0,
+        "void": 0,
+    }
     payload = build_alert_payload(
         webhook_url=url,
         schedule_name="Site Health Check - Webhook Test",
@@ -32,7 +47,7 @@ async def test_webhook(request: TestWebhookRequest) -> TestWebhookResponse:
         timestamp_str="Just now",
         triggers=["🔔 Webhook verification ping successful"],
         summary_stats=summary_stats,
-        table_url="http://localhost:5173",
+        table_url=settings.app_base_url,
         is_healthy=True,
     )
 

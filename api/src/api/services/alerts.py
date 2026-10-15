@@ -29,7 +29,24 @@ def build_google_chat_card(
     table_url: str,
     is_healthy: bool = False,
 ) -> dict[str, Any]:
-    title = "🟢 Scan Complete: All Healthy" if is_healthy else "🔴 Alert: Scan Issues Detected"
+    """Constructs a Google Chat Cards v2 webhook payload.
+
+    Args:
+        schedule_name: Name of the scheduled scan.
+        run_id: Unique identifier for the scan run.
+        timestamp_str: Formatted UTC timestamp string.
+        triggers: List of reasons triggering the notification.
+        summary_stats: Counts of active, warning, failed, ghost, void hosts.
+        table_url: Deep-link URL to the host results table.
+        is_healthy: Whether the run completed with all checks healthy.
+
+    Returns:
+        Dictionary representation of the Cards v2 payload.
+    """
+    if is_healthy:
+        title = "🟢 Scan Complete: All Healthy"
+    else:
+        title = "🔴 Alert: Scan Issues Detected"
     trigger_text = ", ".join(triggers) if triggers else "None"
     summary_text = (
         f"Active: {summary_stats.get('active', 0)} | "
@@ -82,7 +99,24 @@ def build_slack_blocks(
     table_url: str,
     is_healthy: bool = False,
 ) -> dict[str, Any]:
-    title = "🟢 Scan Complete: All Healthy" if is_healthy else "🔴 Alert: Scan Issues Detected"
+    """Constructs a Slack Block Kit webhook payload.
+
+    Args:
+        schedule_name: Name of the scheduled scan.
+        run_id: Unique identifier for the scan run.
+        timestamp_str: Formatted UTC timestamp string.
+        triggers: List of reasons triggering the notification.
+        summary_stats: Counts of active, warning, failed, ghost, void hosts.
+        table_url: Deep-link URL to the host results table.
+        is_healthy: Whether the run completed with all checks healthy.
+
+    Returns:
+        Dictionary representation of the Slack Block Kit payload.
+    """
+    if is_healthy:
+        title = "🟢 Scan Complete: All Healthy"
+    else:
+        title = "🔴 Alert: Scan Issues Detected"
     trigger_text = ", ".join(triggers) if triggers else "None"
     summary_text = (
         f"Active: {summary_stats.get('active', 0)} | "
@@ -115,7 +149,10 @@ def build_slack_blocks(
             "elements": [
                 {
                     "type": "button",
-                    "text": {"type": "plain_text", "text": "View Results Table"},
+                    "text": {
+                        "type": "plain_text",
+                        "text": "View Results Table",
+                    },
                     "url": table_url,
                     "style": "primary",
                 }
@@ -139,6 +176,21 @@ def build_alert_payload(
     table_url: str,
     is_healthy: bool = False,
 ) -> dict[str, Any]:
+    """Builds appropriate alert payload by detecting the target webhook provider.
+
+    Args:
+        webhook_url: Target URL for the incoming webhook.
+        schedule_name: Name of the scheduled scan.
+        run_id: Unique identifier for the scan run.
+        timestamp_str: Formatted UTC timestamp string.
+        triggers: List of reasons triggering the notification.
+        summary_stats: Counts of active, warning, failed, ghost, void hosts.
+        table_url: Deep-link URL to the host results table.
+        is_healthy: Whether the run completed with all checks healthy.
+
+    Returns:
+        Formatted payload dict for Google Chat, Slack, or generic fallback.
+    """
     if "chat.googleapis.com" in webhook_url:
         return build_google_chat_card(
             schedule_name=schedule_name,
@@ -160,9 +212,19 @@ def build_alert_payload(
             is_healthy=is_healthy,
         )
     else:
-        title = "🟢 Scan Complete: All Healthy" if is_healthy else "🔴 Alert: Scan Issues Detected"
+        if is_healthy:
+            title = "🟢 Scan Complete: All Healthy"
+        else:
+            title = "🔴 Alert: Scan Issues Detected"
+        msg_lines = [
+            title,
+            f"Schedule: {schedule_name}",
+            f"Run ID: {run_id}",
+            f"Triggers: {', '.join(triggers)}",
+            f"Link: {table_url}",
+        ]
         return {
-            "text": f"{title}\nSchedule: {schedule_name}\nRun ID: {run_id}\nTriggers: {', '.join(triggers)}\nLink: {table_url}",
+            "text": "\n".join(msg_lines),
             "schedule_name": schedule_name,
             "run_id": run_id,
             "triggers": triggers,
@@ -177,6 +239,16 @@ def evaluate_alert_triggers(
     run_status: ScanRunStatus,
     summary_stats: dict[str, int],
 ) -> tuple[bool, list[str], bool]:
+    """Evaluates whether the run triggers an alert based on alert_config.
+
+    Args:
+        alert_config: Notification configuration with enabled trigger flags.
+        run_status: Terminal status of the scan run.
+        summary_stats: Counts of active, warning, failed, ghost, void hosts.
+
+    Returns:
+        Tuple of (should_send, trigger_descriptions, is_healthy).
+    """
     triggers: list[str] = []
 
     if alert_config.alert_on_abort and run_status in (
@@ -197,8 +269,11 @@ def evaluate_alert_triggers(
     if triggers:
         return (True, triggers, False)
 
-    # If no failure/warning triggers activated, check if healthy notification is enabled
-    is_healthy = summary_stats.get("failed", 0) == 0 and summary_stats.get("ghost", 0) == 0
+    # Check if healthy notification is enabled
+    is_healthy = (
+        summary_stats.get("failed", 0) == 0
+        and summary_stats.get("ghost", 0) == 0
+    )
     if alert_config.notify_on_healthy and is_healthy:
         return (True, ["All checks passed successfully"], True)
 
@@ -208,6 +283,15 @@ def evaluate_alert_triggers(
 async def dispatch_webhook(
     webhook_url: str, payload: dict[str, Any]
 ) -> tuple[bool, str | None]:
+    """Dispatches JSON payload to webhook URL with a 5-second timeout.
+
+    Args:
+        webhook_url: Target URL for HTTP POST.
+        payload: Body content dict to serialize as JSON.
+
+    Returns:
+        Tuple of (success_bool, optional_error_message).
+    """
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.post(webhook_url, json=payload)
@@ -215,7 +299,9 @@ async def dispatch_webhook(
                 return (True, None)
             return (False, f"HTTP {resp.status_code}: {resp.text}")
     except Exception as e:
-        logger.warning(f"Failed to dispatch alert webhook to {webhook_url}: {e}")
+        logger.warning(
+            f"Failed to dispatch alert webhook to {webhook_url}: {e}"
+        )
         return (False, str(e))
 
 
@@ -225,6 +311,17 @@ def compute_run_summary(
     ghost_window_str: str = "7d",
     tls_warning_days: int = 30,
 ) -> dict[str, int]:
+    """Calculates active, warning, failed, ghost, and void counts for a run.
+
+    Args:
+        session: Active SQLModel database session.
+        run: The ScanRun instance to summarize.
+        ghost_window_str: Historical time window string (e.g., '7d', '24h').
+        tls_warning_days: Number of days before certificate expiry for warning.
+
+    Returns:
+        Dictionary mapping status name to count.
+    """
     statement = select(HostState).where(HostState.scan_run_id == run.id)
     hosts = session.exec(statement).all()
 
@@ -247,7 +344,9 @@ def compute_run_summary(
             if port.tls_certificate:
                 valid = port.tls_certificate.valid
                 exp_days = port.tls_certificate.expires_in_days
-                if not valid or (exp_days is not None and exp_days <= tls_warning_days):
+                if not valid or (
+                    exp_days is not None and exp_days <= tls_warning_days
+                ):
                     host_has_warning = True
 
             # Check HTTP
@@ -271,12 +370,18 @@ def compute_run_summary(
         delta = timedelta(**{units[unit]: amount})
         cutoff = datetime.now(UTC) - delta
 
-        current_active_ips = {h.ip_address for h in hosts if any(p.tcp_status == "open" for p in h.ports)}
+        current_active_ips = {
+            h.ip_address for h in hosts
+            if any(p.tcp_status == "open" for p in h.ports)
+        }
         target_ips = [h.ip_address for h in hosts]
         if target_ips:
             historical_stmt = (
                 select(HostState.ip_address)
-                .join(PortState, col(HostState.id) == col(PortState.host_state_id))
+                .join(
+                    PortState,
+                    col(HostState.id) == col(PortState.host_state_id),
+                )
                 .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
                 .where(PortState.tcp_status == "open")
                 .where(col(ScanRun.started_at) >= cutoff)
@@ -298,6 +403,12 @@ def compute_run_summary(
 
 
 async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
+    """Evaluates scan run results and dispatches webhooks if triggers match.
+
+    Args:
+        run_id: ID of the finished ScanRun.
+        session: Active SQLModel database session.
+    """
     run = session.get(ScanRun, run_id)
     if not run or not run.scan_id:
         return
@@ -347,6 +458,9 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
 
     success, err = await dispatch_webhook(alert_config.webhook_url, payload)
     if success:
-        logger.info(f"Alert successfully dispatched for run {run.id} to {alert_config.webhook_url}")
+        logger.info(
+            f"Alert successfully dispatched for run {run.id} to "
+            f"{alert_config.webhook_url}"
+        )
     else:
         logger.warning(f"Alert dispatch failed for run {run.id}: {err}")
