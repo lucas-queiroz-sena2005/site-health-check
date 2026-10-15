@@ -1,0 +1,4 @@
+Task: Implement void aggregation and pruning in _finalize_run and update compute_run_summary
+Summary: Updated _finalize_run in runner.py to dynamically query historical active IPs within the ghost window, classify hosts into active, ghost, and void, delete individual void HostState/PortState rows from SQLite, and insert synthetic HostState(ip_address='Void (N)', metadata_resolved_from=parent) rows. Updated compute_run_summary in alerts.py to accurately compute void counts.
+Files: api/src/api/services/runner.py, api/src/api/services/alerts.py
+Why: Prevent SQLite bloat with thousands of closed ports and ensure completed subnet scans return single aggregated Void nodes instead of incorrect ghost rows.
