@@ -1,16 +1,16 @@
 # Implementation Plan: Scan Alert Stopper & Quick Controls
 
 ## Phase 1: Backend Data Model, Stopper Gatekeeper & Idempotent API
-- [ ] Task: Write Tests for Alert Mute Model & Idempotent Endpoints
-  - [ ] Write failing test for `Scan.alerts_muted` field and serialization in `ScanResponse`
-  - [ ] Write failing test for `evaluate_and_dispatch_alert` halting early when `scan.alerts_muted is True`
-  - [ ] Write failing tests for `POST /api/scans/{id}/alerts/mute` and `POST /api/scans/{id}/alerts/unmute` confirming idempotent execution
-  - [ ] Write failing tests for lightweight `GET` web action endpoints returning minimal HTML confirmation without frontend SPA dependencies
-- [ ] Task: Implement Alert Mute Model & API Endpoints
-  - [ ] Add `alerts_muted: bool = False` to `Scan` in `api/src/api/models.py` and update schemas
-  - [ ] Add early stopper check in `evaluate_and_dispatch_alert` in `api/src/api/services/alerts.py`
-  - [ ] Implement `POST` and `GET` mute/unmute endpoints with idempotent state validation in `api/src/api/routers/scans.py`
-- [ ] Task: Phase Verification & Checkpoint
+- [x] Task: Write Tests for Alert Mute Model & Idempotent Endpoints [checkpoint: 76df73d]
+  - [x] Write failing test for `Scan.alerts_muted` field and serialization in `ScanResponse`
+  - [x] Write failing test for `evaluate_and_dispatch_alert` halting early when `scan.alerts_muted is True`
+  - [x] Write failing tests for `POST /api/scans/{id}/alerts/mute` and `POST /api/scans/{id}/alerts/unmute` confirming idempotent execution
+  - [x] Write failing tests for lightweight `GET` web action endpoints returning minimal HTML confirmation without frontend SPA dependencies
+- [x] Task: Implement Alert Mute Model & API Endpoints [checkpoint: 362e595]
+  - [x] Add `alerts_muted: bool = False` to `Scan` in `api/src/api/models.py` and update schemas
+  - [x] Add early stopper check in `evaluate_and_dispatch_alert` in `api/src/api/services/alerts.py`
+  - [x] Implement `POST` and `GET` mute/unmute endpoints with idempotent state validation in `api/src/api/routers/scans.py`
+- [x] Task: Phase Verification & Checkpoint [checkpoint: 362e595]
 
 ## Phase 2: Chat Card Mute Links & Automated Chat Confirmation
 - [ ] Task: Write Tests for Card Actions & Webhook Confirmation Messages
