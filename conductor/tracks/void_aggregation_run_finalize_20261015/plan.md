@@ -5,10 +5,10 @@
   - [x] Write test in `api/tests/test_api_runner.py` verifying that `_finalize_run` on a clean DB removes raw non-responsive hosts and inserts a synthetic `HostState` with `ip_address="Void (N)"`
   - [x] Write test verifying that active hosts and ghost hosts are preserved in SQLite while void hosts are purged
   - [x] Write test in `api/tests/test_alert_service.py` confirming `compute_run_summary` calculates accurate `void` count in `metrics_json["summary"]`
-- [ ] Task: Implement void aggregation and pruning in `_finalize_run` and update `compute_run_summary`
-  - [ ] Implement historical active IP resolution and void host classification in `api/src/api/services/runner.py`
-  - [ ] Purge individual void `HostState` records (and cascading `PortState` records) and insert synthetic `HostState(ip_address="Void (N)", ...)`
-  - [ ] Update `compute_run_summary` in `api/src/api/services/alerts.py` to record accurate void counts
+- [x] Task: Implement void aggregation and pruning in `_finalize_run` and update `compute_run_summary` (d4911ad)
+  - [x] Implement historical active IP resolution and void host classification in `api/src/api/services/runner.py`
+  - [x] Purge individual void `HostState` records (and cascading `PortState` records) and insert synthetic `HostState(ip_address="Void (N)", ...)`
+  - [x] Update `compute_run_summary` in `api/src/api/services/alerts.py` to record accurate void counts
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ---
