@@ -90,6 +90,7 @@ class Scan(SQLModel, table=True):
     ghost_window: str = Field(default="7d")
     tls_warning_days: int = Field(default=30)
     alert_config_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    alerts_muted: bool = Field(default=False)
     
     deleted_at: datetime | None = None
     

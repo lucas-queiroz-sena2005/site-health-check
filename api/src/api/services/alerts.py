@@ -448,7 +448,7 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
         return
 
     scan = session.get(Scan, run.scan_id)
-    if not scan or not scan.alert_config_json:
+    if not scan or not scan.alert_config_json or scan.alerts_muted:
         return
 
     try:
