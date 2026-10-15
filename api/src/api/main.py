@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
-from api.database import engine
+from api.database import engine, init_db
 from api.routers import alerts, results, runs, scans, schemas, views
 from api.services.scheduler import scheduler_loop
 
@@ -15,7 +15,7 @@ from api.services.scheduler import scheduler_loop
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient()
     
-    await asyncio.to_thread(SQLModel.metadata.create_all, engine)
+    await asyncio.to_thread(init_db)
     app.state.log_subscribers = {}
     app.state.run_logs = {}
     app.state.processes = {}
