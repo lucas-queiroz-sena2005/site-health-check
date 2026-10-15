@@ -10,4 +10,3 @@
 - [x] **Track: docs-review** *Link: [./tracks/docs_review/index.md](./tracks/docs_review/index.md)*
 - [x] **Track: integration** *Link: [./tracks/integration/index.md](./tracks/integration/index.md)*
 - [x] **Track: Implementation of ADR 0022 - Slash16 Scale Strategy** *Link: [./tracks/adr_0022_slash16_scale/index.md](./tracks/adr_0022_slash16_scale/index.md)*
-- [x] **Track: Alerting System & Scan Evaluation Controls** *Link: [./tracks/alerting_and_evaluation_controls/index.md](./tracks/alerting_and_evaluation_controls/index.md)*
