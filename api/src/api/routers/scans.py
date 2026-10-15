@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated, Any
 
 import croniter
-from fastapi import APIRouter, HTTPException, Path, Request, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Path, Request, status
 from fastapi.responses import HTMLResponse
 from sqlmodel import desc, select
 
@@ -20,6 +20,7 @@ from api.models import (
     TargetGroup,
 )
 from api.routers.runs import ScanRunResponse, run_engine_cli
+from api.services.alerts import dispatch_mute_status_notification
 from api.services.scheduler import run_scheduled_scan_with_alerts
 
 router = APIRouter(prefix="/scans", tags=["scans"])
@@ -183,42 +184,57 @@ def update_scan(
 
 @router.post("/{id}/alerts/mute", response_model=ScanResponse)
 def mute_scan_alerts(
-    id: Annotated[str, Path()], session: SessionDep
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    background_tasks: BackgroundTasks,
 ) -> ScanResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
+    was_muted = scan.alerts_muted
     scan.alerts_muted = True
     session.add(scan)
     session.commit()
     session.refresh(scan)
+    if not was_muted:
+        background_tasks.add_task(dispatch_mute_status_notification, scan, True)
     return _build_scan_response(scan, session)
 
 
 @router.post("/{id}/alerts/unmute", response_model=ScanResponse)
 def unmute_scan_alerts(
-    id: Annotated[str, Path()], session: SessionDep
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    background_tasks: BackgroundTasks,
 ) -> ScanResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
+    was_muted = scan.alerts_muted
     scan.alerts_muted = False
     session.add(scan)
     session.commit()
     session.refresh(scan)
+    if was_muted:
+        background_tasks.add_task(dispatch_mute_status_notification, scan, False)
     return _build_scan_response(scan, session)
 
 
 @router.get("/{id}/alerts/mute", response_class=HTMLResponse)
 def get_mute_scan_alerts(
-    id: Annotated[str, Path()], session: SessionDep
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    background_tasks: BackgroundTasks,
 ) -> HTMLResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
+    was_muted = scan.alerts_muted
     scan.alerts_muted = True
     session.add(scan)
     session.commit()
+    if not was_muted:
+        background_tasks.add_task(dispatch_mute_status_notification, scan, True)
     unmute_url = f"/api/scans/{scan.id}/alerts/unmute"
     dashboard_url = f"{settings.app_base_url}/schedules"
     html_content = (
@@ -242,14 +258,19 @@ def get_mute_scan_alerts(
 
 @router.get("/{id}/alerts/unmute", response_class=HTMLResponse)
 def get_unmute_scan_alerts(
-    id: Annotated[str, Path()], session: SessionDep
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    background_tasks: BackgroundTasks,
 ) -> HTMLResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
+    was_muted = scan.alerts_muted
     scan.alerts_muted = False
     session.add(scan)
     session.commit()
+    if was_muted:
+        background_tasks.add_task(dispatch_mute_status_notification, scan, False)
     mute_url = f"/api/scans/{scan.id}/alerts/mute"
     dashboard_url = f"{settings.app_base_url}/schedules"
     html_content = (

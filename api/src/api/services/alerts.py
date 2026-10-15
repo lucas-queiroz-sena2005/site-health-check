@@ -28,6 +28,7 @@ def build_google_chat_card(
     summary_stats: dict[str, int],
     table_url: str,
     is_healthy: bool = False,
+    mute_url: str | None = None,
 ) -> dict[str, Any]:
     """Constructs a professional Google Chat Cards v2 webhook payload.
 
@@ -39,6 +40,7 @@ def build_google_chat_card(
         summary_stats: Counts of active, warning, failed, ghost, void hosts.
         table_url: Deep-link URL to the host results table.
         is_healthy: Whether the run completed with all checks healthy.
+        mute_url: Optional URL to turn off alerts for this schedule.
 
     Returns:
         Dictionary representation of the Cards v2 payload.
@@ -60,6 +62,8 @@ def build_google_chat_card(
 
     is_https = table_url.startswith("https://")
     link_html = f"<a href='{table_url}'>View Results Table</a>"
+    if mute_url:
+        link_html += f"<br><a href='{mute_url}'>Turn Off Alerts for this Schedule</a>"
 
     body_lines = [
         f"<b>Status:</b> <font color='{status_color}'>{status_label}</font>",
@@ -68,31 +72,29 @@ def build_google_chat_card(
         f"<b>Time:</b> {timestamp_str}",
         f"<b>Triggers:</b> {trigger_text}",
         f"<b>Summary:</b> {summary_text}",
+        "",
+        link_html,
     ]
 
-    widgets: list[dict[str, Any]] = []
+    widgets: list[dict[str, Any]] = [
+        {"textParagraph": {"text": "<br>".join(body_lines)}}
+    ]
 
     if is_https:
-        widgets.append({"textParagraph": {"text": "<br>".join(body_lines)}})
-        widgets.append(
+        buttons = [
             {
-                "buttonList": {
-                    "buttons": [
-                        {
-                            "text": "View Results Table",
-                            "onClick": {"openLink": {"url": table_url}},
-                        }
-                    ]
-                }
+                "text": "View Results Table",
+                "onClick": {"openLink": {"url": table_url}},
             }
-        )
-    else:
-        # In Google Chat Cards v2, openLink buttons strictly require HTTPS.
-        # HTTP URLs are rejected by Google Chat button handlers and do nothing.
-        # We render a direct HTML hyperlink instead of a non-functional button.
-        body_lines.append("")
-        body_lines.append(link_html)
-        widgets.append({"textParagraph": {"text": "<br>".join(body_lines)}})
+        ]
+        if mute_url:
+            buttons.append(
+                {
+                    "text": "Turn Off Alerts",
+                    "onClick": {"openLink": {"url": mute_url}},
+                }
+            )
+        widgets.append({"buttonList": {"buttons": buttons}})
 
     return {
         "cardsV2": [
@@ -122,6 +124,7 @@ def build_slack_blocks(
     summary_stats: dict[str, int],
     table_url: str,
     is_healthy: bool = False,
+    mute_url: str | None = None,
 ) -> dict[str, Any]:
     """Constructs a clean Slack Block Kit webhook payload.
 
@@ -133,6 +136,7 @@ def build_slack_blocks(
         summary_stats: Counts of active, warning, failed, ghost, void hosts.
         table_url: Deep-link URL to the host results table.
         is_healthy: Whether the run completed with all checks healthy.
+        mute_url: Optional URL to turn off alerts for this schedule.
 
     Returns:
         Dictionary representation of the Slack Block Kit payload.
@@ -150,6 +154,29 @@ def build_slack_blocks(
         f"Active: {active_cnt} | Warning: {warning_cnt} | "
         f"Failed: {failed_cnt} | Ghost: {ghost_cnt}"
     )
+
+    action_elements = [
+        {
+            "type": "button",
+            "text": {
+                "type": "plain_text",
+                "text": "View Results Table",
+            },
+            "url": table_url,
+            "style": "primary" if is_healthy else "danger",
+        }
+    ]
+    if mute_url:
+        action_elements.append(
+            {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Turn Off Alerts",
+                },
+                "url": mute_url,
+            }
+        )
 
     blocks = [
         {
@@ -172,17 +199,7 @@ def build_slack_blocks(
         },
         {
             "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "View Results Table",
-                    },
-                    "url": table_url,
-                    "style": "primary" if is_healthy else "danger",
-                }
-            ],
+            "elements": action_elements,
         },
     ]
 
@@ -190,6 +207,165 @@ def build_slack_blocks(
         "text": f"{title} - {schedule_name}",
         "blocks": blocks,
     }
+
+
+def build_mute_status_payload(
+    webhook_url: str,
+    schedule_name: str,
+    is_muted: bool,
+    mute_url: str | None = None,
+    unmute_url: str | None = None,
+) -> dict[str, Any]:
+    """Constructs notification payload for mute/unmute status changes.
+
+    Args:
+        webhook_url: Target URL for the incoming webhook.
+        schedule_name: Name of the scheduled scan.
+        is_muted: True if alerts were muted, False if resumed.
+        mute_url: Direct URL to mute alerts.
+        unmute_url: Direct URL to unmute alerts.
+
+    Returns:
+        Formatted payload dict for Google Chat, Slack, or generic fallback.
+    """
+    if "chat.googleapis.com" in webhook_url:
+        title = f"Alerts Muted: {schedule_name}" if is_muted else f"Alerts Active: {schedule_name}"
+        desc = (
+            f"Automated alerts for schedule <b>{schedule_name}</b> have been turned off."
+            if is_muted
+            else f"Automated alerts for schedule <b>{schedule_name}</b> have been resumed."
+        )
+        action_link = (
+            f"<a href='{unmute_url}'>Turn Back On Alerts for this Schedule</a>"
+            if is_muted and unmute_url
+            else (f"<a href='{mute_url}'>Turn Off Alerts for this Schedule</a>" if not is_muted and mute_url else "")
+        )
+        button_text = "Turn Back On" if is_muted else "Turn Off Alerts"
+        button_url = unmute_url if is_muted else mute_url
+
+        body_lines = [desc]
+        if action_link:
+            body_lines.append("")
+            body_lines.append(action_link)
+
+        widgets: list[dict[str, Any]] = [
+            {"textParagraph": {"text": "<br>".join(body_lines)}}
+        ]
+
+        if button_url and button_url.startswith("https://"):
+            widgets.append(
+                {
+                    "buttonList": {
+                        "buttons": [
+                            {
+                                "text": button_text,
+                                "onClick": {"openLink": {"url": button_url}},
+                            }
+                        ]
+                    }
+                }
+            )
+
+        return {
+            "cardsV2": [
+                {
+                    "cardId": f"mute-status-{schedule_name.lower().replace(' ', '-')}",
+                    "card": {
+                        "header": {
+                            "title": title,
+                            "subtitle": f"{schedule_name} | Quick Controls",
+                        },
+                        "sections": [{"widgets": widgets}],
+                    },
+                }
+            ]
+        }
+    elif "hooks.slack.com" in webhook_url:
+        title = f"Alerts Muted: {schedule_name}" if is_muted else f"Alerts Active: {schedule_name}"
+        desc = (
+            f"Automated alerts for schedule *{schedule_name}* have been turned off."
+            if is_muted
+            else f"Automated alerts for schedule *{schedule_name}* have been resumed."
+        )
+        btn_text = "Turn Back On" if is_muted else "Turn Off Alerts"
+        btn_url = unmute_url if is_muted else mute_url
+
+        blocks = [
+            {"type": "header", "text": {"type": "plain_text", "text": title}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": desc}},
+        ]
+        if btn_url:
+            blocks.append(
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": btn_text},
+                            "url": btn_url,
+                        }
+                    ],
+                }
+            )
+        return {
+            "text": f"{title} - {desc}",
+            "blocks": blocks,
+        }
+    else:
+        desc = (
+            f"Automated alerts for schedule {schedule_name} have been turned off."
+            if is_muted
+            else f"Automated alerts for schedule {schedule_name} have been resumed."
+        )
+        url = unmute_url if is_muted else mute_url
+        msg = f"{desc}\nAction: {url}" if url else desc
+        return {
+            "text": msg,
+            "schedule_name": schedule_name,
+            "is_muted": is_muted,
+            "url": url,
+        }
+
+
+async def dispatch_mute_status_notification(scan: Scan, is_muted: bool) -> bool:
+    """Dispatches an automated confirmation notification when alerts are muted or unmuted.
+
+    Args:
+        scan: The Scan instance whose alert state was toggled.
+        is_muted: The new muted state (True if muted, False if active/unmuted).
+
+    Returns:
+        True if notification was successfully sent, False otherwise.
+    """
+    if not scan.alert_config_json:
+        return False
+
+    webhook_url = scan.alert_config_json.get("webhook_url")
+    if not webhook_url:
+        return False
+
+    mute_url = f"{settings.app_base_url}/api/scans/{scan.id}/alerts/mute"
+    unmute_url = f"{settings.app_base_url}/api/scans/{scan.id}/alerts/unmute"
+
+    payload = build_mute_status_payload(
+        webhook_url=webhook_url,
+        schedule_name=scan.name,
+        is_muted=is_muted,
+        mute_url=mute_url,
+        unmute_url=unmute_url,
+    )
+
+    success, err = await dispatch_webhook(webhook_url, payload)
+    if success:
+        logger.info(
+            f"Mute status notification ({'muted' if is_muted else 'resumed'}) "
+            f"dispatched for scan {scan.id} to {webhook_url}"
+        )
+    else:
+        logger.warning(
+            f"Failed to dispatch mute status notification for scan {scan.id}: {err}"
+        )
+    return success
 
 
 def build_alert_payload(
@@ -201,6 +377,7 @@ def build_alert_payload(
     summary_stats: dict[str, int],
     table_url: str,
     is_healthy: bool = False,
+    mute_url: str | None = None,
 ) -> dict[str, Any]:
     """Builds appropriate alert payload by detecting webhook provider.
 
@@ -213,6 +390,7 @@ def build_alert_payload(
         summary_stats: Counts of active, warning, failed, ghost, void hosts.
         table_url: Deep-link URL to the host results table.
         is_healthy: Whether the run completed with all checks healthy.
+        mute_url: Optional URL to turn off alerts for this schedule.
 
     Returns:
         Formatted payload dict for Google Chat, Slack, or generic fallback.
@@ -226,6 +404,7 @@ def build_alert_payload(
             summary_stats=summary_stats,
             table_url=table_url,
             is_healthy=is_healthy,
+            mute_url=mute_url,
         )
     elif "hooks.slack.com" in webhook_url:
         return build_slack_blocks(
@@ -236,6 +415,7 @@ def build_alert_payload(
             summary_stats=summary_stats,
             table_url=table_url,
             is_healthy=is_healthy,
+            mute_url=mute_url,
         )
     else:
         title = "Scan: Healthy" if is_healthy else "Scan: Issues Detected"
@@ -257,6 +437,8 @@ def build_alert_payload(
             f"Summary: {summary_text}",
             f"Link: {table_url}",
         ]
+        if mute_url:
+            msg_lines.append(f"Mute Alerts: {mute_url}")
         return {
             "text": "\n".join(msg_lines),
             "schedule_name": schedule_name,
@@ -265,6 +447,7 @@ def build_alert_payload(
             "summary": summary_stats,
             "table_url": table_url,
             "is_healthy": is_healthy,
+            "mute_url": mute_url,
         }
 
 
@@ -482,6 +665,8 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
     timestamp_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     table_url = f"{settings.app_base_url}/?run={run.id}"
 
+    mute_url = f"{settings.app_base_url}/api/scans/{scan.id}/alerts/mute"
+
     payload = build_alert_payload(
         webhook_url=alert_config.webhook_url,
         schedule_name=scan.name,
@@ -491,6 +676,7 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
         summary_stats=summary,
         table_url=table_url,
         is_healthy=is_healthy,
+        mute_url=mute_url,
     )
 
     success, err = await dispatch_webhook(alert_config.webhook_url, payload)

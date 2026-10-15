@@ -242,3 +242,54 @@ async def test_dispatch_mute_status_notification():
         assert "https://chat.googleapis.com/test" in args
         assert "cardsV2" in args[1]
 
+
+def test_concurrent_chat_clicks_idempotency_and_webhook_suppression(
+    client: TestClient, session: Session
+):
+    scan = Scan(
+        name="Team Cluster",
+        cron_expression="0 * * * *",
+        ports_json=[80],
+        flags_json={},
+        alert_config_json={"webhook_url": "https://chat.googleapis.com/team-space"},
+        alerts_muted=False,
+    )
+    session.add(scan)
+    session.commit()
+    session.refresh(scan)
+
+    with patch("api.routers.scans.dispatch_mute_status_notification", new_callable=AsyncMock) as mock_dispatch:
+        # User 1 clicks Turn Off Alerts from chat
+        r1 = client.get(f"/api/scans/{scan.id}/alerts/mute")
+        assert r1.status_code == 200
+        session.refresh(scan)
+        assert scan.alerts_muted is True
+        assert mock_dispatch.call_count == 1
+        assert mock_dispatch.call_args[0][1] is True  # is_muted = True
+
+        # User 2 clicks the same Turn Off Alerts button in chat later
+        r2 = client.get(f"/api/scans/{scan.id}/alerts/mute")
+        assert r2.status_code == 200
+        session.refresh(scan)
+        # MUST remain muted, MUST NOT toggle to False
+        assert scan.alerts_muted is True
+        # Webhook dispatch was suppressed for duplicate click!
+        assert mock_dispatch.call_count == 1
+
+        # User 1 clicks Turn Back On from chat
+        r3 = client.get(f"/api/scans/{scan.id}/alerts/unmute")
+        assert r3.status_code == 200
+        session.refresh(scan)
+        assert scan.alerts_muted is False
+        assert mock_dispatch.call_count == 2
+        assert mock_dispatch.call_args[0][1] is False  # is_muted = False
+
+        # User 2 clicks Turn Back On again
+        r4 = client.get(f"/api/scans/{scan.id}/alerts/unmute")
+        assert r4.status_code == 200
+        session.refresh(scan)
+        # MUST remain unmuted
+        assert scan.alerts_muted is False
+        # Suppressed duplicate webhook!
+        assert mock_dispatch.call_count == 2
+
