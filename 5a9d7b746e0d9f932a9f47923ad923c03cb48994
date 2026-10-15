@@ -1,0 +1,4 @@
+Task: Write failing unit and integration tests for finalization void aggregation and database pruning
+Summary: Added unit and integration tests in test_api_runner.py and test_alert_service.py to verify that _finalize_run purges individual void hosts, retains active/ghost hosts, inserts synthetic Void (N) nodes, and accurately computes void counts in run metrics summary.
+Files: api/tests/test_api_runner.py, api/tests/test_alert_service.py
+Why: Establish Red phase of TDD before implementing run-finalization void aggregation.
