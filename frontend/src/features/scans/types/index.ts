@@ -31,6 +31,7 @@ export interface AlertConfig {
   alert_on_ghost?: boolean
   alert_on_warning?: boolean
   alert_on_abort?: boolean
+  alert_on_void?: boolean
   notify_on_healthy?: boolean
 }
 

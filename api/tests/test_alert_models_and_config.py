@@ -45,11 +45,13 @@ def test_alert_config_model():
         alert_on_ghost=True,
         alert_on_warning=False,
         alert_on_abort=True,
+        alert_on_void=True,
         notify_on_healthy=False,
     )
     assert alert.webhook_url.startswith("https://chat.googleapis.com")
     assert alert.alert_on_warning is False
     assert alert.alert_on_failure is True
+    assert alert.alert_on_void is True
 
 
 def test_scan_model_alert_and_evaluation_fields(session: Session):

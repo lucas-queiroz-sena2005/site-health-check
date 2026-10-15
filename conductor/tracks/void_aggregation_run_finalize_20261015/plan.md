@@ -9,7 +9,7 @@
   - [x] Implement historical active IP resolution and void host classification in `api/src/api/services/runner.py`
   - [x] Purge individual void `HostState` records (and cascading `PortState` records) and insert synthetic `HostState(ip_address="Void (N)", ...)`
   - [x] Update `compute_run_summary` in `api/src/api/services/alerts.py` to record accurate void counts
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [~] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ---
 

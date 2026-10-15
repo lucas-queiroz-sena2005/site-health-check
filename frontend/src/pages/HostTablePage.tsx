@@ -546,6 +546,12 @@ export function HostTablePage() {
                   <span className="uppercase tracking-wider opacity-70">Ghost</span>
                   <span>{summary.ghost ?? 0}</span>
                 </div>
+                {summary.void !== undefined && (
+                  <div className="flex items-center gap-1.5 bg-muted text-muted-foreground px-2 py-1 rounded border border-border">
+                    <span className="uppercase tracking-wider opacity-70">Void</span>
+                    <span>{summary.void ?? 0}</span>
+                  </div>
+                )}
               </div>
             )
           })()}

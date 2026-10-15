@@ -40,6 +40,7 @@ function hasConfiguredTriggers(scan: any) {
     cfg.alert_on_failure ||
     cfg.alert_on_ghost ||
     cfg.alert_on_warning ||
+    cfg.alert_on_void ||
     cfg.notify_on_healthy
   )
 }

@@ -54,10 +54,11 @@ def build_google_chat_card(
     warning_cnt = summary_stats.get("warning", 0)
     failed_cnt = summary_stats.get("failed", 0)
     ghost_cnt = summary_stats.get("ghost", 0)
+    void_cnt = summary_stats.get("void", 0)
 
     summary_text = (
         f"Active: {active_cnt} | Warning: {warning_cnt} | "
-        f"Failed: {failed_cnt} | Ghost: {ghost_cnt}"
+        f"Failed: {failed_cnt} | Ghost: {ghost_cnt} | Void: {void_cnt}"
     )
 
     is_https = table_url.startswith("https://")
@@ -149,10 +150,11 @@ def build_slack_blocks(
     warning_cnt = summary_stats.get("warning", 0)
     failed_cnt = summary_stats.get("failed", 0)
     ghost_cnt = summary_stats.get("ghost", 0)
+    void_cnt = summary_stats.get("void", 0)
 
     summary_text = (
         f"Active: {active_cnt} | Warning: {warning_cnt} | "
-        f"Failed: {failed_cnt} | Ghost: {ghost_cnt}"
+        f"Failed: {failed_cnt} | Ghost: {ghost_cnt} | Void: {void_cnt}"
     )
 
     action_elements = [
@@ -425,7 +427,8 @@ def build_alert_payload(
             f"Active: {summary_stats.get('active', 0)} | "
             f"Warning: {summary_stats.get('warning', 0)} | "
             f"Failed: {summary_stats.get('failed', 0)} | "
-            f"Ghost: {summary_stats.get('ghost', 0)}"
+            f"Ghost: {summary_stats.get('ghost', 0)} | "
+            f"Void: {summary_stats.get('void', 0)}"
         )
         msg_lines = [
             title,
@@ -483,6 +486,9 @@ def evaluate_alert_triggers(
     if alert_config.alert_on_warning and summary_stats.get("warning", 0) > 0:
         triggers.append(f"{summary_stats['warning']} Warnings (TLS/Redirects)")
 
+    if alert_config.alert_on_void and summary_stats.get("void", 0) > 0:
+        triggers.append(f"{summary_stats['void']} Void Hosts")
+
     if triggers:
         return (True, triggers, False)
 
@@ -527,6 +533,7 @@ def compute_run_summary(
     run: ScanRun,
     ghost_window_str: str = "7d",
     tls_warning_days: int = 30,
+    void_count: int | None = None,
 ) -> dict[str, int]:
     """Calculates active, warning, failed, ghost, and void counts for a run.
 
@@ -535,6 +542,7 @@ def compute_run_summary(
         run: The ScanRun instance to summarize.
         ghost_window_str: Historical time window string (e.g., '7d', '24h').
         tls_warning_days: Number of days before certificate expiry for warning.
+        void_count: Explicit void count if already known/purged during finalization.
 
     Returns:
         Dictionary mapping status name to count.
@@ -545,12 +553,12 @@ def compute_run_summary(
     active_count = 0
     warning_count = 0
     failed_count = 0
-    void_count = 0
+    calculated_void = 0
 
     for h in hosts:
         if h.ip_address.startswith("Void"):
             match_void = re.search(r"\d+", h.ip_address)
-            void_count += int(match_void.group(0)) if match_void else 1
+            calculated_void += int(match_void.group(0)) if match_void else 1
             continue
 
         host_has_open = False
@@ -624,14 +632,21 @@ def compute_run_summary(
                 and h.ip_address not in current_active_ips
                 and h.ip_address not in historical_active
             ]
-            void_count += len(raw_void_ips)
+            calculated_void += len(raw_void_ips)
+
+    if void_count is not None:
+        final_void = void_count
+    elif run.metrics_json and isinstance(run.metrics_json, dict) and "summary" in run.metrics_json and "void" in run.metrics_json["summary"]:
+        final_void = run.metrics_json["summary"]["void"]
+    else:
+        final_void = calculated_void
 
     return {
         "active": active_count,
         "warning": warning_count,
         "failed": failed_count,
         "ghost": ghost_count,
-        "void": void_count,
+        "void": final_void,
     }
 
 

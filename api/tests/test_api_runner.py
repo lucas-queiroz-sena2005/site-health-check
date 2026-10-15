@@ -135,13 +135,9 @@ def test_finalize_run_prunes_void_hosts_and_inserts_synthetic_void_on_clean_db(t
             final_run = session.get(ScanRun, run_id)
             assert final_run.status == ScanRunStatus.COMPLETED
 
-            # The 3 individual dead hosts must be deleted and replaced with 1 synthetic void host
+            # The 3 individual dead hosts must be deleted and excluded from table
             hosts = session.exec(select(HostState).where(HostState.scan_run_id == run_id)).all()
-            assert len(hosts) == 1
-            synthetic_void = hosts[0]
-            assert synthetic_void.ip_address == "Void (3)"
-            assert synthetic_void.metadata_resolved_from == "10.0.0.0/24"
-            assert synthetic_void.metadata_discovered_from_json == ["void_aggregated"]
+            assert len(hosts) == 0
 
             # Also verify summary stats in metrics_json
             summary = final_run.metrics_json["summary"]
@@ -220,13 +216,11 @@ def test_finalize_run_preserves_active_and_ghost_hosts_while_pruning_void(test_e
         with Session(test_engine) as session:
             final_run = session.get(ScanRun, curr_run_id)
             hosts = session.exec(select(HostState).where(HostState.scan_run_id == curr_run_id)).all()
-            # 1 active + 1 ghost + 1 synthetic void = 3
-            assert len(hosts) == 3
+            # 1 active + 1 ghost = 2 (void hosts excluded from table)
+            assert len(hosts) == 2
             ip_map = {h.ip_address: h for h in hosts}
             assert "10.0.0.1" in ip_map
             assert "10.0.0.2" in ip_map
-            assert "Void (2)" in ip_map
-            assert ip_map["Void (2)"].metadata_resolved_from == "10.0.0.0/24"
 
             summary = final_run.metrics_json["summary"]
             assert summary["active"] == 1

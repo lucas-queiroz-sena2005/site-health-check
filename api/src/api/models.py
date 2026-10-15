@@ -54,6 +54,7 @@ class AlertConfig(BaseModel):
     alert_on_ghost: bool = PydanticField(default=True, title="Alert on Ghost Hosts")
     alert_on_warning: bool = PydanticField(default=True, title="Alert on Warnings")
     alert_on_abort: bool = PydanticField(default=True, title="Alert on Run Abort/Crash")
+    alert_on_void: bool = PydanticField(default=False, title="Alert on Void Hosts")
     notify_on_healthy: bool = PydanticField(default=False, title="Notify on Healthy Runs")
 
 class ExecutionConfig(BaseModel):

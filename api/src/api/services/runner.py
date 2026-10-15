@@ -193,12 +193,12 @@ def _finalize_run(run_id: str, returncode: int):
                 historical_active_ips = set(session.exec(historical_stmt).all())
 
         # 2. Classify hosts: Active, Ghost, Void
-        void_hosts_by_parent: dict[str, list[HostState]] = defaultdict(list)
+        void_host_ids: list[str] = []
         kept_hosts: list[HostState] = []
 
         for host in hosts:
             if host.ip_address.startswith("Void"):
-                kept_hosts.append(host)
+                void_host_ids.append(host.id)
                 continue
 
             has_open = any(p.tcp_status == "open" for p in host.ports)
@@ -207,11 +207,9 @@ def _finalize_run(run_id: str, returncode: int):
             elif host.ip_address in historical_active_ips:
                 kept_hosts.append(host)
             else:
-                parent = host.metadata_resolved_from or "unknown"
-                void_hosts_by_parent[parent].append(host)
+                void_host_ids.append(host.id)
 
-        # 3. Purge individual void hosts and insert synthetic void nodes
-        void_host_ids = [h.id for void_list in void_hosts_by_parent.values() for h in void_list]
+        # 3. Purge individual void hosts completely from table/database
         if void_host_ids:
             port_stmt = select(PortState.id).where(col(PortState.host_state_id).in_(void_host_ids))
             port_ids = list(session.exec(port_stmt).all())
@@ -220,19 +218,6 @@ def _finalize_run(run_id: str, returncode: int):
                 session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(port_ids)))
                 session.exec(delete(PortState).where(col(PortState.id).in_(port_ids)))
             session.exec(delete(HostState).where(col(HostState.id).in_(void_host_ids)))
-
-        for parent, void_list in void_hosts_by_parent.items():
-            count = len(void_list)
-            if count > 0:
-                synthetic_void = HostState(
-                    id=f"{run_id}_void_{uuid.uuid4().hex[:8]}",
-                    scan_run_id=run_id,
-                    ip_address=f"Void ({count})",
-                    metadata_resolved_from=parent if parent != "unknown" else None,
-                    metadata_discovered_from_json=["void_aggregated"]
-                )
-                session.add(synthetic_void)
-                kept_hosts.append(synthetic_void)
 
         session.commit()
 
@@ -254,6 +239,7 @@ def _finalize_run(run_id: str, returncode: int):
             run=run,
             ghost_window_str=ghost_window,
             tls_warning_days=tls_warning_days,
+            void_count=len(void_host_ids),
         )
 
         run.metrics_json = {

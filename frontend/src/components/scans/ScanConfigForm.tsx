@@ -46,6 +46,7 @@ export const DEFAULT_NEW_SCAN = {
     alert_on_ghost: true,
     alert_on_warning: true,
     alert_on_abort: true,
+    alert_on_void: false,
     notify_on_healthy: false,
   },
 }
@@ -376,6 +377,20 @@ export function ScanConfigForm({
                   onCheckedChange={(c) => setForm({
                     ...form,
                     alert_config: { ...(form.alert_config || {}), alert_on_abort: c }
+                  })}
+                />
+              </div>
+
+              <div className={switchWrapperClass}>
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-semibold">Alert on Void Hosts</Label>
+                  <p className="text-xs text-muted-foreground">Unresponsive host with no past activity</p>
+                </div>
+                <Switch
+                  checked={form?.alert_config?.alert_on_void ?? false}
+                  onCheckedChange={(c) => setForm({
+                    ...form,
+                    alert_config: { ...(form.alert_config || {}), alert_on_void: c }
                   })}
                 />
               </div>
