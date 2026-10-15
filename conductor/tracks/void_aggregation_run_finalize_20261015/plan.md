@@ -1,10 +1,10 @@
 # Implementation Plan: Void Aggregation on Run Finalization
 
 ## Phase 1: Run-Finalization Void Aggregation & DB Pruning (Backend TDD)
-- [ ] Task: Write failing unit and integration tests for finalization void aggregation and database pruning
-  - [ ] Write test in `api/tests/test_api_runner.py` verifying that `_finalize_run` on a clean DB removes raw non-responsive hosts and inserts a synthetic `HostState` with `ip_address="Void (N)"`
-  - [ ] Write test verifying that active hosts and ghost hosts are preserved in SQLite while void hosts are purged
-  - [ ] Write test in `api/tests/test_alert_service.py` confirming `compute_run_summary` calculates accurate `void` count in `metrics_json["summary"]`
+- [x] Task: Write failing unit and integration tests for finalization void aggregation and database pruning (5a9d7b7)
+  - [x] Write test in `api/tests/test_api_runner.py` verifying that `_finalize_run` on a clean DB removes raw non-responsive hosts and inserts a synthetic `HostState` with `ip_address="Void (N)"`
+  - [x] Write test verifying that active hosts and ghost hosts are preserved in SQLite while void hosts are purged
+  - [x] Write test in `api/tests/test_alert_service.py` confirming `compute_run_summary` calculates accurate `void` count in `metrics_json["summary"]`
 - [ ] Task: Implement void aggregation and pruning in `_finalize_run` and update `compute_run_summary`
   - [ ] Implement historical active IP resolution and void host classification in `api/src/api/services/runner.py`
   - [ ] Purge individual void `HostState` records (and cascading `PortState` records) and insert synthetic `HostState(ip_address="Void (N)", ...)`
