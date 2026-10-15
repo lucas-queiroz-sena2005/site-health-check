@@ -1,13 +1,16 @@
 import asyncio
 import json
+import re
 import sys
-from datetime import UTC, datetime
+import uuid
+from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi.sse import ServerSentEvent
 from sqlalchemy import column
 from sqlalchemy.dialects.sqlite import insert
-from sqlmodel import Session, delete, select
+from sqlmodel import Session, col, delete, select
 
 from api.database import engine as db_engine
 from api.models import (
@@ -159,11 +162,83 @@ def _finalize_run(run_id: str, returncode: int):
                 started_at = started_at.replace(tzinfo=UTC)
             duration = round((run.finished_at - started_at).total_seconds(), 2)
             
-        # Anomalies and operational summary
-        anomalies = 0
+        snapshot = run.execution_config_snapshot_json or {}
+        ghost_window = snapshot.get("ghost_window", "7d")
+        tls_warning_days = snapshot.get("tls_warning_days", 30)
+
         statement = select(HostState).where(HostState.scan_run_id == run_id)
-        hosts = session.exec(statement).all()
+        hosts = list(session.exec(statement).all())
+        initial_targets_count = len(hosts)
+
+        # 1. Resolve historical active IPs within ghost window
+        historical_active_ips = set()
+        match = re.fullmatch(r"^(\d+)([smhd])$", ghost_window.strip().lower())
+        if match:
+            amount, unit = int(match.group(1)), match.group(2)
+            units = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
+            delta = timedelta(**{units[unit]: amount})
+            cutoff = datetime.now(UTC) - delta
+            current_ips = [h.ip_address for h in hosts if not h.ip_address.startswith("Void")]
+            if current_ips:
+                historical_stmt = (
+                    select(HostState.ip_address)
+                    .join(PortState, col(HostState.id) == col(PortState.host_state_id))
+                    .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
+                    .where(PortState.tcp_status == "open")
+                    .where(col(ScanRun.started_at) >= cutoff)
+                    .where(ScanRun.status == ScanRunStatus.COMPLETED)
+                    .where(col(HostState.ip_address).in_(current_ips))
+                    .distinct()
+                )
+                historical_active_ips = set(session.exec(historical_stmt).all())
+
+        # 2. Classify hosts: Active, Ghost, Void
+        void_hosts_by_parent: dict[str, list[HostState]] = defaultdict(list)
+        kept_hosts: list[HostState] = []
+
         for host in hosts:
+            if host.ip_address.startswith("Void"):
+                kept_hosts.append(host)
+                continue
+
+            has_open = any(p.tcp_status == "open" for p in host.ports)
+            if has_open:
+                kept_hosts.append(host)
+            elif host.ip_address in historical_active_ips:
+                kept_hosts.append(host)
+            else:
+                parent = host.metadata_resolved_from or "unknown"
+                void_hosts_by_parent[parent].append(host)
+
+        # 3. Purge individual void hosts and insert synthetic void nodes
+        void_host_ids = [h.id for void_list in void_hosts_by_parent.values() for h in void_list]
+        if void_host_ids:
+            port_stmt = select(PortState.id).where(col(PortState.host_state_id).in_(void_host_ids))
+            port_ids = list(session.exec(port_stmt).all())
+            if port_ids:
+                session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(port_ids)))
+                session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(port_ids)))
+                session.exec(delete(PortState).where(col(PortState.id).in_(port_ids)))
+            session.exec(delete(HostState).where(col(HostState.id).in_(void_host_ids)))
+
+        for parent, void_list in void_hosts_by_parent.items():
+            count = len(void_list)
+            if count > 0:
+                synthetic_void = HostState(
+                    id=f"{run_id}_void_{uuid.uuid4().hex[:8]}",
+                    scan_run_id=run_id,
+                    ip_address=f"Void ({count})",
+                    metadata_resolved_from=parent if parent != "unknown" else None,
+                    metadata_discovered_from_json=["void_aggregated"]
+                )
+                session.add(synthetic_void)
+                kept_hosts.append(synthetic_void)
+
+        session.commit()
+
+        # 4. Anomalies and operational summary
+        anomalies = 0
+        for host in kept_hosts:
             for port in host.ports:
                 if port.tcp_status != "open":
                     anomalies += 1
@@ -172,10 +247,6 @@ def _finalize_run(run_id: str, returncode: int):
                 for route in port.http_routing_checks:
                     if route.status_code and route.status_code >= 400:
                         anomalies += 1
-
-        snapshot = run.execution_config_snapshot_json or {}
-        ghost_window = snapshot.get("ghost_window", "7d")
-        tls_warning_days = snapshot.get("tls_warning_days", 30)
 
         from api.services.alerts import compute_run_summary
         summary = compute_run_summary(
@@ -186,7 +257,7 @@ def _finalize_run(run_id: str, returncode: int):
         )
 
         run.metrics_json = {
-            "total_targets_scanned": len(hosts),
+            "total_targets_scanned": initial_targets_count,
             "scan_duration_seconds": duration,
             "anomalies_found": anomalies,
             "summary": summary,

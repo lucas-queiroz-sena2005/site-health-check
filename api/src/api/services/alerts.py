@@ -545,8 +545,14 @@ def compute_run_summary(
     active_count = 0
     warning_count = 0
     failed_count = 0
+    void_count = 0
 
     for h in hosts:
+        if h.ip_address.startswith("Void"):
+            match_void = re.search(r"\d+", h.ip_address)
+            void_count += int(match_void.group(0)) if match_void else 1
+            continue
+
         host_has_open = False
         host_has_failed = False
         host_has_warning = False
@@ -571,12 +577,13 @@ def compute_run_summary(
                 if http.status_code and http.status_code >= 400:
                     host_has_failed = True
 
-        if host_has_failed:
-            failed_count += 1
-        elif host_has_warning:
-            warning_count += 1
-        elif host_has_open:
-            active_count += 1
+        if host_has_open:
+            if host_has_failed:
+                failed_count += 1
+            elif host_has_warning:
+                warning_count += 1
+            else:
+                active_count += 1
 
     # Ghost count calculation
     ghost_count = 0
@@ -589,9 +596,9 @@ def compute_run_summary(
 
         current_active_ips = {
             h.ip_address for h in hosts
-            if any(p.tcp_status == "open" for p in h.ports)
+            if not h.ip_address.startswith("Void") and any(p.tcp_status == "open" for p in h.ports)
         }
-        target_ips = [h.ip_address for h in hosts]
+        target_ips = [h.ip_address for h in hosts if not h.ip_address.startswith("Void")]
         if target_ips:
             historical_stmt = (
                 select(HostState.ip_address)
@@ -610,12 +617,21 @@ def compute_run_summary(
             ghost_ips = historical_active - current_active_ips
             ghost_count = len(ghost_ips)
 
+            # In case raw unaggregated hosts are passed before finalization
+            raw_void_ips = [
+                h for h in hosts
+                if not h.ip_address.startswith("Void")
+                and h.ip_address not in current_active_ips
+                and h.ip_address not in historical_active
+            ]
+            void_count += len(raw_void_ips)
+
     return {
         "active": active_count,
         "warning": warning_count,
         "failed": failed_count,
         "ghost": ghost_count,
-        "void": 0,
+        "void": void_count,
     }
 
 
