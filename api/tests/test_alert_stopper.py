@@ -152,3 +152,93 @@ def test_get_web_action_mute_and_unmute_endpoints(client: TestClient, session: S
 
     session.refresh(scan)
     assert scan.alerts_muted is False
+
+
+def test_build_google_chat_card_includes_mute_action():
+    from api.services.alerts import build_google_chat_card
+
+    payload = build_google_chat_card(
+        schedule_name="Gitlab",
+        run_id="run-1234",
+        timestamp_str="now",
+        triggers=[],
+        summary_stats={"active": 1, "warning": 0, "failed": 0, "ghost": 0, "void": 0},
+        table_url="http://localhost:8080/?run=run-1234",
+        is_healthy=True,
+        mute_url="http://localhost:8080/api/scans/scan-123/alerts/mute",
+    )
+    card = payload["cardsV2"][0]["card"]
+    text = card["sections"][0]["widgets"][0]["textParagraph"]["text"]
+    assert "View Results Table" in text
+    assert "Turn Off Alerts" in text
+    assert "http://localhost:8080/api/scans/scan-123/alerts/mute" in text
+
+
+def test_build_slack_blocks_includes_mute_action():
+    from api.services.alerts import build_slack_blocks
+
+    payload = build_slack_blocks(
+        schedule_name="Gitlab",
+        run_id="run-1234",
+        timestamp_str="now",
+        triggers=[],
+        summary_stats={"active": 1, "warning": 0, "failed": 0, "ghost": 0, "void": 0},
+        table_url="http://localhost:8080/?run=run-1234",
+        is_healthy=True,
+        mute_url="http://localhost:8080/api/scans/scan-123/alerts/mute",
+    )
+    blocks = payload["blocks"]
+    action_block = next(b for b in blocks if b["type"] == "actions")
+    urls = [el["url"] for el in action_block["elements"]]
+    assert "http://localhost:8080/api/scans/scan-123/alerts/mute" in urls
+
+
+def test_build_mute_status_payload():
+    from api.services.alerts import build_mute_status_payload
+
+    # Muted payload
+    p_muted = build_mute_status_payload(
+        webhook_url="https://chat.googleapis.com/test",
+        schedule_name="Production Scan",
+        is_muted=True,
+        unmute_url="http://localhost:8080/api/scans/scan-1/alerts/unmute",
+    )
+    assert "cardsV2" in p_muted
+    card_muted = p_muted["cardsV2"][0]["card"]
+    assert "Alerts Muted" in card_muted["header"]["title"]
+    assert "Turn Back On" in card_muted["sections"][0]["widgets"][0]["textParagraph"]["text"]
+
+    # Resumed payload
+    p_resumed = build_mute_status_payload(
+        webhook_url="https://chat.googleapis.com/test",
+        schedule_name="Production Scan",
+        is_muted=False,
+        mute_url="http://localhost:8080/api/scans/scan-1/alerts/mute",
+    )
+    card_resumed = p_resumed["cardsV2"][0]["card"]
+    assert "Alerts Active" in card_resumed["header"]["title"]
+
+
+@pytest.mark.asyncio
+async def test_dispatch_mute_status_notification():
+    from api.services.alerts import dispatch_mute_status_notification
+
+    scan = Scan(
+        id="scan-xyz",
+        name="Critical Service",
+        cron_expression="0 * * * *",
+        ports_json=[80],
+        flags_json={},
+        alert_config_json={"webhook_url": "https://chat.googleapis.com/test"},
+        alerts_muted=True,
+    )
+
+    with patch("api.services.alerts.dispatch_webhook", new_callable=AsyncMock) as mock_dispatch:
+        mock_dispatch.return_value = (True, None)
+        success = await dispatch_mute_status_notification(scan, is_muted=True)
+        assert success is True
+        mock_dispatch.assert_called_once()
+        args, kwargs = mock_dispatch.call_args
+        assert "https://chat.googleapis.com/test" in args
+        assert "cardsV2" in args[1]
+
