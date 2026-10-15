@@ -159,25 +159,39 @@ def _finalize_run(run_id: str, returncode: int):
                 started_at = started_at.replace(tzinfo=UTC)
             duration = round((run.finished_at - started_at).total_seconds(), 2)
             
-        # Anomalies
+        # Anomalies and operational summary
         anomalies = 0
-        hosts = session.exec(select(HostState).where(HostState.scan_run_id == run_id)).all()
+        statement = select(HostState).where(HostState.scan_run_id == run_id)
+        hosts = session.exec(statement).all()
         for host in hosts:
-            for port in host.ports_list:
+            for port in host.ports:
                 if port.tcp_status != "open":
                     anomalies += 1
                 if port.tls_certificate and not port.tls_certificate.valid:
                     anomalies += 1
-                for route in port.http_routing_checks_list:
+                for route in port.http_routing_checks:
                     if route.status_code and route.status_code >= 400:
                         anomalies += 1
-                        
+
+        snapshot = run.execution_config_snapshot_json or {}
+        ghost_window = snapshot.get("ghost_window", "7d")
+        tls_warning_days = snapshot.get("tls_warning_days", 30)
+
+        from api.services.alerts import compute_run_summary
+        summary = compute_run_summary(
+            session=session,
+            run=run,
+            ghost_window_str=ghost_window,
+            tls_warning_days=tls_warning_days,
+        )
+
         run.metrics_json = {
             "total_targets_scanned": len(hosts),
             "scan_duration_seconds": duration,
-            "anomalies_found": anomalies
+            "anomalies_found": anomalies,
+            "summary": summary,
         }
-        
+
         session.commit()
 
 async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):

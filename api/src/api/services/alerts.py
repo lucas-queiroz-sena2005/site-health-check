@@ -176,7 +176,7 @@ def build_alert_payload(
     table_url: str,
     is_healthy: bool = False,
 ) -> dict[str, Any]:
-    """Builds appropriate alert payload by detecting the target webhook provider.
+    """Builds appropriate alert payload by detecting webhook provider.
 
     Args:
         webhook_url: Target URL for the incoming webhook.
@@ -426,12 +426,15 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
     if not alert_config.webhook_url:
         return
 
-    summary = compute_run_summary(
-        session=session,
-        run=run,
-        ghost_window_str=scan.ghost_window or "7d",
-        tls_warning_days=scan.tls_warning_days or 30,
-    )
+    # Reuse pre-computed summary stored with run if available
+    summary = (run.metrics_json or {}).get("summary")
+    if not summary:
+        summary = compute_run_summary(
+            session=session,
+            run=run,
+            ghost_window_str=scan.ghost_window or "7d",
+            tls_warning_days=scan.tls_warning_days or 30,
+        )
 
     should_send, triggers, is_healthy = evaluate_alert_triggers(
         alert_config=alert_config,

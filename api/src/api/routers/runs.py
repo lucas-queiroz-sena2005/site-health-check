@@ -155,6 +155,35 @@ def list_runs(
         )
     return runs
 
+@router.get("/{id}", response_model=ScanRunResponse)
+def get_run(
+    id: Annotated[str, Path()],
+    session: SessionDep
+) -> ScanRunResponse:
+    run = session.get(ScanRun, id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    config = run.execution_config_snapshot_json or {}
+    scan_name = None
+    if run.scan_id:
+        scan = session.get(Scan, run.scan_id)
+        if scan:
+            scan_name = scan.name
+    return ScanRunResponse(
+        id=run.id,
+        scan_id=run.scan_id,
+        scan_name=scan_name,
+        status=run.status,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        metrics_json=run.metrics_json,
+        targets=config.get("targets", []),
+        ports=config.get("ports", []),
+        flags=ExecutionFlags.model_validate(config.get("flags", {})),
+        ghost_window=config.get("ghost_window", "7d"),
+        tls_warning_days=config.get("tls_warning_days", 30),
+    )
+
 @router.get("/{id}/stream", response_class=EventSourceResponse)
 async def stream_run_logs(
     id: Annotated[str, Path()], 

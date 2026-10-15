@@ -235,3 +235,95 @@ def test_api_test_webhook_failure(client: TestClient):
         data = resp.json()
         assert data["success"] is False
         assert "404" in data["error"] or "Space not found" in data["error"]
+
+
+def test_compute_run_summary_with_real_models(session: Session):
+    from api.models import HostState, HttpRoutingCheck, PortState, Scan, ScanRun, ScanRunStatus, TlsCertificate
+    from api.services.alerts import compute_run_summary, evaluate_and_dispatch_alert
+
+    scan = Scan(
+        name="Nightly Scan",
+        cron_expression="0 0 * * *",
+        ports_json=[80, 443],
+        flags_json={},
+        alert_config_json={
+            "webhook_url": "https://chat.googleapis.com/test",
+            "alert_on_failure": True,
+            "alert_on_warning": True,
+        },
+    )
+    session.add(scan)
+    session.commit()
+    session.refresh(scan)
+
+    run = ScanRun(
+        scan_id=scan.id,
+        status=ScanRunStatus.COMPLETED,
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+    )
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+
+    # 1. Active Host (port 80 open)
+    host1 = HostState(scan_run_id=run.id, ip_address="10.0.0.1")
+    session.add(host1)
+    session.flush()
+    p1 = PortState(host_state_id=host1.id, port_number=80, tcp_status="open")
+    session.add(p1)
+
+    # 2. Host with warning (TLS expiring in 10 days <= 30)
+    host2 = HostState(scan_run_id=run.id, ip_address="10.0.0.2")
+    session.add(host2)
+    session.flush()
+    p2 = PortState(host_state_id=host2.id, port_number=443, tcp_status="open")
+    session.add(p2)
+    session.flush()
+    tls = TlsCertificate(port_state_id=p2.id, valid=True, expires_in_days=10)
+    session.add(tls)
+
+    # 3. Host with failure (HTTP 500)
+    host3 = HostState(scan_run_id=run.id, ip_address="10.0.0.3")
+    session.add(host3)
+    session.flush()
+    p3 = PortState(host_state_id=host3.id, port_number=80, tcp_status="open")
+    session.add(p3)
+    session.flush()
+    http_check = HttpRoutingCheck(port_state_id=p3.id, domain="example.com", status_code=500)
+    session.add(http_check)
+
+    session.commit()
+
+    # Compute summary directly using database ORM objects
+    summary = compute_run_summary(
+        session=session,
+        run=run,
+        ghost_window_str="7d",
+        tls_warning_days=30,
+    )
+    assert summary["active"] == 1
+    assert summary["warning"] == 1
+    assert summary["failed"] == 1
+    assert summary["ghost"] == 0
+
+
+def test_get_results_summary_returns_persisted_summary(client: TestClient, session: Session):
+    from api.models import HostState, PortState, ScanRun, ScanRunStatus
+
+    run = ScanRun(
+        status=ScanRunStatus.COMPLETED,
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+        metrics_json={
+            "summary": {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
+        },
+    )
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+
+    resp = client.get(f"/api/results/summary?run_id={run.id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["run_id"] == run.id
+    assert data["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
+

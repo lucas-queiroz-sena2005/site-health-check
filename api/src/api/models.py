@@ -170,6 +170,10 @@ class PortState(SQLModel, table=True):
             res["tls_certificate"] = None
         return res
 
+    @property
+    def http_routing_checks(self) -> list[HttpRoutingCheck]:
+        return self.http_routing_checks_list
+
 class HostState(SQLModel, table=True):
     __tablename__: str = "host_states"  # type: ignore
     __table_args__ = (UniqueConstraint("scan_run_id", "ip_address"),)
@@ -185,6 +189,10 @@ class HostState(SQLModel, table=True):
     ports_list: list[PortState] = Relationship(
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
     )
+
+    @property
+    def ports(self) -> list[PortState]:
+        return self.ports_list
 
     @model_serializer(mode='wrap')
     def serialize_model(self, handler):

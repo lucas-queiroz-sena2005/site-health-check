@@ -21,6 +21,11 @@ class TargetSummary(BaseModel):
     total_ips: int
     active_ips: int
 
+class RunResultsSummaryResponse(BaseModel):
+    run_id: str | None = None
+    summary: dict[str, int] | None = None
+    targets: list[TargetSummary] = []
+
 def parse_ghost_window(
     ghost_window: Annotated[
         str | None, 
@@ -44,12 +49,31 @@ def parse_ghost_window(
 
 GhostWindowDep = Annotated[timedelta | None, Depends(parse_ghost_window)]
 
-@router.get("/summary")
+@router.get("/summary", response_model=RunResultsSummaryResponse)
 def get_results_summary(
     session: SessionDep,
     run_id: str | None = None,
     subrun_id: str | None = None
-) -> list[TargetSummary]:
+) -> RunResultsSummaryResponse:
+    run_summary: dict[str, int] | None = None
+    if run_id:
+        run = session.get(ScanRun, run_id)
+        if run:
+            run_summary = (run.metrics_json or {}).get("summary")
+            if not run_summary:
+                from api.services.alerts import compute_run_summary
+                snapshot = run.execution_config_snapshot_json or {}
+                run_summary = compute_run_summary(
+                    session=session,
+                    run=run,
+                    ghost_window_str=snapshot.get("ghost_window", "7d"),
+                    tls_warning_days=snapshot.get("tls_warning_days", 30),
+                )
+                run.metrics_json = run.metrics_json or {}
+                run.metrics_json["summary"] = run_summary
+                session.add(run)
+                session.commit()
+
     statement = (
         select(
             HostState.metadata_resolved_from,
@@ -80,7 +104,12 @@ def get_results_summary(
             total_ips=total,
             active_ips=active
         ))
-    return summaries
+
+    return RunResultsSummaryResponse(
+        run_id=run_id,
+        summary=run_summary,
+        targets=summaries,
+    )
 
 @router.get("")
 def get_results(
