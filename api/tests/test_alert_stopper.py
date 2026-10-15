@@ -293,3 +293,36 @@ def test_concurrent_chat_clicks_idempotency_and_webhook_suppression(
         # Suppressed duplicate webhook!
         assert mock_dispatch.call_count == 2
 
+
+def test_dashboard_button_does_not_trigger_chat_notification(
+    client: TestClient, session: Session
+):
+    scan = Scan(
+        name="Dashboard Scan",
+        cron_expression="0 * * * *",
+        ports_json=[80],
+        flags_json={},
+        alert_config_json={"webhook_url": "https://chat.googleapis.com/dashboard-space"},
+        alerts_muted=False,
+    )
+    session.add(scan)
+    session.commit()
+    session.refresh(scan)
+
+    with patch("api.routers.scans.dispatch_mute_status_notification", new_callable=AsyncMock) as mock_dispatch:
+        # Dashboard user clicks "Mute Alerts" (calls POST)
+        r_mute = client.post(f"/api/scans/{scan.id}/alerts/mute")
+        assert r_mute.status_code == 200
+        session.refresh(scan)
+        assert scan.alerts_muted is True
+        # MUST NOT send notification to chat space!
+        mock_dispatch.assert_not_called()
+
+        # Dashboard user clicks "Resume Alerts" (calls POST)
+        r_unmute = client.post(f"/api/scans/{scan.id}/alerts/unmute")
+        assert r_unmute.status_code == 200
+        session.refresh(scan)
+        assert scan.alerts_muted is False
+        # MUST NOT send notification to chat space!
+        mock_dispatch.assert_not_called()
+

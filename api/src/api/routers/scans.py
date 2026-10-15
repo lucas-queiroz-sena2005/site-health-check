@@ -186,18 +186,14 @@ def update_scan(
 def mute_scan_alerts(
     id: Annotated[str, Path()],
     session: SessionDep,
-    background_tasks: BackgroundTasks,
 ) -> ScanResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
-    was_muted = scan.alerts_muted
     scan.alerts_muted = True
     session.add(scan)
     session.commit()
     session.refresh(scan)
-    if not was_muted:
-        background_tasks.add_task(dispatch_mute_status_notification, scan, True)
     return _build_scan_response(scan, session)
 
 
@@ -205,18 +201,14 @@ def mute_scan_alerts(
 def unmute_scan_alerts(
     id: Annotated[str, Path()],
     session: SessionDep,
-    background_tasks: BackgroundTasks,
 ) -> ScanResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
-    was_muted = scan.alerts_muted
     scan.alerts_muted = False
     session.add(scan)
     session.commit()
     session.refresh(scan)
-    if was_muted:
-        background_tasks.add_task(dispatch_mute_status_notification, scan, False)
     return _build_scan_response(scan, session)
 
 
