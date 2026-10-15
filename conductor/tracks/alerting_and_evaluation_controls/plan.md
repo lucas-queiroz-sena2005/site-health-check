@@ -36,3 +36,5 @@
 - [x] Task: Apply review suggestions [checkpoint: 060341f]
 - [x] Task: Persist run summary upon completion and expose via summary endpoint [checkpoint: 9e6e66e]
 - [x] Task: Modernize card styling without emojis, fix table URL redirect, and connect frontend summary [checkpoint: f10627e]
+- [x] Task: Simplify card layout with uniform typography, standard nomenclature, and HTTP direct link [checkpoint: 63efa99]
+
