@@ -1,32 +1,34 @@
-# Implementation Plan: Void Aggregation on Run Finalization
+# Implementation Plan: Void Counting & DB Pruning on Run Finalization
 
-## Phase 1: Run-Finalization Void Aggregation & DB Pruning (Backend TDD)
-- [x] Task: Write failing unit and integration tests for finalization void aggregation and database pruning (5a9d7b7)
-  - [x] Write test in `api/tests/test_api_runner.py` verifying that `_finalize_run` on a clean DB removes raw non-responsive hosts and inserts a synthetic `HostState` with `ip_address="Void (N)"`
+## Phase 1: Run-Finalization Void Pruning & Metrics Calculation (Backend TDD)
+- [x] Task: Write unit and integration tests for finalization void purging and database pruning (5a9d7b7, e8275af)
+  - [x] Write test in `api/tests/test_api_runner.py` verifying that `_finalize_run` removes raw non-responsive hosts from SQLite table
   - [x] Write test verifying that active hosts and ghost hosts are preserved in SQLite while void hosts are purged
   - [x] Write test in `api/tests/test_alert_service.py` confirming `compute_run_summary` calculates accurate `void` count in `metrics_json["summary"]`
-- [x] Task: Implement void aggregation and pruning in `_finalize_run` and update `compute_run_summary` (d4911ad)
+- [x] Task: Implement void purging in `_finalize_run` and update `compute_run_summary` (d4911ad, d09146f)
   - [x] Implement historical active IP resolution and void host classification in `api/src/api/services/runner.py`
-  - [x] Purge individual void `HostState` records (and cascading `PortState` records) and insert synthetic `HostState(ip_address="Void (N)", ...)`
+  - [x] Purge individual void `HostState` records (and cascading `PortState` records) from DB without inserting synthetic nodes
   - [x] Update `compute_run_summary` in `api/src/api/services/alerts.py` to record accurate void counts
-- [~] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint
 
 ---
 
-## Phase 2: Results Endpoint Consistency & Dynamic Fallback (Backend TDD)
-- [ ] Task: Write failing tests for `GET /api/runs/{id}/results` returning aggregated void nodes
-  - [ ] Write test in `api/tests/test_api_runs.py` verifying `GET /api/runs/{id}/results` returns synthetic `Void (N)` records for finalized runs
-  - [ ] Write test verifying dynamic void aggregation fallback for in-progress or unfinalized runs
-- [ ] Task: Update `get_run_results` in `api/src/api/routers/runs.py`
-  - [ ] Ensure `get_run_results` cleanly returns the pruned synthetic void nodes and applies fallback aggregation if unfinalized hosts are present
-  - [ ] Align query parameter handling (`ghost_window`) between `runs.py` and `results.py`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 2: Void Alert Trigger, Results Endpoint Consistency & Dashboard UI
+- [x] Task: Add Void Alert Trigger across backend and frontend (d09146f)
+  - [x] Add `alert_on_void` to `AlertConfig` in `api/src/api/models.py` and frontend `types/index.ts`
+  - [x] Evaluate `alert_on_void` in `evaluate_alert_triggers` and include void count in alert notifications
+  - [x] Add toggle switch in `ScanConfigForm.tsx` and integrate with `ScheduledScansPage.tsx`
+- [x] Task: Results Endpoint Consistency & Dashboard UI Integration (0071421)
+  - [x] Ensure `get_run_results` in `api/src/api/routers/runs.py` always returns metadata with summary stats
+  - [x] Remove `void` from global table filter buttons and filtering logic in `HostTablePage.tsx`
+  - [x] Render `Void` count pill unconditionally in dashboard summary header and add void badges in `RenderTreeNode.tsx`
+- [x] Task: Phase Verification & Checkpoint
 
 ---
 
 ## Phase 3: End-to-End System Verification & Regression Testing
-- [ ] Task: Comprehensive test suite and container validation
-  - [ ] Execute full pytest test suite across `api/tests` and `engine/tests`
-  - [ ] Rebuild and update container images (`docker compose up -d --build`)
-  - [ ] Verify manual scan scenario: launch `143.106.1.1/24`, verify database row count, and inspect `/api/runs/{id}/results` output
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Comprehensive test suite and container validation
+  - [x] Execute full pytest test suite across `api/tests` and `engine/tests` (58 passed)
+  - [x] Rebuild and update container images (`podman-compose up -d --build`)
+  - [x] Verify manual scan scenario: launch scans, verify database row count, and inspect `/api/runs/{id}/results` output
+- [x] Task: Phase Verification & Checkpoint

@@ -10,4 +10,4 @@
 - [x] **Track: docs-review** *Link: [./tracks/docs_review/index.md](./tracks/docs_review/index.md)*
 - [x] **Track: integration** *Link: [./tracks/integration/index.md](./tracks/integration/index.md)*
 - [x] **Track: Implementation of ADR 0022 - Slash16 Scale Strategy** *Link: [./tracks/adr_0022_slash16_scale/index.md](./tracks/adr_0022_slash16_scale/index.md)*
-- [~] **Track: Void Aggregation on Run Finalization** *Link: [./tracks/void_aggregation_run_finalize_20261015/index.md](./tracks/void_aggregation_run_finalize_20261015/index.md)*
+- [x] **Track: Void Aggregation on Run Finalization** *Link: [./tracks/void_aggregation_run_finalize_20261015/index.md](./tracks/void_aggregation_run_finalize_20261015/index.md)*
