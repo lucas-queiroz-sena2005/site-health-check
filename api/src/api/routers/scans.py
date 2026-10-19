@@ -59,6 +59,8 @@ def _build_scan_response(
     latest_run = session.exec(run_stmt).first()
 
     last_run = latest_run.started_at if latest_run and latest_run.started_at else None
+    if last_run and last_run.tzinfo is None:
+        last_run = last_run.replace(tzinfo=timezone.utc)
     metrics = latest_run.metrics_json if latest_run else None
 
     next_run = None

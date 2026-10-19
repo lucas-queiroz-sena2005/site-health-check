@@ -1,10 +1,17 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+)
+
 
 from api.database import engine, init_db
 from api.routers import alerts, results, runs, scans, schemas, views

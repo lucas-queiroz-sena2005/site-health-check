@@ -137,14 +137,21 @@ def list_runs(
             continue
 
         config = run.execution_config_snapshot_json or {}
+        started_at = run.started_at
+        if started_at and started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        finished_at = run.finished_at
+        if finished_at and finished_at.tzinfo is None:
+            finished_at = finished_at.replace(tzinfo=timezone.utc)
+
         runs.append(
             ScanRunResponse(
                 id=run.id,
                 scan_id=run.scan_id,
                 scan_name=scan_name,
                 status=run.status,
-                started_at=run.started_at,
-                finished_at=run.finished_at,
+                started_at=started_at,
+                finished_at=finished_at,
                 metrics_json=run.metrics_json,
                 targets=config.get("targets", []),
                 ports=config.get("ports", []),
@@ -169,13 +176,20 @@ def get_run(
         scan = session.get(Scan, run.scan_id)
         if scan:
             scan_name = scan.name
+    started_at = run.started_at
+    if started_at and started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=timezone.utc)
+    finished_at = run.finished_at
+    if finished_at and finished_at.tzinfo is None:
+        finished_at = finished_at.replace(tzinfo=timezone.utc)
+
     return ScanRunResponse(
         id=run.id,
         scan_id=run.scan_id,
         scan_name=scan_name,
         status=run.status,
-        started_at=run.started_at,
-        finished_at=run.finished_at,
+        started_at=started_at,
+        finished_at=finished_at,
         metrics_json=run.metrics_json,
         targets=config.get("targets", []),
         ports=config.get("ports", []),

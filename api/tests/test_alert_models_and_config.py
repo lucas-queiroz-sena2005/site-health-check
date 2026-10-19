@@ -154,3 +154,29 @@ def test_api_update_scan_alert_config(client: TestClient):
     assert put_data["tls_warning_days"] == 10
     assert put_data["alert_config"]["webhook_url"] == "https://hooks.slack.com/services/111/222/333"
     assert put_data["alert_config"]["alert_on_ghost"] is False
+
+
+def test_settings_domain_name_to_base_url():
+    from api.config import Settings
+
+    # Default localhost without SSL
+    s_dev = Settings(domain_name="localhost", http_port=8080, enable_ssl=False)
+    assert s_dev.base_url == "http://localhost:8080"
+    assert s_dev.app_base_url == "http://localhost:8080"
+
+    # Production domain with SSL
+    s_prod_ssl = Settings(domain_name="health.unicamp.br", enable_ssl=True, https_port=443)
+    assert s_prod_ssl.base_url == "https://health.unicamp.br"
+
+    # Production domain without SSL on port 80
+    s_prod_http = Settings(domain_name="health.unicamp.br", enable_ssl=False, http_port=80)
+    assert s_prod_http.base_url == "http://health.unicamp.br"
+
+    # Custom SSL port
+    s_custom_port = Settings(domain_name="health.unicamp.br", enable_ssl=True, https_port=8443)
+    assert s_custom_port.base_url == "https://health.unicamp.br:8443"
+
+    # Direct URL passed as domain_name
+    s_direct = Settings(domain_name="https://custom.unicamp.br")
+    assert s_direct.base_url == "https://custom.unicamp.br"
+

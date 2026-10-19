@@ -330,6 +330,80 @@ def test_compute_run_summary_with_real_models(session: Session):
     assert summary["ghost"] == 0
 
 
+def test_compute_run_summary_closed_port_with_open_tls_warning(session: Session):
+    from api.models import HostState, PortState, ScanRun, ScanRunStatus, TlsCertificate
+    from api.services.alerts import compute_run_summary
+
+    run = ScanRun(
+        status=ScanRunStatus.COMPLETED,
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+    )
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+
+    # Host with port 80 closed, port 443 open with TLS expiring in 7 days
+    host = HostState(scan_run_id=run.id, ip_address="143.106.7.48")
+    session.add(host)
+    session.flush()
+
+    p80 = PortState(host_state_id=host.id, port_number=80, tcp_status="closed")
+    p443 = PortState(host_state_id=host.id, port_number=443, tcp_status="open")
+    session.add_all([p80, p443])
+    session.flush()
+
+    tls = TlsCertificate(port_state_id=p443.id, valid=True, expires_in_days=7)
+    session.add(tls)
+    session.commit()
+
+    summary = compute_run_summary(
+        session=session,
+        run=run,
+        ghost_window_str="7d",
+        tls_warning_days=30,
+    )
+    assert summary["active"] == 0
+    assert summary["warning"] == 1
+    assert summary["failed"] == 0
+    assert summary["ghost"] == 0
+
+
+def test_compute_run_summary_invalid_tls_is_warning(session: Session):
+    from api.models import HostState, PortState, ScanRun, ScanRunStatus, TlsCertificate
+    from api.services.alerts import compute_run_summary
+
+    run = ScanRun(
+        status=ScanRunStatus.COMPLETED,
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+    )
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+
+    host = HostState(scan_run_id=run.id, ip_address="143.106.7.49")
+    session.add(host)
+    session.flush()
+
+    p443 = PortState(host_state_id=host.id, port_number=443, tcp_status="open")
+    session.add(p443)
+    session.flush()
+
+    tls = TlsCertificate(port_state_id=p443.id, valid=False, expires_in_days=0)
+    session.add(tls)
+    session.commit()
+
+    summary = compute_run_summary(
+        session=session,
+        run=run,
+        ghost_window_str="7d",
+        tls_warning_days=30,
+    )
+    assert summary["active"] == 0
+    assert summary["warning"] == 1
+    assert summary["failed"] == 0
+    assert summary["ghost"] == 0
+
+
 def test_compute_run_summary_counts_void_hosts(session: Session):
     from api.models import HostState, PortState, ScanRun, ScanRunStatus
     from api.services.alerts import compute_run_summary

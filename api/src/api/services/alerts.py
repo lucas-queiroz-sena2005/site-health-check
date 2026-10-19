@@ -568,7 +568,7 @@ def compute_run_summary(
         for port in h.ports:
             if port.tcp_status == "open":
                 host_has_open = True
-            elif port.tcp_status in ("closed", "filtered", "error"):
+            elif port.tcp_status == "error":
                 host_has_failed = True
 
             # Check TLS
@@ -583,6 +583,8 @@ def compute_run_summary(
             # Check HTTP
             for http in port.http_routing_checks:
                 if http.status_code and http.status_code >= 400:
+                    host_has_failed = True
+                elif http.notes and "Failed" in http.notes:
                     host_has_failed = True
 
         if host_has_open:
