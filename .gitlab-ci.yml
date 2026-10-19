@@ -18,6 +18,7 @@ stages:
       LOCAL_CA_DIR=$LOCAL_CA_DIR
       HTTP_PORT=$HTTP_PORT
       HTTPS_PORT=$HTTPS_PORT
+      TIMEZONE=${TIMEZONE:-UTC}
       EOF
     - docker compose build
     - chmod +x ./init-letsencrypt.sh

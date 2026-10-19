@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 import croniter
 from sqlmodel import Session, col, desc, select
 
+from api.config import settings
 from api.database import engine
 from api.models import Scan, ScanRun, ScanRunStatus
 from api.routers.runs import run_engine_cli
@@ -23,6 +24,7 @@ async def run_scheduled_scan_with_alerts(run_id: str, snapshot: dict, app_state)
         logger.error(f"Failed to process alerts for scheduled scan {run_id}: {e}")
 
 async def check_and_run_scheduled_scans(app_state):
+    tz = settings.get_tz()
     with Session(engine) as session:
         stmt = select(Scan).where(
             Scan.is_active == True,
@@ -30,7 +32,7 @@ async def check_and_run_scheduled_scans(app_state):
             Scan.cron_expression != None
         )
         scans = session.exec(stmt).all()
-        now = datetime.now(UTC)
+        now = datetime.now(tz)
         
         for scan in scans:
             if not scan.cron_expression:
@@ -56,13 +58,14 @@ async def check_and_run_scheduled_scans(app_state):
                     lr_started = latest_run.started_at
                     if lr_started.tzinfo is None:
                         lr_started = lr_started.replace(tzinfo=UTC)
+                    lr_started_tz = lr_started.astimezone(tz)
                     # Prevent running multiple times in the same minute
-                    if (now - lr_started).total_seconds() < 55:
+                    if (now - lr_started_tz).total_seconds() < 55:
                         continue
-                    it = croniter.croniter(scan.cron_expression, lr_started)
+                    it = croniter.croniter(scan.cron_expression, lr_started_tz)
                     next_run = it.get_next(datetime)
                     if next_run.tzinfo is None:
-                        next_run = next_run.replace(tzinfo=UTC)
+                        next_run = next_run.replace(tzinfo=tz)
                     if now >= next_run:
                         should_run = True
                 else:
@@ -73,7 +76,7 @@ async def check_and_run_scheduled_scans(app_state):
                         it = croniter.croniter(scan.cron_expression, now)
                         prev_run = it.get_prev(datetime)
                         if prev_run.tzinfo is None:
-                            prev_run = prev_run.replace(tzinfo=UTC)
+                            prev_run = prev_run.replace(tzinfo=tz)
                         if (now - prev_run).total_seconds() < 60:
                             should_run = True
                             

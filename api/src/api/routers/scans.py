@@ -64,7 +64,8 @@ def _build_scan_response(
     next_run = None
     if scan.cron_expression and scan.is_active:
         try:
-            it = croniter.croniter(scan.cron_expression, datetime.now(timezone.utc))
+            tz = settings.get_tz()
+            it = croniter.croniter(scan.cron_expression, datetime.now(tz))
             next_run = it.get_next(datetime)
         except Exception:
             pass

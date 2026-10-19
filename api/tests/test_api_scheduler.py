@@ -73,3 +73,60 @@ async def test_scheduler_triggers_due_scan(monkeypatch):
         assert new_run.scan_id == scan_id
         assert new_run.status == ScanRunStatus.PENDING
         assert new_run.started_at is not None
+
+
+def test_settings_timezone_resolution(monkeypatch):
+    from zoneinfo import ZoneInfo
+    from api.config import Settings
+
+    # Default is UTC
+    s = Settings(timezone="UTC")
+    assert s.get_tz() == ZoneInfo("UTC")
+
+    # Valid custom timezone
+    s_sp = Settings(timezone="America/Sao_Paulo")
+    assert s_sp.get_tz() == ZoneInfo("America/Sao_Paulo")
+
+    # Fallback to UTC on invalid timezone
+    s_invalid = Settings(timezone="NonExistent/InvalidZone")
+    assert s_invalid.get_tz() == ZoneInfo("UTC")
+
+
+@pytest.mark.asyncio
+async def test_scheduler_respects_custom_timezone(monkeypatch):
+    from zoneinfo import ZoneInfo
+    test_engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(test_engine)
+    monkeypatch.setattr("api.services.scheduler.engine", test_engine)
+
+    called_runs = []
+    async def mock_run_engine_cli(run_id, snapshot, app_state):
+        called_runs.append(run_id)
+
+    monkeypatch.setattr("api.services.scheduler.run_engine_cli", mock_run_engine_cli)
+    monkeypatch.setattr("api.services.scheduler.settings.timezone", "America/Sao_Paulo")
+
+    tz = ZoneInfo("America/Sao_Paulo")
+    now_local = datetime.now(tz)
+    # Cron for current minute in local time
+    cron_now = f"{now_local.minute} {now_local.hour} * * *"
+
+    app_state = DummyAppState()
+
+    with Session(test_engine) as session:
+        scan = Scan(
+            name="Timezone Aware Scan",
+            cron_expression=cron_now,
+            ports_json=[80],
+            flags_json={}
+        )
+        session.add(scan)
+        session.commit()
+
+    await check_and_run_scheduled_scans(app_state)
+    await asyncio.sleep(0)
+
+    assert len(called_runs) == 1
+
