@@ -39,6 +39,7 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
         if (child.nodeStats.warning > 0) warningCount += child.nodeStats.warning
         if (child.nodeStats.failed > 0) failedCount += child.nodeStats.failed
         if (child.nodeStats.ghost > 0) ghostCount += child.nodeStats.ghost
+        if (child.nodeStats.void > 0) voidCount += child.nodeStats.void
       }
     } else if (child.type === 'Port') {
       // Host level counting Ports
@@ -74,12 +75,15 @@ function propagateStatus(node: TreeNode): TreeNodeStatus {
   return node.status
 }
 
-export function buildTreeData(hosts: any[]): TreeNode[] {
+export function buildTreeData(
+  hosts: any[],
+  summaryStats?: { active?: number; warning?: number; failed?: number; ghost?: number; void?: number }
+): TreeNode[] {
   const cidrGroups = new Map<string, any[]>()
   const rogueHosts: any[] = []
   
   hosts.forEach(host => {
-    const cidr = host.metadata?.resolved_from
+    const cidr = host.metadata_resolved_from || host.metadata?.resolved_from
     if (cidr) {
       if (!cidrGroups.has(cidr)) cidrGroups.set(cidr, [])
       cidrGroups.get(cidr)!.push(host)
@@ -175,20 +179,6 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
       })
       hostNodes.push(hostNode)
     })
-    const totalPossibleHosts = groupHosts[0]?.metadata?.total_hosts || groupHosts.length
-    const totalVoid = Math.max(0, totalPossibleHosts - groupHosts.length)
-    
-    if (totalVoid > 0) {
-      hostNodes.push({
-        id: `void-${cidr}`,
-        type: 'Void',
-        label: `Void Space (${totalVoid} IPs)`,
-        status: 'neutral',
-        nodeStats: { active: 0, warning: 0, failed: 0, ghost: 0, void: totalVoid },
-        children: [],
-        rawPayload: { description: `${totalVoid} IPs did not respond to the scan.` }
-      })
-    }
 
     const isCidr = cidr.includes('/')
     
@@ -202,7 +192,7 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
         label: cidr,
         status: 'neutral',
         children: hostNodes,
-        rawPayload: { target: cidr, total_hosts: totalPossibleHosts }
+        rawPayload: { target: cidr }
       }
       rootNodes.push(targetNode)
     }
@@ -305,5 +295,15 @@ export function buildTreeData(hosts: any[]): TreeNode[] {
   
   propagateStatus(globalRoot)
   
+  if (summaryStats) {
+    globalRoot.nodeStats = {
+      active: summaryStats.active ?? globalRoot.nodeStats?.active ?? 0,
+      warning: summaryStats.warning ?? globalRoot.nodeStats?.warning ?? 0,
+      failed: summaryStats.failed ?? globalRoot.nodeStats?.failed ?? 0,
+      ghost: summaryStats.ghost ?? globalRoot.nodeStats?.ghost ?? 0,
+      void: summaryStats.void ?? globalRoot.nodeStats?.void ?? 0,
+    }
+  }
+
   return [globalRoot]
 }

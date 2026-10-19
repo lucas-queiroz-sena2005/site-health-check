@@ -33,7 +33,6 @@ function filterTree(
           if (f === 'warning' && node.status === 'warning') matchesStatus = true
           if (f === 'failed' && node.status === 'error') matchesStatus = true
           if (f === 'ghost' && node.status === 'ghost') matchesStatus = true
-          if (f === 'void' && node.type === 'Void') matchesStatus = true
           if (matchesStatus) break
         }
       }
@@ -289,7 +288,7 @@ export function HostTablePage() {
   // Build tree
   const rawTree = useMemo(() => {
     if (!data?.hosts) return []
-    return buildTreeData(data.hosts)
+    return buildTreeData(data.hosts, data.metadata?.summary)
   }, [data])
 
   const filteredTreeData = useMemo(() => {
@@ -361,7 +360,7 @@ export function HostTablePage() {
             if (newGlobal.length === 0) newGlobal = ['all']
           } else {
             newGlobal.push(f)
-            const allPossible = ['active', 'warning', 'failed', 'ghost', 'void']
+            const allPossible = ['active', 'warning', 'failed', 'ghost']
             if (allPossible.every(p => newGlobal.includes(p))) {
               newGlobal = ['all']
             }
@@ -456,7 +455,6 @@ export function HostTablePage() {
             if (st === 'warning' && node.status === 'warning') matchesStatus = true
             if (st === 'failed' && node.status === 'error') matchesStatus = true
             if (st === 'ghost' && (node.nodeStats?.ghost || 0) > 0) matchesStatus = true
-            if (st === 'void' && node.type === 'Void') matchesStatus = true
 
             if (matchesStatus || childMatched) {
               if (node.children && node.children.length > 0) {
@@ -546,12 +544,10 @@ export function HostTablePage() {
                   <span className="uppercase tracking-wider opacity-70">Ghost</span>
                   <span>{summary.ghost ?? 0}</span>
                 </div>
-                {summary.void !== undefined && (
-                  <div className="flex items-center gap-1.5 bg-muted text-muted-foreground px-2 py-1 rounded border border-border">
-                    <span className="uppercase tracking-wider opacity-70">Void</span>
-                    <span>{summary.void ?? 0}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 bg-slate-500/10 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-500/20">
+                  <span className="uppercase tracking-wider opacity-70">Void</span>
+                  <span>{summary?.void ?? data?.metadata?.summary?.void ?? 0}</span>
+                </div>
               </div>
             )
           })()}
@@ -668,7 +664,7 @@ export function HostTablePage() {
 
         <span className="text-sm font-semibold text-muted-foreground pl-1">Filters:</span>
         <div className="flex bg-muted/30 border border-border p-1 rounded-lg shadow-sm font-mono text-sm">
-          {(['all', 'active', 'warning', 'failed', 'ghost', 'void']).map((f) => (
+          {(['all', 'active', 'warning', 'failed', 'ghost']).map((f) => (
             <button
               key={f}
               onClick={() => handleGlobalFilterClick(f)}

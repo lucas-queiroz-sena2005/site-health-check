@@ -249,7 +249,22 @@ def get_run_results(
     stmt = select(HostState).where(HostState.scan_run_id == id)
     hosts = session.exec(stmt).all()
     
+    metadata = dict(run.metrics_json or {})
+    if not metadata.get("summary"):
+        from api.services.alerts import compute_run_summary
+        snapshot = run.execution_config_snapshot_json or {}
+        summary = compute_run_summary(
+            session=session,
+            run=run,
+            ghost_window_str=snapshot.get("ghost_window", "7d"),
+            tls_warning_days=snapshot.get("tls_warning_days", 30),
+        )
+        metadata["summary"] = summary
+        run.metrics_json = metadata
+        session.add(run)
+        session.commit()
+
     return {
         "results": hosts,
-        "metadata": run.metrics_json or {}
+        "metadata": metadata
     }
