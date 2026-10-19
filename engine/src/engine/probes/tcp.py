@@ -13,21 +13,21 @@ from cryptography.x509.oid import ExtensionOID
 from engine.schemas.engine import PortState, TlsCertificate
 
 
+_SSL_CONTEXT = ssl.create_default_context()
+_SSL_CONTEXT.check_hostname = False
+_SSL_CONTEXT.verify_mode = ssl.CERT_NONE
+
 async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = None, timeout: float = 2.0) -> PortState:
     """Verifies TCP connection, registers TLS Certificate data and acquires SANs"""
     result = PortState()
     start_time = time.perf_counter()
-
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
 
     try:
         _reader, writer = await asyncio.wait_for(
             asyncio.open_connection(
                 host=ip,
                 port=port,
-                ssl=ssl_context,
+                ssl=_SSL_CONTEXT,
                 server_hostname=server_hostname
             ),
             timeout=timeout
@@ -92,7 +92,10 @@ async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = No
                 result.tls_certificate = tls_obj
 
         writer.close()
-        await writer.wait_closed()
+        try:
+            await asyncio.wait_for(writer.wait_closed(), timeout=timeout)
+        except Exception:
+            pass
 
     except ssl.SSLError:
         # Port OPEN, but is just plain TCP (e.g., plain HTTP).

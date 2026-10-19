@@ -29,6 +29,21 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ScanConfigForm, EXECUTION_FLAGS_SCHEMA, DEFAULT_NEW_SCAN } from '@/components/scans/ScanConfigForm'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { BellIcon, BellOffIcon } from '@hugeicons/core-free-icons'
+
+function hasConfiguredTriggers(scan: any) {
+  const cfg = scan?.alert_config
+  if (!cfg || !cfg.webhook_url) return false
+  return Boolean(
+    cfg.alert_on_abort ||
+    cfg.alert_on_failure ||
+    cfg.alert_on_ghost ||
+    cfg.alert_on_warning ||
+    cfg.alert_on_void ||
+    cfg.notify_on_healthy
+  )
+}
 
 export function ScheduledScansPage() {
   const navigate = useNavigate()
@@ -106,6 +121,20 @@ export function ScheduledScansPage() {
     }
   })
 
+  const toggleMuteMutation = useMutation({
+    mutationFn: async ({ id, muted }: { id: string; muted: boolean }) => {
+      const endpoint = muted ? `/api/scans/${id}/alerts/unmute` : `/api/scans/${id}/alerts/mute`
+      const res = await fetch(endpoint, { method: 'POST' })
+      if (!res.ok) throw new Error('Failed to toggle alerts')
+      return res.json()
+    },
+    onSuccess: (updatedScan) => {
+      queryClient.setQueryData(['scans'], (old: any[] = []) =>
+        old.map((s) => (s.id === updatedScan.id ? { ...s, alerts_muted: updatedScan.alerts_muted } : s))
+      )
+    }
+  })
+
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id)
   }
@@ -152,6 +181,7 @@ export function ScheduledScansPage() {
               <TableHead className="w-[40px]"></TableHead>
               <TableHead className="font-bold text-foreground">Scan Name</TableHead>
               <TableHead className="font-bold text-foreground">Cron Schedule</TableHead>
+              <TableHead className="font-bold text-foreground">Alerts</TableHead>
               <TableHead className="font-bold text-foreground">Last Run</TableHead>
               <TableHead className="font-bold text-foreground">Next Run</TableHead>
             </TableRow>
@@ -159,7 +189,7 @@ export function ScheduledScansPage() {
           <TableBody>
             {scans.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground font-medium">
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground font-medium">
                   No scheduled scans found.
                 </TableCell>
               </TableRow>
@@ -187,12 +217,37 @@ export function ScheduledScansPage() {
                     </TableCell>
                     <TableCell className="font-bold text-[15px]">{scan.name}</TableCell>
                     <TableCell className="font-mono text-primary font-bold bg-primary/5 px-3 py-1 rounded-md inline-block mt-3 mb-2 border border-primary/20">{scan.cron_expression || 'None'}</TableCell>
+                    <TableCell className="py-2">
+                      {hasConfiguredTriggers(scan) ? (
+                        scan.alerts_muted ? (
+                          <div
+                            title="Alerts Muted"
+                            className="flex items-center text-muted-foreground gap-1.5"
+                            data-testid={`alert-status-${scan.id}`}
+                          >
+                            <HugeiconsIcon icon={BellOffIcon} strokeWidth={2} className="w-4 h-4" />
+                            <span className="text-xs font-semibold">Muted</span>
+                          </div>
+                        ) : (
+                          <div
+                            title="Alerts Active"
+                            className="flex items-center text-primary gap-1.5"
+                            data-testid={`alert-status-${scan.id}`}
+                          >
+                            <HugeiconsIcon icon={BellIcon} strokeWidth={2} className="w-4 h-4" />
+                            <span className="text-xs font-semibold">Active</span>
+                          </div>
+                        )
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground font-medium">{scan.last_run ? new Date(scan.last_run).toLocaleString() : 'Never'}</TableCell>
                     <TableCell className="font-bold text-green-500">{scan.next_run ? new Date(scan.next_run).toLocaleString() : 'None'}</TableCell>
                   </TableRow>
                   {expandedScanId === scan.id && (
                     <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-2 border-border/40">
-                      <TableCell colSpan={5} className="p-0">
+                      <TableCell colSpan={6} className="p-0">
                         <div className="p-8 border-t-2 border-primary/10 shadow-inner">
                           {editingScanId === scan.id ? (
                             <ScanConfigForm
@@ -296,6 +351,23 @@ export function ScheduledScansPage() {
                                 </AlertDialog>
                                 <Button variant="outline" className="border-2 border-border font-bold justify-start px-4" onClick={() => setEditingScanId(scan.id)}>
                                   ✎ Edit Schedule
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className={`border-2 font-bold justify-start px-4 ${
+                                    scan.alerts_muted
+                                      ? 'border-primary/40 text-primary hover:bg-primary/10'
+                                      : 'border-border text-foreground hover:bg-muted/30'
+                                  }`}
+                                  onClick={() => toggleMuteMutation.mutate({ id: scan.id, muted: Boolean(scan.alerts_muted) })}
+                                  disabled={toggleMuteMutation.isPending && toggleMuteMutation.variables?.id === scan.id}
+                                >
+                                  <HugeiconsIcon
+                                    icon={scan.alerts_muted ? BellIcon : BellOffIcon}
+                                    strokeWidth={2}
+                                    className="w-4 h-4 mr-2"
+                                  />
+                                  {scan.alerts_muted ? 'Resume Alerts' : 'Mute Alerts'}
                                 </Button>
                                 <AlertDialog>
                                   <AlertDialogTrigger render={

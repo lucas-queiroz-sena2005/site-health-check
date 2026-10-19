@@ -25,6 +25,16 @@ export type PortState = z.infer<typeof PortStateSchema>
 export type HostState = z.infer<typeof HostStateSchema>
 export type ScanResult = z.infer<typeof ScanResultSchema>
 
+export interface AlertConfig {
+  webhook_url?: string
+  alert_on_failure?: boolean
+  alert_on_ghost?: boolean
+  alert_on_warning?: boolean
+  alert_on_abort?: boolean
+  alert_on_void?: boolean
+  notify_on_healthy?: boolean
+}
+
 export type TreeNodeStatus = 'success' | 'warning' | 'error' | 'neutral' | 'empty' | 'ghost'
 
 export interface TreeNode {
@@ -46,4 +56,12 @@ export interface TreeNode {
   appliedFilter?: string[]
   isExplicitFilter?: boolean
   originalNodeId?: string
+}
+
+export enum ScanRunStatus {
+  PENDING = 'PENDING',
+  RUNNING = 'RUNNING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  ABORTED = 'ABORTED'
 }

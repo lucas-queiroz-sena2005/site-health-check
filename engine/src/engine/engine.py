@@ -2,44 +2,54 @@
 
 import asyncio
 import ipaddress
+import json
+import logging
+import sys
 from typing import Any
 
 from engine.operations.network import resolve_target
 from engine.probes.http import check_http_routing
 from engine.probes.tcp import check_tcp_and_tls
 from engine.schemas.engine import IpState
+from engine.utils.rate_limit import AsyncTokenBucket
 
-# The master state dictionary: IP (str) -> IpState
-master_state: dict[str, IpState] = {}
+logger = logging.getLogger(__name__)
+
+# Track seen combinations to avoid duplicate probes
 seen_tcp = set()
 seen_http = set()
 
-async def worker(worker_id: str, queue: asyncio.Queue):
-    """
-    Asynchronous worker that pulls tasks from the queue and executes them.
-    """
-    while True:
-        task = await queue.get()
-        
-        try:
-            delay = task.get("flags", {}).get("worker_delay", 0.0)
-            if delay > 0:
-                await asyncio.sleep(delay)
+# Global to handle cancellation gracefully
+is_cancelled = False
+cancel_event = None
+engine_loop: asyncio.AbstractEventLoop | None = None
 
-            target = task["target"]
-            ports = task["ports"]
+async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncTokenBucket):
+    """
+    Asynchronous routine that pulls tasks from the queue and executes them.
+    """
+    while not is_cancelled:
+        try:
+            task = await queue.get()
+        except asyncio.CancelledError:
+            break
+            
+        try:
+
+            target = task.target
+            ports = task.ports
             
             # Normalize domain to ip
             ip_address, host_header, is_domain = await resolve_target(target)
             if not ip_address:
-                print(f"[Worker {worker_id}] Error: Could not resolve domain {target}")
+                logger.error(f"[Routine {routine_id}] Error: Could not resolve domain {target}")
                 continue
 
             state_key = ip_address
             
             # --- Depth and Scope Tracking ---
-            parent_ip = task.get("parent_ip")
-            current_depth = task.get("depth", 0)
+            parent_ip = task.context.parent_ip
+            current_depth = task.context.depth
             
             if parent_ip is None:
                 # Seed task
@@ -47,58 +57,60 @@ async def worker(worker_id: str, queue: asyncio.Queue):
             elif ip_address != parent_ip:
                 current_depth += 1
                 
-            max_depth = task.get("flags", {}).get("out_of_scope_depth", 0)
+            max_depth = task.context.flags.out_of_scope_depth
             if current_depth > max_depth:
-                print(f"[Worker {worker_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
+                logger.info(f"[Routine {routine_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
                 continue
 
-            print(f"[Worker {worker_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
+            logger.info(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
             
-            # Initialize if IP is new
-            if state_key not in master_state:
-                master_state[state_key] = IpState()
-                if is_domain:
-                    master_state[state_key].metadata.resolved_from = target
-                if task.get("discovered_from"):
-                    master_state[state_key].metadata.discovered_from.append(task.get("discovered_from"))
+            # Initialize localized IpState for this task
+            local_state = IpState()
+            if is_domain:
+                local_state.metadata.resolved_from = target
+            else:
+                # If not a domain, we map root_target to resolved_from so the UI categorizes it cleanly under the root block
+                local_state.metadata.resolved_from = task.context.root_target or target
                 
+            if task.context.discovered_from:
+                local_state.metadata.discovered_from.append(task.context.discovered_from)
+            if task.context.subrun_id:
+                local_state.metadata.subrun_id = task.context.subrun_id
+            if task.context.root_target:
+                local_state.metadata.root_target = task.context.root_target
+                
+            has_updates = False
             # Execute the probes for each port
             for port in ports:
                 tcp_cache_key = f"{state_key}:{port}"
                 host_header_key = host_header or state_key
                 http_cache_key = f"{state_key}:{port}:{host_header_key}"
                 
-                check_vhosts = task.get("flags", {}).get("check_virtual_hosts", True)
+                check_vhosts = task.context.flags.check_virtual_hosts
                 
                 skip_tcp = tcp_cache_key in seen_tcp
                 skip_http = http_cache_key in seen_http
                 
-                # If virtual host checking is OFF, and we've already done TCP for this IP/port, skip HTTP entirely.
                 if not check_vhosts and skip_tcp:
                     skip_http = True
                     
                 if skip_tcp and skip_http:
                     continue
                     
+                from engine.schemas.engine import PortState
+                local_state.ports[port] = PortState()
+                
                 if not skip_tcp:
                     seen_tcp.add(tcp_cache_key)
+                    has_updates = True
                     
-                    # Pre-initialize PortState synchronously to prevent KeyErrors
-                    # from other workers doing concurrent HTTP checks on the same IP/Port
-                    if port not in master_state[state_key].ports:
-                        from engine.schemas.engine import PortState
-                        master_state[state_key].ports[port] = PortState()
-                        
+                    await limiter.acquire()
                     tcp_result = await check_tcp_and_tls(state_key, port, server_hostname=host_header)
                     
-                    # Preserve any HTTP routing checks added by concurrent workers while we were awaiting
-                    existing_checks = master_state[state_key].ports[port].http_routing_checks
-                    tcp_result.http_routing_checks.update(existing_checks)
-                    master_state[state_key].ports[port] = tcp_result
+                    local_state.ports[port] = tcp_result
                     
-                    # If we found SANs, and recursive checking is enabled in the flags, 
-                    # we push them to the BACK of the queue!
-                    if tcp_result.tls_certificate and task.get("flags", {}).get("recursive_san_check"):
+                    # If we found SANs, and recursive checking is enabled in the flags
+                    if tcp_result.tls_certificate and task.context.flags.recursive_san_check:
                         for san in tcp_result.tls_certificate.domains_discovered_sans:
                             if "*" not in san:  # Avoid queuing wildcard domains directly
                                 try:
@@ -107,72 +119,181 @@ async def worker(worker_id: str, queue: asyncio.Queue):
                                 except ValueError:
                                     discovered_from = None
                                     
-                                await queue.put({
-                                    "target": san, 
-                                    "ports": [port],
-                                    "flags": task.get("flags", {}),
-                                    "discovered_from": discovered_from,
-                                    "parent_ip": ip_address,
-                                    "depth": current_depth
-                                })
+                                from engine.schemas.engine import EngineTask, TaskContext
+                                await queue.put(EngineTask(
+                                    target=san, 
+                                    ports=[port],
+                                    context=TaskContext(
+                                        flags=task.context.flags,
+                                        discovered_from=discovered_from,
+                                        parent_ip=ip_address,
+                                        depth=current_depth
+                                    )
+                                ))
                 
-                if not skip_http:
+                if not skip_http and task.context.flags.check_http:
                     seen_http.add(http_cache_key)
-                    # 2. The HTTP Pass (aiohttp)
-                    from engine.schemas.engine import TaskFlags
-                    flags_obj = TaskFlags(**task.get("flags", {}))
-                    http_result = await check_http_routing(state_key, port, host_header=host_header, flags=flags_obj)
-                    master_state[state_key].ports[port].http_routing_checks[host_header_key] = http_result
-        
+                    has_updates = True
+                    
+                    await limiter.acquire()
+                    http_result = await check_http_routing(state_key, port, host_header=host_header, flags=task.context.flags)
+                    local_state.ports[port].http_routing_checks[host_header_key] = http_result
+                    
+                    if http_result.redirects_to_url:
+                        from engine.schemas.engine import EngineTask, TaskContext
+                        try:
+                            redirect_task = EngineTask.from_redirect_url(
+                                url=http_result.redirects_to_url,
+                                context=TaskContext(
+                                    flags=task.context.flags,
+                                    discovered_from=state_key,
+                                    parent_ip=ip_address,
+                                    depth=current_depth
+                                )
+                            )
+                            await queue.put(redirect_task)
+                        except Exception as e:
+                            logger.warning(f"[Routine {routine_id}] Error parsing redirect URL {http_result.redirects_to_url}: {e}")
+            
+            # Emit NDJSON delta if we did any work
+            if has_updates:
+                import dataclasses
+                delta = {state_key: dataclasses.asdict(local_state)}
+                sys.stdout.write(json.dumps(delta) + "\n")
+                sys.stdout.flush()
+                
+        except asyncio.CancelledError:
+            break
         except Exception as e:
             import traceback
-            print(f"[Worker {worker_id}] Unhandled exception processing task {task.get('target', 'unknown')}: {e}")
-            traceback.print_exc()
+            logger.error(f"[Routine {routine_id}] Unhandled exception processing task {getattr(task, 'target', 'unknown')}: {e}")
+            logger.error(traceback.format_exc())
         finally:
             queue.task_done()
 
-async def async_main(payload: list[dict[str, Any]], workers_count: int = 100):
-    """
-    Initializes the BFS queue, spawns the workers, and blocks until finished.
-    """
-    queue = asyncio.Queue()
+def generate_targets_round_robin(blocks: list[str]):
+    import ipaddress
+    generators = []
     
-    # Seeding queue with JSON payload
-    for task in payload:
+    def make_gen(target_net, label, root_block):
+        return ((str(ip), str(label), root_block) for ip in target_net)
+        
+    for block in blocks:
+        try:
+            net = ipaddress.ip_network(block, strict=False)
+            if net.prefixlen < 24:
+                for subnet in net.subnets(new_prefix=24):
+                    generators.append(make_gen(subnet, subnet, block))
+            else:
+                generators.append(make_gen(net, net, block))
+        except ValueError:
+            generators.append(iter([(block, block, block)]))
+            
+    while generators:
+        for gen in list(generators):
+            try:
+                yield next(gen)
+            except StopIteration:
+                generators.remove(gen)
+
+async def _producer_routine(queue: asyncio.Queue, tasks_data: list[dict[str, Any]]):
+    from engine.schemas.engine import EngineTask, TaskContext, TaskFlags
+    if not tasks_data:
+        return
+        
+    first_task_dict = tasks_data[0]
+    flags = TaskFlags(**first_task_dict.get("flags", {}))
+    context = TaskContext(
+        flags=flags,
+        discovered_from=first_task_dict.get("discovered_from"),
+        parent_ip=first_task_dict.get("parent_ip"),
+        depth=first_task_dict.get("depth", 0)
+    )
+    ports = first_task_dict.get("ports", [])
+    
+    blocks = [t["target"] for t in tasks_data]
+    for ip, subrun_id, root_target in generate_targets_round_robin(blocks):
+        if is_cancelled:
+            break
+        task_ctx = TaskContext(
+            flags=flags,
+            discovered_from=context.discovered_from,
+            parent_ip=context.parent_ip,
+            depth=context.depth,
+            subrun_id=subrun_id,
+            root_target=root_target
+        )
+        task = EngineTask(
+            target=ip,
+            ports=ports,
+            context=task_ctx
+        )
         await queue.put(task)
+
+async def async_main(tasks_data: list[dict[str, Any]], workers_count: int = 100):
+    """
+    Initializes the BFS queue, spawns the routines, and blocks until finished.
+    """
+    global cancel_event, engine_loop
+    cancel_event = asyncio.Event()
+    engine_loop = asyncio.get_running_loop()
+    
+    queue = asyncio.Queue(maxsize=1000)
+    
+    # Get rate from the first task's parsed flags
+    from engine.schemas.engine import TaskFlags
+    rate_limit = 50.0
+    if tasks_data:
+        flags = TaskFlags(**tasks_data[0].get("flags", {}))
+        rate_limit = flags.rate
+        
+    limiter = AsyncTokenBucket(rate_limit)
         
     workers = []
-    
     for i in range(workers_count):
-        worker_task = asyncio.create_task(worker(f"W-{i}", queue))
+        worker_task = asyncio.create_task(scanner_routine(f"W-{i}", queue, limiter))
         workers.append(worker_task)
         
-    # Wait until queue is empty
-    await queue.join()
+    producer_task = asyncio.create_task(_producer_routine(queue, tasks_data))
+        
+    async def wait_for_completion():
+        await producer_task
+        await queue.join()
+
+    completion_task = asyncio.create_task(wait_for_completion())
+    cancel_task = asyncio.create_task(cancel_event.wait())
+    
+    done, pending = await asyncio.wait(
+        [completion_task, cancel_task],
+        return_when=asyncio.FIRST_COMPLETED
+    )
+    for p in pending:
+        p.cancel()
     
     # Cancel the workers
     for w in workers:
         w.cancel()
         
     await asyncio.gather(*workers, return_exceptions=True)
-    return master_state
 
-def run_engine(payload: list[dict[str, Any]], workers_count: int = 100) -> dict[str, Any]:
+def cancel_engine():
+    """Request cancellation. Safe to call from a signal handler: the loop may be
+    blocked in select() (e.g. a worker sleeping on --delay), so we must wake it
+    through call_soon_threadsafe instead of setting the Event directly."""
+    global is_cancelled
+    is_cancelled = True
+    if cancel_event is not None and engine_loop is not None and not engine_loop.is_closed():
+        engine_loop.call_soon_threadsafe(cancel_event.set)
+
+def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100):
     """
     The synchronous boundary that the CLI calls.
-    It triggers the asyncio event loop and returns the final serialized dictionary.
+    It triggers the asyncio event loop.
     """
-    global master_state, seen_tcp, seen_http
-    master_state.clear()
+    global seen_tcp, seen_http, is_cancelled
     seen_tcp.clear()
     seen_http.clear()
+    is_cancelled = False
     
-    print(f"\n[*] Starting Asyncio Breadth-First Engine with {workers_count} workers...")
-    final_state_objects = asyncio.run(async_main(payload, workers_count=workers_count))
-    
-    import dataclasses
-    serialized_results = {}
-    for ip, state_obj in final_state_objects.items():
-        serialized_results[ip] = dataclasses.asdict(state_obj)
-        
-    return serialized_results
+    logger.info(f"[*] Starting Asyncio Breadth-First Scanner Engine with {workers_count} concurrent routines...")
+    asyncio.run(async_main(tasks_data, workers_count=workers_count))

@@ -146,6 +146,11 @@ const RenderTreeNodeInner = ({
                   <span className="w-1.5 h-1.5 rounded-sm bg-red-500" /> {node.nodeStats.ghost} Ghost
                 </button>
               )}
+              {(node.nodeStats.void || 0) > 0 && (
+                <span className="bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/40 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1.5 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-sm bg-slate-500" /> {node.nodeStats.void} Void
+                </span>
+              )}
             </>
           )}
           

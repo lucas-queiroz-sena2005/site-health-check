@@ -5,16 +5,13 @@ from typing import Any
 @dataclasses.dataclass
 class TaskFlags:
     """Configuration flags defining the depth and behavior of the scan."""
-    check_tcp: bool = True
     check_http: bool = True
     timeout_seconds: int = 10
-    expected_strings: list[str] | None = None
-    undesired_strings: list[str] | None = None
     recursive_san_check: bool = False
     check_virtual_hosts: bool = True
     out_of_scope_depth: int = 0
-    spoof_user_agent: bool = False
-    worker_delay: float = 0.0
+    rate: float = 50.0
+    user_agent: str | None = None
 
 @dataclasses.dataclass
 class TaskConfig:
@@ -30,6 +27,44 @@ class TaskConfig:
     def to_dict(self) -> dict[str, Any]:
         """Serialize object to the standardized JSON payload."""
         return dataclasses.asdict(self)
+
+
+@dataclasses.dataclass
+class TaskContext:
+    """The implicit lineage context of a discovery task."""
+    flags: TaskFlags
+    discovered_from: str | None = None
+    parent_ip: str | None = None
+    depth: int = 0
+    subrun_id: str | None = None
+    root_target: str | None = None
+
+
+@dataclasses.dataclass
+class EngineTask:
+    """Internal task tracking for the engine queue."""
+    target: str
+    ports: list[int]
+    context: TaskContext
+
+    @classmethod
+    def from_redirect_url(
+        cls, 
+        url: str, 
+        context: TaskContext
+    ) -> 'EngineTask':
+        import yarl
+        parsed = yarl.URL(url)
+        target_domain = parsed.host
+        if not target_domain:
+            raise ValueError(f"No host found in URL: {url}")
+        
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        return cls(
+            target=target_domain,
+            ports=[port],
+            context=context
+        )
 
 @dataclasses.dataclass
 class HttpRoutingCheck:
@@ -66,6 +101,8 @@ class IpMetadata:
     """Metadata detailing the origin of this IP state."""
     resolved_from: str | None = None
     discovered_from: list[str] = dataclasses.field(default_factory=list)
+    subrun_id: str | None = None
+    root_target: str | None = None
 
 @dataclasses.dataclass
 class IpState:

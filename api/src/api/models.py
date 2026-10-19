@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, model_serializer
 from pydantic import Field as PydanticField
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
 
 def generate_uuid() -> str:
@@ -16,12 +16,9 @@ class ScanRunStatus(str, Enum):
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    ABORTED = "ABORTED"
 
 class ExecutionFlags(BaseModel):
-    check_tcp: bool = PydanticField(
-        default=True, title="Check TCP/TLS", 
-        json_schema_extra={"cli_arg": "--check-tcp", "is_switch": True}
-    )
     check_http: bool = PydanticField(
         default=True, title="Check HTTP Routing",
         json_schema_extra={"cli_arg": "--check-http", "is_switch": True}
@@ -38,35 +35,34 @@ class ExecutionFlags(BaseModel):
         default=True, title="Check Virtual Hosts",
         json_schema_extra={"cli_arg": "--check-virtual-hosts", "is_switch": True}
     )
-    spoof_user_agent: bool = PydanticField(
-        default=False, title="Spoof User Agent",
-        json_schema_extra={"cli_arg": "--spoof-user-agent", "is_switch": True}
-    )
     timeout: int = PydanticField(
         default=10, title="Timeout (seconds)",
         json_schema_extra={"cli_arg": "--timeout", "is_switch": False}
-    )
-    expected: list[str] | None = PydanticField(
-        default=None, title="Expected HTML Strings",
-        json_schema_extra={"cli_arg": "-e", "is_switch": False, "is_list": True}
-    )
-    undesired: list[str] | None = PydanticField(
-        default=None, title="Undesired HTML Strings",
-        json_schema_extra={"cli_arg": "-u", "is_switch": False, "is_list": True}
     )
     workers: int = PydanticField(
         default=100, title="Async Workers",
         json_schema_extra={"cli_arg": "-w", "is_switch": False}
     )
-    delay: float = PydanticField(
-        default=0.0, title="Worker Delay",
-        json_schema_extra={"cli_arg": "--delay", "is_switch": False}
+    rate: float = PydanticField(
+        default=50.0, title="Rate Limit (req/s)",
+        json_schema_extra={"cli_arg": "--rate", "is_switch": False}
     )
+
+class AlertConfig(BaseModel):
+    webhook_url: str | None = PydanticField(default=None, title="Webhook URL")
+    alert_on_failure: bool = PydanticField(default=True, title="Alert on Failures")
+    alert_on_ghost: bool = PydanticField(default=True, title="Alert on Ghost Hosts")
+    alert_on_warning: bool = PydanticField(default=True, title="Alert on Warnings")
+    alert_on_abort: bool = PydanticField(default=True, title="Alert on Run Abort/Crash")
+    alert_on_void: bool = PydanticField(default=False, title="Alert on Void Hosts")
+    notify_on_healthy: bool = PydanticField(default=False, title="Notify on Healthy Runs")
 
 class ExecutionConfig(BaseModel):
     targets: list[str] = PydanticField(default_factory=list, title="Targets")
     ports: list[str | int] = PydanticField(default_factory=list, title="Ports")
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
+    ghost_window: str = PydanticField(default="7d", title="Ghost Window")
+    tls_warning_days: int = PydanticField(default=30, title="TLS Expiry Warning Threshold (days)")
     
 class ScanTargetGroupLink(SQLModel, table=True):
     __tablename__: str = "scan_target_groups"  # type: ignore
@@ -92,6 +88,10 @@ class Scan(SQLModel, table=True):
     
     ports_json: list[str | int] = Field(sa_column=Column(JSON))
     flags_json: dict[str, Any] = Field(sa_column=Column(JSON))
+    ghost_window: str = Field(default="7d")
+    tls_warning_days: int = Field(default=30)
+    alert_config_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+    alerts_muted: bool = Field(default=False)
     
     deleted_at: datetime | None = None
     
@@ -121,6 +121,7 @@ class SavedView(SQLModel, table=True):
 
 class HttpRoutingCheck(SQLModel, table=True):
     __tablename__: str = "http_routing_checks"  # type: ignore
+    __table_args__ = (UniqueConstraint("port_state_id", "domain"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     port_state_id: str = Field(foreign_key="port_states.id", exclude=True)
@@ -147,6 +148,7 @@ class TlsCertificate(SQLModel, table=True):
 
 class PortState(SQLModel, table=True):
     __tablename__: str = "port_states"  # type: ignore
+    __table_args__ = (UniqueConstraint("host_state_id", "port_number"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     host_state_id: str = Field(foreign_key="host_states.id", exclude=True)
@@ -170,12 +172,18 @@ class PortState(SQLModel, table=True):
             res["tls_certificate"] = None
         return res
 
+    @property
+    def http_routing_checks(self) -> list[HttpRoutingCheck]:
+        return self.http_routing_checks_list
+
 class HostState(SQLModel, table=True):
     __tablename__: str = "host_states"  # type: ignore
+    __table_args__ = (UniqueConstraint("scan_run_id", "ip_address"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     scan_run_id: str = Field(foreign_key="scan_runs.id")
     ip_address: str = Field(index=True)
+    subrun_id: str | None = Field(default=None, index=True)
     
     metadata_resolved_from: str | None = None
     metadata_discovered_from_json: list[str] = Field(default_factory=list, sa_column=Column(JSON))
@@ -183,6 +191,10 @@ class HostState(SQLModel, table=True):
     ports_list: list[PortState] = Relationship(
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
     )
+
+    @property
+    def ports(self) -> list[PortState]:
+        return self.ports_list
 
     @model_serializer(mode='wrap')
     def serialize_model(self, handler):

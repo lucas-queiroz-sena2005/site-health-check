@@ -7,9 +7,7 @@ from typing import Any
 import aiohttp
 import aiohttp.abc
 
-from engine.catcher import validate_html
 from engine.schemas.engine import HttpRoutingCheck, TaskFlags
-
 
 class SingleIPResolver(aiohttp.abc.AbstractResolver):
     """
@@ -32,6 +30,10 @@ class SingleIPResolver(aiohttp.abc.AbstractResolver):
     async def close(self):
         pass
 
+_SSL_CONTEXT = ssl.create_default_context()
+_SSL_CONTEXT.check_hostname = False
+_SSL_CONTEXT.verify_mode = ssl.CERT_NONE
+
 async def check_http_routing(ip: str, port: int, host_header: str | None, flags: TaskFlags) -> HttpRoutingCheck:
     """
     Validates HTTP payloads for a given Virtual Host (domain) on a specific IP.
@@ -44,36 +46,27 @@ async def check_http_routing(ip: str, port: int, host_header: str | None, flags:
     
     resolver = SingleIPResolver(target_ip=ip)
     
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-
-    connector = aiohttp.TCPConnector(resolver=resolver, ssl=ssl_context)
+    connector = aiohttp.TCPConnector(resolver=resolver, ssl=_SSL_CONTEXT)
     
     headers = {}
-    if flags.spoof_user_agent:
-        headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    if flags.user_agent:
+        headers["User-Agent"] = flags.user_agent
+    else:
+        headers["User-Agent"] = "site-health-check/1.0"
     
     try:
         async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
             start_time = time.perf_counter()
-            async with session.get(url, timeout=flags.timeout_seconds) as response:
+            async with session.get(url, timeout=flags.timeout_seconds, allow_redirects=False) as response:
                 result.status_code = response.status
                 result.http_latency_ms = int((time.perf_counter() - start_time) * 1000)
                 result.server_header = response.headers.get("Server")
                 
-                if flags.expected_strings or flags.undesired_strings:
-                    body = await response.text()
-                    passed, message = validate_html(
-                        html_content=body,
-                        expected_strings=flags.expected_strings,
-                        undesired_strings=flags.undesired_strings,
-                        require_all_expected=True,
-                        reject_any_undesired=True
-                    )
-                    
-                    if not passed:
-                        result.notes = message
+                if 300 <= response.status < 400:
+                    location = response.headers.get("Location")
+                    if location:
+                        import yarl
+                        result.redirects_to_url = str(response.url.join(yarl.URL(location)))
                             
     except asyncio.TimeoutError:
         result.notes = "HTTP Timeout"

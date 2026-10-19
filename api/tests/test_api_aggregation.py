@@ -81,24 +81,24 @@ def test_void_aggregation_and_ghosting(client: TestClient, session: Session):
     # We expect:
     # - 10.0.0.2 (Ghost)
     # - 10.0.0.4 (Active)
-    # - "Void (2)" (Squashed 10.0.0.1 and 10.0.0.3)
-    assert len(data) == 3
+    # Void hosts (10.0.0.1, 10.0.0.3) are excluded from the actual table
+    assert len(data) == 2
     
     ips = {item["ip_address"] for item in data}
     assert "10.0.0.2" in ips
     assert "10.0.0.4" in ips
-    assert "Void (2)" in ips
+    assert "Void (2)" not in ips
     
     # Test overriding the window to 10d
     # 10.0.0.1 (8 days ago) now becomes a Ghost too!
-    # 10.0.0.3 remains Void (1)
+    # 10.0.0.3 remains Void, so excluded
     response_10d = client.get(f"/api/results?run_id={current_job.id}&ghost_window=10d")
     assert response_10d.status_code == 200
     data_10d = response_10d.json()
     
-    assert len(data_10d) == 4
+    assert len(data_10d) == 3
     ips_10d = {item["ip_address"] for item in data_10d}
     assert "10.0.0.1" in ips_10d
     assert "10.0.0.2" in ips_10d
     assert "10.0.0.4" in ips_10d
-    assert "Void (1)" in ips_10d
+    assert "Void (1)" not in ips_10d

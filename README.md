@@ -121,10 +121,10 @@ O projeto é dividido em três frentes principais:
 2. **Backend (API):** Gerencia os schedules, recebe configurações e serve os dados coletados (construído em FastAPI).
 3. **Engine:** O executor independente que realiza as chamadas de rede e coleta os dados brutos.
 
-Para desenvolvimento local do backend (utilizando o [Poetry](https://python-poetry.org/)):
+Para desenvolvimento local do backend (utilizando o [uv](https://docs.astral.sh/uv/), que também instala o Python fixado em `.python-version`):
 ```bash
-cd engine && poetry install
-cd ../api && poetry install
+uv sync          # cria .venv com api + engine
+uv run pytest    # roda os testes
 ```
 
 A documentação interativa da API (Swagger/ReDoc) pode ser acessada em `http://localhost:8000/docs` com o backend em execução.

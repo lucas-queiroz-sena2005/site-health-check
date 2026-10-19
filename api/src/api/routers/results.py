@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,8 +17,14 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 class TargetSummary(BaseModel):
     target: str
+    subrun_id: str | None
     total_ips: int
     active_ips: int
+
+class RunResultsSummaryResponse(BaseModel):
+    run_id: str | None = None
+    summary: dict[str, int] | None = None
+    targets: list[TargetSummary] = []
 
 def parse_ghost_window(
     ghost_window: Annotated[
@@ -43,14 +49,35 @@ def parse_ghost_window(
 
 GhostWindowDep = Annotated[timedelta | None, Depends(parse_ghost_window)]
 
-@router.get("/summary")
+@router.get("/summary", response_model=RunResultsSummaryResponse)
 def get_results_summary(
     session: SessionDep,
-    run_id: str | None = None
-) -> list[TargetSummary]:
+    run_id: str | None = None,
+    subrun_id: str | None = None
+) -> RunResultsSummaryResponse:
+    run_summary: dict[str, int] | None = None
+    if run_id:
+        run = session.get(ScanRun, run_id)
+        if run:
+            run_summary = (run.metrics_json or {}).get("summary")
+            if not run_summary:
+                from api.services.alerts import compute_run_summary
+                snapshot = run.execution_config_snapshot_json or {}
+                run_summary = compute_run_summary(
+                    session=session,
+                    run=run,
+                    ghost_window_str=snapshot.get("ghost_window", "7d"),
+                    tls_warning_days=snapshot.get("tls_warning_days", 30),
+                )
+                run.metrics_json = run.metrics_json or {}
+                run.metrics_json["summary"] = run_summary
+                session.add(run)
+                session.commit()
+
     statement = (
         select(
             HostState.metadata_resolved_from,
+            HostState.subrun_id,
             func.count(col(HostState.id).distinct()).label("total_ips"),
             func.count(col(PortState.id).distinct()).label("active_ports")
         )
@@ -60,27 +87,36 @@ def get_results_summary(
         ))
     )
     
+    assert HostState.subrun_id
     if run_id is not None:
         statement = statement.where(HostState.scan_run_id == run_id)
-        
-    statement = statement.group_by(HostState.metadata_resolved_from)
+    if subrun_id is not None:
+        statement = statement.where(HostState.subrun_id == subrun_id)
+    statement = statement.group_by(HostState.metadata_resolved_from, HostState.subrun_id)
     results = session.exec(statement).all()
     
     summaries = []
     for row in results:
-        target, total, active = row
+        target, subrun, total, active = row
         summaries.append(TargetSummary(
             target=target or "unknown",
+            subrun_id=subrun,
             total_ips=total,
             active_ips=active
         ))
-    return summaries
+
+    return RunResultsSummaryResponse(
+        run_id=run_id,
+        summary=run_summary,
+        targets=summaries,
+    )
 
 @router.get("")
 def get_results(
     session: SessionDep,
     ghost_window: GhostWindowDep,
     run_id: str | None = None,
+    subrun_id: str | None = None,
     ip_address: str | None = None,
     resolved_from: str | None = None,
     status: str | None = None
@@ -88,6 +124,8 @@ def get_results(
     statement = select(HostState)
     if run_id is not None:
         statement = statement.where(HostState.scan_run_id == run_id)
+    if subrun_id is not None:
+        statement = statement.where(HostState.subrun_id == subrun_id)
     if ip_address is not None:
         statement = statement.where(HostState.ip_address == ip_address)
     if resolved_from is not None:
@@ -100,14 +138,15 @@ def get_results(
     
     historical_active_ips = set()
     if ghost_window is not None:
-        cutoff = datetime.now(timezone.utc) - ghost_window
-        # Find all IPs that had an open port in a run started after the cutoff
+        cutoff = datetime.now(UTC) - ghost_window
+        from api.models import ScanRunStatus
         historical_stmt = (
             select(HostState.ip_address)
             .join(PortState, col(HostState.id) == col(PortState.host_state_id))
             .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
             .where(PortState.tcp_status == "open")
             .where(col(ScanRun.started_at) >= cutoff)
+            .where(ScanRun.status == ScanRunStatus.COMPLETED)
             .distinct()
         )
         # We only care about IPs in the current result set

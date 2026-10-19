@@ -80,3 +80,54 @@ def test_launch_scheduled_scan_endpoint(client: TestClient):
     filtered_runs = filter_resp.json()
     assert len(filtered_runs) == 1
     assert filtered_runs[0]["id"] == forced_run["id"]
+
+class FakeProcess:
+    def __init__(self):
+        self.signals: list[int] = []
+        self.returncode = None
+
+    def send_signal(self, sig: int):
+        self.signals.append(sig)
+
+    def kill(self):
+        self.returncode = -9
+
+
+def test_abort_run_sends_sigterm(client: TestClient):
+    import signal
+
+    launch_resp = client.post(
+        "/api/runs/launch",
+        json={"targets": ["10.0.0.1"], "ports": [80], "flags": {}},
+    )
+    assert launch_resp.status_code == 201
+    run_id = launch_resp.json()["id"]
+
+    process = FakeProcess()
+    app.state.processes = {run_id: process}
+    try:
+        abort_resp = client.post(f"/api/runs/{run_id}/abort")
+    finally:
+        app.state.processes = {}
+
+    assert abort_resp.status_code == 202
+    assert "Abort signal sent" in abort_resp.json()["message"]
+    assert process.signals == [signal.SIGTERM]
+
+
+def test_abort_unknown_run_returns_404(client: TestClient):
+    app.state.processes = {}
+    resp = client.post("/api/runs/does-not-exist/abort")
+    assert resp.status_code == 404
+
+
+def test_abort_finished_run_returns_409(client: TestClient, session: Session):
+    from api.models import ScanRun, ScanRunStatus
+
+    run = ScanRun(execution_config_snapshot_json={}, status=ScanRunStatus.COMPLETED)
+    session.add(run)
+    session.commit()
+
+    app.state.processes = {}
+    resp = client.post(f"/api/runs/{run.id}/abort")
+    assert resp.status_code == 409

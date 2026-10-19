@@ -161,7 +161,7 @@ def expand_range(start_val: str, end_val: str | None, range_type: str) -> list[s
             else:
                 # Single CIDR block generation
                 network = ipaddress.IPv4Network(start_val, strict=False)
-                return [str(ip) for ip in network.hosts()]
+                return [str(ip) for ip in network]
         except ValueError as e:
             raise ValueError(f"Invalid CIDR block or range: {e}")
             
@@ -189,7 +189,7 @@ def expand_target_ranges(segments: list[TargetSegment]) -> list[str]:
                 start, end = seg.data.split("-")
                 final_targets.extend(str(t) for t in expand_range(f"{start}{seg.suffix}", f"{end}{seg.suffix}", "cidr"))
             else:
-                final_targets.extend(str(t) for t in expand_range(f"{seg.data}{seg.suffix}", None, "cidr"))
+                final_targets.append(f"{seg.data}{seg.suffix}")
     return final_targets
 
 

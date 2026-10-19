@@ -2,11 +2,15 @@
 
 import argparse
 import json
+import logging
+import signal
 import sys
 
 from engine.parsing import expand_target_ranges, parse_ports, validate_and_clean_target
 from engine.schemas.engine import TaskConfig, TaskFlags
 
+logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 def build_parser() -> argparse.ArgumentParser:
     """Construct the command-line argument parser."""
@@ -18,15 +22,8 @@ def build_parser() -> argparse.ArgumentParser:
         "target", help="Target Host or URL (e.g., example.com or 192.168.1.50)"
     )
 
-    # Network Prober Arguments
     parser.add_argument(
         "-p", "--ports", default="443", help="Target port(s) (e.g., 443, 8000-8050)"
-    )
-    parser.add_argument(
-        "--check-tcp",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Run TCP/TLS port scan",
     )
     parser.add_argument(
         "-r",
@@ -50,22 +47,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run HTTP payload validation",
     )
     parser.add_argument(
-        "-e", "--expected", action="append", help="Expected string(s) to validate in the HTML body"
-    )
-    parser.add_argument(
-        "-u", "--undesired", action="append", help="Undesired string(s) to fail if found"
-    )
-    parser.add_argument(
         "--check-virtual-hosts",
         action=argparse.BooleanOptionalAction,
         default=True,
         help="Check HTTP responses for all discovered Virtual Hosts on the same IP",
     )
     parser.add_argument(
-        "--spoof-user-agent",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Spoof a standard browser User-Agent to prevent WAF blocks (default: False)",
+        "--user-agent",
+        type=str,
+        default=None,
+        help="Override the standard User-Agent for requests",
     )
     parser.add_argument(
         "-t",
@@ -84,18 +75,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of concurrent asynchronous workers (default: 100)",
     )
     parser.add_argument(
-        "--delay",
+        "--rate",
         type=float,
-        default=0.0,
-        help="Make each worker wait the given seconds before executing a task (default: 0)",
+        default=50.0,
+        help="Global rate limit for connections/requests per second (default: 50.0)",
     )
     
     # Observability & Output
     parser.add_argument(
-        "--push-url", help="Optional Webhook URL for observability tools"
-    )
-    parser.add_argument(
-        "-o", "--output", help="Save results to specified JSON file", default=None
+        "-o", "--output", help="Save results to specified JSON file (legacy, ignored)", default=None
     )
 
     return parser
@@ -107,23 +95,20 @@ def main(args: list | None = None) -> int:
     parsed_args = parser.parse_args(args)
     validation_result = validate_and_clean_target(parsed_args.target)
     if not validation_result.is_valid:
-        print(validation_result.error_message, file=sys.stderr)
+        logger.error(validation_result.error_message)
         return 1
 
     expanded_targets = expand_target_ranges(validation_result.segments)
     target_ports = parse_ports(parsed_args.ports)
   
     flags = TaskFlags(
-        check_tcp=parsed_args.check_tcp,
         check_http=parsed_args.check_http,
         timeout_seconds=parsed_args.timeout,
-        expected_strings=parsed_args.expected,
-        undesired_strings=parsed_args.undesired,
         recursive_san_check=parsed_args.recursive_san,
         check_virtual_hosts=parsed_args.check_virtual_hosts,
         out_of_scope_depth=parsed_args.out_of_scope_depth,
-        spoof_user_agent=parsed_args.spoof_user_agent,
-        worker_delay=parsed_args.delay
+        rate=parsed_args.rate,
+        user_agent=parsed_args.user_agent
     )
     
     json_payload = []
@@ -135,25 +120,37 @@ def main(args: list | None = None) -> int:
         )
         json_payload.append(task.to_dict())
     
-    print("\n[*] Standardized Payload Built:")
-    print(json.dumps(json_payload, indent=2))
-    print("\n[*] Handing off to Core Engine...")
+    logger.info("\n[*] Standardized Payload Built:")
+    logger.info(json.dumps(json_payload, indent=2))
+    logger.info("\n[*] Handing off to Core Engine...")
     
+    from engine.engine import cancel_engine, run_engine
+    
+    aborted = False
+    
+    def handle_signal(signum, frame):
+        nonlocal aborted
+        if aborted:
+            return
+        aborted = True
+        logger.info(f"\n[!] Received signal {signum}, aborting engine...")
+        cancel_engine()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
     # --- The Engine Boundary ---
-    from engine.engine import run_engine
-    results = run_engine(json_payload, workers_count=parsed_args.workers)
+    run_engine(json_payload, workers_count=parsed_args.workers)
 
-    # Unified Terminal Output
-    print("\n[+] Scan Complete. Output State:")
-    print(json.dumps(results, indent=2))
-
-    # State Export
-    if parsed_args.output and results:
-        from engine.exporter import export_results
-        saved_path = export_results(results, parsed_args.output)
-        print(f"\n[+] Results saved to {saved_path}")
-
-    return 0
+    if aborted:
+        sys.stdout.write(json.dumps({"status": "aborted", "reason": "signal"}) + "\n")
+        sys.stdout.flush()
+        return 130 # standard exit code for SIGINT (128+2)
+    else:
+        sys.stdout.write(json.dumps({"status": "completed"}) + "\n")
+        sys.stdout.flush()
+        logger.info("\n[+] Scan Complete.")
+        return 0
 
 
 if __name__ == "__main__":

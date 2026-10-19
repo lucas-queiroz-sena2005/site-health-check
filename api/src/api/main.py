@@ -1,24 +1,41 @@
 import asyncio
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
-from api.database import engine
-from api.routers import results, runs, scans, schemas, views
+from api.database import engine, init_db
+from api.routers import alerts, results, runs, scans, schemas, views
 from api.services.scheduler import scheduler_loop
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await asyncio.to_thread(SQLModel.metadata.create_all, engine)
+    app.state.http_client = httpx.AsyncClient()
+    
+    await asyncio.to_thread(init_db)
     app.state.log_subscribers = {}
     app.state.run_logs = {}
+    app.state.processes = {}
+    
+    from sqlmodel import Session, select
+
+    from api.models import ScanRun, ScanRunStatus
+    with Session(engine) as session:
+        runs = session.exec(select(ScanRun).where(ScanRun.status.in_([ScanRunStatus.PENDING, ScanRunStatus.RUNNING]))).all()
+        for run in runs:
+            run.status = ScanRunStatus.FAILED
+            run.metrics_json = run.metrics_json or {}
+            run.metrics_json["reason"] = "api_restart"
+            session.add(run)
+        session.commit()
     scheduler_task = asyncio.create_task(scheduler_loop(app.state))
     try:
         yield
     finally:
+        await app.state.http_client.aclose()
         scheduler_task.cancel()
         try:
             await scheduler_task
@@ -27,6 +44,7 @@ async def lifespan(app: FastAPI):
 
 import anyio
 from starlette.types import ASGIApp, Receive, Scope, Send
+
 
 class SuppressDisconnectMiddleware:
     def __init__(self, app: ASGIApp):
@@ -63,5 +81,6 @@ api_router.include_router(scans.router)
 api_router.include_router(schemas.router)
 api_router.include_router(results.router)
 api_router.include_router(views.router)
+api_router.include_router(alerts.router)
 
 app.include_router(api_router)

@@ -33,7 +33,6 @@ function filterTree(
           if (f === 'warning' && node.status === 'warning') matchesStatus = true
           if (f === 'failed' && node.status === 'error') matchesStatus = true
           if (f === 'ghost' && node.status === 'ghost') matchesStatus = true
-          if (f === 'void' && node.type === 'Void') matchesStatus = true
           if (matchesStatus) break
         }
       }
@@ -114,7 +113,7 @@ function sortTree(nodes: TreeNode[], sortBy: string | null, sortDir: 'asc' | 'de
 export function HostTablePage() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
     const urlParams = new URLSearchParams(window.location.search)
-    return urlParams.get('run') || null
+    return urlParams.get('run') || urlParams.get('run_id') || null
   })
 
   const { data: latestRuns } = useQuery({
@@ -289,7 +288,7 @@ export function HostTablePage() {
   // Build tree
   const rawTree = useMemo(() => {
     if (!data?.hosts) return []
-    return buildTreeData(data.hosts)
+    return buildTreeData(data.hosts, data.metadata?.summary)
   }, [data])
 
   const filteredTreeData = useMemo(() => {
@@ -361,7 +360,7 @@ export function HostTablePage() {
             if (newGlobal.length === 0) newGlobal = ['all']
           } else {
             newGlobal.push(f)
-            const allPossible = ['active', 'warning', 'failed', 'ghost', 'void']
+            const allPossible = ['active', 'warning', 'failed', 'ghost']
             if (allPossible.every(p => newGlobal.includes(p))) {
               newGlobal = ['all']
             }
@@ -456,7 +455,6 @@ export function HostTablePage() {
             if (st === 'warning' && node.status === 'warning') matchesStatus = true
             if (st === 'failed' && node.status === 'error') matchesStatus = true
             if (st === 'ghost' && (node.nodeStats?.ghost || 0) > 0) matchesStatus = true
-            if (st === 'void' && node.type === 'Void') matchesStatus = true
 
             if (matchesStatus || childMatched) {
               if (node.children && node.children.length > 0) {
@@ -526,26 +524,33 @@ export function HostTablePage() {
           
           <div className="h-8 w-px bg-border mx-2"></div>
           
-          {rawTree[0]?.nodeStats && (
-            <div className="flex items-center gap-3 text-xs font-mono font-bold">
-              <div className="flex items-center gap-1.5 bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-1 rounded border border-green-500/20">
-                <span className="uppercase tracking-wider opacity-70">Active</span>
-                <span>{rawTree[0].nodeStats.active}</span>
+          {(data?.metadata?.summary || rawTree[0]?.nodeStats) && (() => {
+            const summary = data?.metadata?.summary || rawTree[0]?.nodeStats
+            return (
+              <div className="flex items-center gap-3 text-xs font-mono font-bold">
+                <div className="flex items-center gap-1.5 bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-1 rounded border border-green-500/20">
+                  <span className="uppercase tracking-wider opacity-70">Active</span>
+                  <span>{summary.active ?? 0}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/20">
+                  <span className="uppercase tracking-wider opacity-70">Warning</span>
+                  <span>{summary.warning ?? 0}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-1 rounded border border-red-500/20">
+                  <span className="uppercase tracking-wider opacity-70">Failed</span>
+                  <span>{summary.failed ?? 0}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-1 rounded border border-purple-500/20">
+                  <span className="uppercase tracking-wider opacity-70">Ghost</span>
+                  <span>{summary.ghost ?? 0}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-500/10 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-500/20">
+                  <span className="uppercase tracking-wider opacity-70">Void</span>
+                  <span>{summary?.void ?? data?.metadata?.summary?.void ?? 0}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/20">
-                <span className="uppercase tracking-wider opacity-70">Warning</span>
-                <span>{rawTree[0].nodeStats.warning}</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-1 rounded border border-red-500/20">
-                <span className="uppercase tracking-wider opacity-70">Failed</span>
-                <span>{rawTree[0].nodeStats.failed}</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-1 rounded border border-purple-500/20">
-                <span className="uppercase tracking-wider opacity-70">Ghost</span>
-                <span>{rawTree[0].nodeStats.ghost}</span>
-              </div>
-            </div>
-          )}
+            )
+          })()}
         </div>
         <div className="flex items-center gap-3">
           <RunHistorySheet 
@@ -659,7 +664,7 @@ export function HostTablePage() {
 
         <span className="text-sm font-semibold text-muted-foreground pl-1">Filters:</span>
         <div className="flex bg-muted/30 border border-border p-1 rounded-lg shadow-sm font-mono text-sm">
-          {(['all', 'active', 'warning', 'failed', 'ghost', 'void']).map((f) => (
+          {(['all', 'active', 'warning', 'failed', 'ghost']).map((f) => (
             <button
               key={f}
               onClick={() => handleGlobalFilterClick(f)}

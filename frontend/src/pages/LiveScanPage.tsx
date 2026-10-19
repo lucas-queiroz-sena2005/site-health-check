@@ -111,7 +111,7 @@ export function LiveScanPage() {
   // Countdown timer for automatic redirection to dashboard
   useEffect(() => {
     if (isFinished && currentRunId) {
-      setCountdown(3)
+      setCountdown(7)
     }
   }, [isFinished, currentRunId])
 
@@ -169,6 +169,15 @@ export function LiveScanPage() {
     setCountdown(null)
   }
 
+  const handleStop = async () => {
+    if (!currentRunId) return
+    try {
+      await fetch(`/api/runs/${currentRunId}/abort`, { method: 'POST' })
+    } catch (err: any) {
+      setLogs(prev => [...prev, `[ERROR] Failed to abort: ${err.message}`])
+    }
+  }
+
   return (
     <div className="p-8 w-full h-full max-w-screen-2xl mx-auto flex flex-col gap-6">
       <div>
@@ -213,13 +222,20 @@ export function LiveScanPage() {
           </div>
           
           {/* Post-Scan Redirection & Action */}
-          {isFinished && currentRunId && (
+          {isFinished && currentRunId ? (
             <div className="absolute bottom-6 right-6 flex items-center gap-3 z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card/95 backdrop-blur-md p-3.5 rounded-lg border-2 border-primary/30 shadow-2xl">
               <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                {countdown !== null && countdown > 0 
-                  ? `Redirecting to dashboard in ${countdown}s...`
-                  : 'Redirecting to dashboard...'}
+                {countdown !== null && countdown > 0 ? (
+                  <>
+                    <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Redirecting to dashboard in {countdown}s...
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground"></span>
+                    Scan finished. Viewing terminal logs.
+                  </>
+                )}
               </span>
               <Button 
                 size="default" 
@@ -231,16 +247,33 @@ export function LiveScanPage() {
               >
                 View Results Now →
               </Button>
+              {countdown !== null && countdown > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setCountdown(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Stay here
+                </Button>
+              )}
+            </div>
+          ) : isScanning && currentRunId ? (
+            <div className="absolute bottom-6 right-6 flex items-center gap-3 z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 bg-card/95 backdrop-blur-md p-3.5 rounded-lg border-2 border-primary/30 shadow-2xl">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                Scan in progress...
+              </span>
               <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setCountdown(null)}
-                className="text-xs text-muted-foreground hover:text-foreground"
+                variant="destructive"
+                size="default" 
+                className="font-bold shadow-sm"
+                onClick={handleStop}
               >
-                Stay here
+                Stop Scan
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
