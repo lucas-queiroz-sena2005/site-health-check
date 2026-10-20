@@ -1,11 +1,17 @@
-# Ignore Python compiled files
+# Ignore Python compiled files and tool caches
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
 src/.ruff_cache/
 
-# Ignore output files
+# Ignore output files and raw logs
 /results*.json
 /results/*.json
+*.raw.log
+conductor/**/*.html
 
 # Ignore virtual environments if created manually
 .venv/

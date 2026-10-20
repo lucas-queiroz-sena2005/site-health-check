@@ -22,13 +22,11 @@ _Avoid_: scan request, job
 A key-value pair attached to a Task and passed unchanged through to its Result (e.g., `target_group: professors`). Used to filter and group Results in Prometheus without modifying the Scanner.
 _Avoid_: tag, metadata, annotation
 
-**TargetGroup**:
-A logical organizational grouping assigned to a Target or range (e.g., `professors`, `datacenter_core`). Helps SREs group, schedule, and run targeted scans across vast infrastructure ranges without typing raw CIDR expressions. Contains an `is_ad_hoc` flag for unsaved groups.
-_Avoid_: classification
+**TargetGroup** *(Deprecated - Retired in ADR 0023)*:
+Historically conceived as a named catalog of targets. Retired in ADR 0023; `Scan` directly owns an inline list of `Target` expressions (`targets: list[str]`).
 
-**Sub-group**:
-A specific sub-tag under a TargetGroup (e.g., `physics_dept`, `hypervisors`).
-_Avoid_: sub-classification
+**Sub-group** *(Deprecated - Retired in ADR 0023)*:
+Historically conceived sub-tag under a TargetGroup. Retired along with TargetGroup.
 
 
 ### Target States
@@ -38,8 +36,8 @@ An IP address or domain that failed to respond to the current scan, but has a hi
 _Avoid_: dead node, missing target
 
 **Void Space**:
-IP addresses within a scanned CIDR block that did not respond and have no historical record of ever responding. These are typically unassigned IPs or empty subnets.
-_Avoid_: empty IPs, unresponsive block
+A derived summary metric representing unassigned or unresponsive IP addresses within a scanned CIDR block (`total_hosts - active_hosts - ghost_hosts`). Strictly a metric count; never a database row, table entity, or synthetic string in an IP address column (ADR 0023).
+_Avoid_: empty IPs, unresponsive block, synthetic void rows
 
 ### Scan outputs
 
@@ -98,7 +96,14 @@ _Avoid_: queue, message bus, transport
 - **ADR 0011**: Filter Immunity for Structural Nodes.
 - **ADR 0012**: Reactive Visual Tree Compression & Opt-out Overrides.
 - **ADR 0013**: Default to Latest Scan Run (Abandon Unified Global View).
-- **ADR 0014**: Canonical Hierarchical Tree-Table Architecture.
+- **ADR 0014**: Canonical Hierarchical Tree-Table Architecture (Superseded by ADR 0023).
 - **ADR 0015**: Server-Sent Events (SSE) Execution Streaming.
-- **ADR 0016**: Execution Config Schema Synchronization (Static Generation).
+- **ADR 0016**: Execution Config Schema Synchronization (Static Generation; Amended by ADR 0023).
+- **ADR 0017**: Engine Streaming Output Contract (NDJSON Deltas on stdout).
+- **ADR 0018**: Scan Run Abort & Partial Results.
+- **ADR 0019**: HTTP Redirect First-Hop Semantics.
+- **ADR 0020**: Execution Flags Reduction & Global Rate Limiting.
+- **ADR 0021**: DNS-Independent Vhost Probing.
+- **ADR 0022**: /16 Scale Strategy (Engine Memory, API Aggregation, Drill-Down UI).
+- **ADR 0023**: Control-Plane Modernization, Engine JSON Input & Flat Relational Explorer.
 
