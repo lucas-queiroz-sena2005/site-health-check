@@ -1,0 +1,7 @@
+Task: Write failing CLI seam tests for --config - (stdin) and --config <file> JSON ingestion (Red Phase)
+Summary of changes:
+- Added integration tests in engine/tests/test_cli_seam.py for --config - (stdin) JSON ingestion, -c <file> JSON ingestion, SIGTERM abort during --config - execution, and validation error when both positional target and --config are omitted.
+Files:
+- engine/tests/test_cli_seam.py
+Why:
+- Establishes the Red phase for dual-mode Engine CLI configuration ingestion.
