@@ -1,0 +1,15 @@
+Task: Implement unified TaskFlags (ExecutionFlags) in engine/src/engine/schemas/engine.py and import in api/src/api/models.py (Green & Refactor Phase)
+Summary of changes:
+- Converted TaskFlags in engine/src/engine/schemas/engine.py to a Pydantic BaseModel with canonical fields (check_http, recursive_san, out_of_scope_depth, check_virtual_hosts, timeout, workers, rate, user_agent), AliasChoices for backward compatibility (timeout_seconds, recursive_san_check), and alias ExecutionFlags = TaskFlags.
+- Updated TaskConfig.to_dict() to cleanly serialize flags using model_dump().
+- Updated engine.py and probes/http.py to access canonical fields flags.recursive_san and flags.timeout.
+- Updated cli.py to pass canonical field names to TaskFlags.
+- Replaced the duplicate ExecutionFlags definition in api/src/api/models.py with an import from engine.schemas.engine.
+Files:
+- engine/src/engine/schemas/engine.py
+- api/src/api/models.py
+- engine/src/engine/engine.py
+- engine/src/engine/probes/http.py
+- engine/src/engine/cli.py
+Why:
+- Unifies flag schemas across the engine and api packages into a single source of truth, eliminating schema duplication and CLI string translation metadata pollution.
