@@ -30,7 +30,7 @@
   - [ ] Add unit test in `api/tests/test_api_runner.py` mocking `asyncio.create_subprocess_exec` in `run_engine_cli` and asserting it invokes `[sys.executable, "-u", "-m", "engine.cli", "--config", "-"]` with `stdin=asyncio.subprocess.PIPE` and writes the JSON-serialized snapshot to `process.stdin`
   - [ ] Add unit test in `api/tests/test_api_runner.py` verifying that a second vhost HTTP-only delta on an already-open port preserves `tcp_status="open"`, `tcp_latency_ms`, `subrun_id`, and merges `discovered_from` without clobbering existing values or causing `_finalize_run` to purge the active host as Void
   - [ ] Add unit tests in `engine/tests/test_http_redirects.py` verifying that: (a) closed TCP ports skip HTTP probing, (b) cross-IP domain SANs record `discovered_from = state_key`, and (c) same-IP SANs (in-scope vhosts) do not create self-loops in `metadata.discovered_from`
-- [ ] Task: Refactor `run_engine_cli` in `api/src/api/services/runner.py` and fix delta emission in `engine/src/engine/engine.py` (Green & Refactor Phase)
+- [x] Task: Refactor `run_engine_cli` in `api/src/api/services/runner.py` and fix delta emission in `engine/src/engine/engine.py` (Green & Refactor Phase) 161f1c1
   - [ ] Replace the 35-line CLI argument construction loop in `api/src/api/services/runner.py` with `stdin` JSON payload delivery and `process.stdin.close()`
   - [ ] Track `open_tcp` in `engine/src/engine/engine.py` to skip HTTP probes on closed ports, emit `tcp_status="open"` on `skip_tcp` vhost probes, and guard `discovered_from` with `task.context.discovered_from != ip_address`
   - [ ] Update `runner.py:_upsert_delta_sync` to preserve open `tcp_status`, non-null `tcp_latency_ms` / `subrun_id`, and union `discovered_from`
