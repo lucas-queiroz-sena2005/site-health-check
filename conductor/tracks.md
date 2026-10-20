@@ -11,4 +11,4 @@
 - [x] **Track: integration** *Link: [./tracks/integration/index.md](./tracks/integration/index.md)*
 - [x] **Track: Implementation of ADR 0022 - Slash16 Scale Strategy** *Link: [./tracks/adr_0022_slash16_scale/index.md](./tracks/adr_0022_slash16_scale/index.md)*
 - [x] **Track: Void Aggregation on Run Finalization** *Link: [./tracks/void_aggregation_run_finalize_20261015/index.md](./tracks/void_aggregation_run_finalize_20261015/index.md)*
-- [~] **Track: Shared Schema & Engine JSON Input (`engine_json_contract`)** *Link: [./tracks/engine_json_contract/index.md](./tracks/engine_json_contract/index.md)*
+- [x] **Track: Shared Schema & Engine JSON Input (`engine_json_contract`)** *Link: [./tracks/engine_json_contract/index.md](./tracks/engine_json_contract/index.md)*
