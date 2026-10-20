@@ -1,0 +1,7 @@
+Task: Write failing unit tests for unified TaskFlags / ExecutionFlags schema (Red Phase)
+Summary of changes:
+- Created engine/tests/test_schemas.py with unit tests asserting TaskFlags and ExecutionFlags are identical, is a Pydantic BaseModel, uses canonical field names (timeout, recursive_san, workers, rate, etc.), rejects CLI metadata pollution, supports legacy aliases (timeout_seconds, recursive_san_check), and serializes cleanly from TaskConfig.to_dict().
+Files:
+- engine/tests/test_schemas.py
+Why:
+- Establishes the Red phase of TDD for unifying the divergent flag schemas between engine and api.
