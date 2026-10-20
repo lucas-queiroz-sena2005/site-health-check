@@ -1,14 +1,14 @@
 # Implementation Plan: Shared Schema & Engine JSON Input (`engine_json_contract`)
 
-## Phase 1: Unify Flag Schemas Across Engine and API (TDD)
+## Phase 1: Unify Flag Schemas Across Engine and API (TDD) [checkpoint: 30145f3]
 - [x] Task: Write failing unit tests for unified `TaskFlags` / `ExecutionFlags` schema (Red Phase) af761f7
-  - [ ] Add schema tests in `engine/tests/test_cli_seam.py` (or `engine/tests/test_schemas.py`) asserting that `TaskFlags` and `api.models.ExecutionFlags` are the identical class, support canonical fields (`timeout`, `recursive_san`, `workers`, `rate`, `check_http`, `check_virtual_hosts`, `out_of_scope_depth`, `user_agent`), accept legacy alias keys (`timeout_seconds`, `recursive_san_check`), and contain no `cli_arg` metadata
+  - [x] Add schema tests in `engine/tests/test_cli_seam.py` (or `engine/tests/test_schemas.py`) asserting that `TaskFlags` and `api.models.ExecutionFlags` are the identical class, support canonical fields (`timeout`, `recursive_san`, `workers`, `rate`, `check_http`, `check_virtual_hosts`, `out_of_scope_depth`, `user_agent`), accept legacy alias keys (`timeout_seconds`, `recursive_san_check`), and contain no `cli_arg` metadata
 - [x] Task: Implement unified `TaskFlags` (`ExecutionFlags`) in `engine/src/engine/schemas/engine.py` and import in `api/src/api/models.py` (Green & Refactor Phase) 30145f3
-  - [ ] Convert `TaskFlags` in `engine/src/engine/schemas/engine.py` to a Pydantic `BaseModel` with canonical field names, `AliasChoices` for legacy keys, and `ExecutionFlags = TaskFlags` alias
-  - [ ] Update `TaskConfig.to_dict()` in `engine/src/engine/schemas/engine.py` so `flags` serializes cleanly into a dictionary
-  - [ ] Update `engine/src/engine/engine.py` and `engine/src/engine/probes/http.py` to read `flags.recursive_san` and `flags.timeout`
-  - [ ] Replace the duplicate `ExecutionFlags` definition in `api/src/api/models.py` with `from engine.schemas.engine import ExecutionFlags`
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+  - [x] Convert `TaskFlags` in `engine/src/engine/schemas/engine.py` to a Pydantic `BaseModel` with canonical field names, `AliasChoices` for legacy keys, and `ExecutionFlags = TaskFlags` alias
+  - [x] Update `TaskConfig.to_dict()` in `engine/src/engine/schemas/engine.py` so `flags` serializes cleanly into a dictionary
+  - [x] Update `engine/src/engine/engine.py` and `engine/src/engine/probes/http.py` to read `flags.recursive_san` and `flags.timeout`
+  - [x] Replace the duplicate `ExecutionFlags` definition in `api/src/api/models.py` with `from engine.schemas.engine import ExecutionFlags`
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 30145f3
 
 ---
 
