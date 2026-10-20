@@ -157,6 +157,8 @@ def test_engine_cli_config_stdin_abort_seam():
     )
     process.stdin.write(json.dumps(payload) + "\n")
     process.stdin.flush()
+    process.stdin.close()
+    process.stdin = None
 
     time.sleep(1.5)
     process.send_signal(signal.SIGTERM)
