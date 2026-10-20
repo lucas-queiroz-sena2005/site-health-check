@@ -12,16 +12,16 @@
 
 ---
 
-## Phase 2: Engine CLI `--config` / `stdin` JSON Ingestion (TDD)
+## Phase 2: Engine CLI `--config` / `stdin` JSON Ingestion (TDD) [checkpoint: bd06252]
 - [x] Task: Write failing CLI seam tests for `--config -` (`stdin`) and `--config <file>` JSON ingestion (Red Phase) aeb6580
-  - [ ] Add unit and integration tests in `engine/tests/test_cli_seam.py` verifying that `engine.cli --config -` accepts an `ExecutionConfig`-shaped JSON payload over `stdin` (including multi-target arrays, port lists/ranges, and `check_http: false` / `rate` flags) and emits expected NDJSON output
-  - [ ] Add test verifying that `SIGTERM` abort handling works identically when launched via `--config -`
-  - [ ] Add test verifying that missing both positional `target` and `--config` exits with a non-zero error code
+  - [x] Add unit and integration tests in `engine/tests/test_cli_seam.py` verifying that `engine.cli --config -` accepts an `ExecutionConfig`-shaped JSON payload over `stdin` (including multi-target arrays, port lists/ranges, and `check_http: false` / `rate` flags) and emits expected NDJSON output
+  - [x] Add test verifying that `SIGTERM` abort handling works identically when launched via `--config -`
+  - [x] Add test verifying that missing both positional `target` and `--config` exits with a non-zero error code
 - [x] Task: Implement `--config` (`-c`) and `stdin` reader in `engine/src/engine/cli.py` (Green & Refactor Phase) bd06252
-  - [ ] Update `build_parser()` in `engine/src/engine/cli.py` to make positional `target` optional (`nargs="?"`) and add `-c` / `--config`
-  - [ ] Implement single-object JSON loading from `sys.stdin` (when `--config -`) or file path, validating the single `ExecutionConfig` snapshot dict (`targets`, `ports`, `flags`) and converting it into internal tasks via existing target expansion
-  - [ ] Preserve existing positional CLI target and flag behavior when `--config` is not passed
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+  - [x] Update `build_parser()` in `engine/src/engine/cli.py` to make positional `target` optional (`nargs="?"`) and add `-c` / `--config`
+  - [x] Implement single-object JSON loading from `sys.stdin` (when `--config -`) or file path, validating the single `ExecutionConfig` snapshot dict (`targets`, `ports`, `flags`) and converting it into internal tasks via existing target expansion
+  - [x] Preserve existing positional CLI target and flag behavior when `--config` is not passed
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) bd06252
 
 ---
 
