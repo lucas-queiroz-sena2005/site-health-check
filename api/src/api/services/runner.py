@@ -14,7 +14,6 @@ from sqlmodel import Session, col, delete, select
 
 from api.database import engine as db_engine
 from api.models import (
-    ExecutionFlags,
     HostState,
     HttpRoutingCheck,
     PortState,
