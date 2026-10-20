@@ -26,7 +26,7 @@
 ---
 
 ## Phase 3: Zero-Translation Subprocess Dispatch & Delta Integrity Fixes (TDD)
-- [ ] Task: Write failing tests for `stdin` JSON dispatch and non-destructive delta ingestion (Red Phase)
+- [x] Task: Write failing tests for `stdin` JSON dispatch and non-destructive delta ingestion (Red Phase) 3f38661
   - [ ] Add unit test in `api/tests/test_api_runner.py` mocking `asyncio.create_subprocess_exec` in `run_engine_cli` and asserting it invokes `[sys.executable, "-u", "-m", "engine.cli", "--config", "-"]` with `stdin=asyncio.subprocess.PIPE` and writes the JSON-serialized snapshot to `process.stdin`
   - [ ] Add unit test in `api/tests/test_api_runner.py` verifying that a second vhost HTTP-only delta on an already-open port preserves `tcp_status="open"`, `tcp_latency_ms`, `subrun_id`, and merges `discovered_from` without clobbering existing values or causing `_finalize_run` to purge the active host as Void
   - [ ] Add unit tests in `engine/tests/test_http_redirects.py` verifying that: (a) closed TCP ports skip HTTP probing, (b) cross-IP domain SANs record `discovered_from = state_key`, and (c) same-IP SANs (in-scope vhosts) do not create self-loops in `metadata.discovered_from`
