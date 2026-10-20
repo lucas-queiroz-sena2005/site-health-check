@@ -29,45 +29,77 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
     with Session(db_engine) as session:
         # 1. Upsert HostState
         metadata = data.get("metadata", {})
+        host_id = f"{run_id}_{ip}"
+        existing_host = session.get(HostState, host_id)
+
+        resolved_from = metadata.get("resolved_from")
+        if not resolved_from and existing_host:
+            resolved_from = existing_host.metadata_resolved_from
+
+        subrun_id = metadata.get("subrun_id")
+        if not subrun_id and existing_host:
+            subrun_id = existing_host.subrun_id
+
+        new_discovered = metadata.get("discovered_from") or []
+        if existing_host and existing_host.metadata_discovered_from_json:
+            merged_discovered = list(dict.fromkeys(existing_host.metadata_discovered_from_json + new_discovered))
+        else:
+            merged_discovered = list(dict.fromkeys(new_discovered))
+
         stmt_host = insert(HostState).values(
-            id=f"{run_id}_{ip}",
+            id=host_id,
             scan_run_id=run_id,
             ip_address=ip,
-            metadata_resolved_from=metadata.get("resolved_from"),
-            metadata_discovered_from_json=metadata.get("discovered_from", []),
-            subrun_id=metadata.get("subrun_id")
+            metadata_resolved_from=resolved_from,
+            metadata_discovered_from_json=merged_discovered,
+            subrun_id=subrun_id
         ).on_conflict_do_update(
             index_elements=["scan_run_id", "ip_address"],
             set_={
-                "metadata_resolved_from": metadata.get("resolved_from"),
-                "metadata_discovered_from_json": metadata.get("discovered_from", []),
-                "subrun_id": metadata.get("subrun_id")
+                "metadata_resolved_from": resolved_from,
+                "metadata_discovered_from_json": merged_discovered,
+                "subrun_id": subrun_id
             }
         ).returning(column("id"))
         
         result_host = session.exec(stmt_host).first()
-        host_id: str = f"{run_id}_{ip}" if result_host is None else str(result_host[0])
+        host_id = f"{run_id}_{ip}" if result_host is None else str(result_host[0])
 
         # 2. Upsert PortState
         ports = data.get("ports", {})
         for port_str, port_data in ports.items():
             port_num = int(port_str)
+            port_id = f"{host_id}_{port_num}"
+            existing_port = session.get(PortState, port_id)
+
+            incoming_tcp = port_data.get("tcp_status", "closed")
+            if existing_port and existing_port.tcp_status == "open":
+                final_tcp_status = "open"
+            else:
+                final_tcp_status = incoming_tcp
+
+            incoming_latency = port_data.get("tcp_latency_ms")
+            if incoming_latency is None and existing_port:
+                final_latency = existing_port.tcp_latency_ms
+            else:
+                final_latency = incoming_latency
+
             stmt_port = insert(PortState).values(
-                id=f"{host_id}_{port_num}",
+                id=port_id,
                 host_state_id=host_id,
                 port_number=port_num,
-                tcp_status=port_data.get("tcp_status", "closed"),
-                tcp_latency_ms=port_data.get("tcp_latency_ms")
+                tcp_status=final_tcp_status,
+                tcp_latency_ms=final_latency
             ).on_conflict_do_update(
                 index_elements=["host_state_id", "port_number"],
                 set_={
-                    "tcp_status": port_data.get("tcp_status", "closed"),
-                    "tcp_latency_ms": port_data.get("tcp_latency_ms")
+                    "tcp_status": final_tcp_status,
+                    "tcp_latency_ms": final_latency
                 }
             ).returning(column("id"))
             
             result_port = session.exec(stmt_port).first()
-            port_id: str = f"{host_id}_{port_num}" if result_port is None else str(result_port[0])
+            port_id = f"{host_id}_{port_num}" if result_port is None else str(result_port[0])
 
             # 3. Handle TLS Certificates
             tls = port_data.get("tls_certificate")
@@ -279,50 +311,22 @@ async def run_engine_cli(run_id: str, snapshot: dict[str, Any], app_state: Any):
                 session.add(run)
                 session.commit()
 
-        cmd = [sys.executable, "-u", "-m", "engine.cli"]
-        
-        targets = snapshot.get("targets", [])
-        if targets:
-            cmd.append(",".join(targets))
-            
-        ports = snapshot.get("ports", [])
-        if ports:
-            cmd.extend(["-p", ",".join(map(str, ports))])
-            
-        flags = snapshot.get("flags", {})
-        if isinstance(flags, dict) and "flags" in flags:
-            flags = flags["flags"]
-        
-        fields = ExecutionFlags.model_fields
-        for key, value in flags.items():
-            if value is None or key not in fields:
-                continue
-                
-            extra = fields[key].json_schema_extra or {}
-            if not isinstance(extra, dict):
-                continue
-            cli_arg = extra.get("cli_arg")
-            is_switch = extra.get("is_switch", False)
-            
-            if not isinstance(cli_arg, str):
-                continue
-                
-            if is_switch and isinstance(value, bool):
-                if value:
-                    cmd.append(cli_arg)
-                else:
-                    cmd.append(cli_arg.replace("--", "--no-"))
-            elif isinstance(value, list):
-                for item in value:
-                    cmd.extend([cli_arg, str(item)])
-            else:
-                cmd.extend([cli_arg, str(value)])
-                
+        cmd = [sys.executable, "-u", "-m", "engine.cli", "--config", "-"]
         process = await asyncio.create_subprocess_exec(
             *cmd,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
+
+        if process.stdin:
+            process.stdin.write(json.dumps(snapshot).encode("utf-8") + b"\n")
+            await process.stdin.drain()
+            process.stdin.close()
+            try:
+                await process.stdin.wait_closed()
+            except Exception:
+                pass
         
         app_state.processes[run_id] = process
         
