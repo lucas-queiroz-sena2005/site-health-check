@@ -8,3 +8,14 @@ Files:
 - engine/src/engine/engine.py
 Why:
 - Eliminates CLI string translation, fixes bogus HTTP timeouts on closed ports, preserves open port states across vhost deltas to prevent false Void host deletion, and correctly records cross-IP SAN lineage without self-loops.
+
+Phase 3 Checkpoint Verification Report
+Automated Tests Command:
+CI=true ./.venv/bin/pytest engine/tests/ api/tests/ (77 passed, 0 failures)
+
+Manual Verification Steps:
+1. Verified delta integrity via runner _upsert_delta_sync preserving open tcp_status and merging discovered_from.
+2. Verified zero-translation subprocess dispatch with stdin snapshot injection.
+
+User Confirmation:
+Confirmed meeting expectations by user with instruction to run live CLI exploration.
