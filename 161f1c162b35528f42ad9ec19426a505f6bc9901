@@ -1,0 +1,10 @@
+Task: Refactor run_engine_cli in api/src/api/services/runner.py and fix delta emission in engine/src/engine/engine.py (Green & Refactor Phase)
+Summary of changes:
+- Replaced the 40-line CLI string argument construction loop in api/src/api/services/runner.py with stdin JSON delivery via [sys.executable, '-u', '-m', 'engine.cli', '--config', '-'].
+- Updated _upsert_delta_sync in runner.py to preserve open tcp_status, preserve non-null tcp_latency_ms and subrun_id, and union metadata_discovered_from_json lists.
+- Added open_tcp tracking in engine/src/engine/engine.py to skip HTTP probing on closed TCP ports, emit PortState(tcp_status='open') on skipped TCP probes when port was opened, and eliminated same-IP vhost self-loops in metadata.discovered_from.
+Files:
+- api/src/api/services/runner.py
+- engine/src/engine/engine.py
+Why:
+- Eliminates CLI string translation, fixes bogus HTTP timeouts on closed ports, preserves open port states across vhost deltas to prevent false Void host deletion, and correctly records cross-IP SAN lineage without self-loops.
