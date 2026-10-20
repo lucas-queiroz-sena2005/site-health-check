@@ -1,0 +1,9 @@
+Task: Write failing tests for stdin JSON dispatch and non-destructive delta ingestion (Red Phase)
+Summary of changes:
+- Added unit tests in api/tests/test_api_runner.py asserting stdin JSON dispatch via [sys.executable, '-u', '-m', 'engine.cli', '--config', '-'] and non-destructive delta ingestion (preserving open tcp_status, tcp_latency_ms, subrun_id, and merging discovered_from).
+- Added unit tests in engine/tests/test_http_redirects.py asserting skipping HTTP probes on closed TCP ports, cross-IP SAN discovery passing discovered_from = state_key, and eliminating same-IP vhost self-loops in metadata.discovered_from.
+Files:
+- api/tests/test_api_runner.py
+- engine/tests/test_http_redirects.py
+Why:
+- Establishes the Red phase for zero-translation subprocess dispatch and delta integrity fixes.
