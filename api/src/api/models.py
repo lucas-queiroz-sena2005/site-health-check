@@ -18,35 +18,7 @@ class ScanRunStatus(str, Enum):
     FAILED = "FAILED"
     ABORTED = "ABORTED"
 
-class ExecutionFlags(BaseModel):
-    check_http: bool = PydanticField(
-        default=True, title="Check HTTP Routing",
-        json_schema_extra={"cli_arg": "--check-http", "is_switch": True}
-    )
-    recursive_san: bool = PydanticField(
-        default=False, title="Recursive SAN Check",
-        json_schema_extra={"cli_arg": "--recursive-san", "is_switch": True}
-    )
-    out_of_scope_depth: int = PydanticField(
-        default=0, title="Out-of-Scope Depth",
-        json_schema_extra={"cli_arg": "--out-of-scope-depth", "is_switch": False}
-    )
-    check_virtual_hosts: bool = PydanticField(
-        default=True, title="Check Virtual Hosts",
-        json_schema_extra={"cli_arg": "--check-virtual-hosts", "is_switch": True}
-    )
-    timeout: int = PydanticField(
-        default=10, title="Timeout (seconds)",
-        json_schema_extra={"cli_arg": "--timeout", "is_switch": False}
-    )
-    workers: int = PydanticField(
-        default=100, title="Async Workers",
-        json_schema_extra={"cli_arg": "-w", "is_switch": False}
-    )
-    rate: float = PydanticField(
-        default=50.0, title="Rate Limit (req/s)",
-        json_schema_extra={"cli_arg": "--rate", "is_switch": False}
-    )
+from engine.schemas.engine import ExecutionFlags, TaskFlags
 
 class AlertConfig(BaseModel):
     webhook_url: str | None = PydanticField(default=None, title="Webhook URL")

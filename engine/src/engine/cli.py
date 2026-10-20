@@ -103,12 +103,13 @@ def main(args: list | None = None) -> int:
   
     flags = TaskFlags(
         check_http=parsed_args.check_http,
-        timeout_seconds=parsed_args.timeout,
-        recursive_san_check=parsed_args.recursive_san,
+        timeout=parsed_args.timeout,
+        recursive_san=parsed_args.recursive_san,
         check_virtual_hosts=parsed_args.check_virtual_hosts,
         out_of_scope_depth=parsed_args.out_of_scope_depth,
         rate=parsed_args.rate,
-        user_agent=parsed_args.user_agent
+        user_agent=parsed_args.user_agent,
+        workers=getattr(parsed_args, "workers", 100),
     )
     
     json_payload = []

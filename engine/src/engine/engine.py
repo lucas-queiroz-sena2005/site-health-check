@@ -110,7 +110,7 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                     local_state.ports[port] = tcp_result
                     
                     # If we found SANs, and recursive checking is enabled in the flags
-                    if tcp_result.tls_certificate and task.context.flags.recursive_san_check:
+                    if tcp_result.tls_certificate and task.context.flags.recursive_san:
                         for san in tcp_result.tls_certificate.domains_discovered_sans:
                             if "*" not in san:  # Avoid queuing wildcard domains directly
                                 try:
@@ -202,7 +202,7 @@ async def _producer_routine(queue: asyncio.Queue, tasks_data: list[dict[str, Any
         return
         
     first_task_dict = tasks_data[0]
-    flags = TaskFlags(**first_task_dict.get("flags", {}))
+    flags = TaskFlags.model_validate(first_task_dict.get("flags") or {})
     context = TaskContext(
         flags=flags,
         discovered_from=first_task_dict.get("discovered_from"),
