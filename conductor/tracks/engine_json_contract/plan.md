@@ -36,3 +36,8 @@
   - [x] Update `runner.py:_upsert_delta_sync` to preserve open `tcp_status`, non-null `tcp_latency_ms` / `subrun_id`, and union `discovered_from`
   - [x] Run full test suite across `engine/tests/` and `api/tests/` to verify zero regressions
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 161f1c1
+
+---
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions 8335b3c
