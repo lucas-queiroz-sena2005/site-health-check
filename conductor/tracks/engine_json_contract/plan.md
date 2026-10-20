@@ -13,7 +13,7 @@
 ---
 
 ## Phase 2: Engine CLI `--config` / `stdin` JSON Ingestion (TDD)
-- [ ] Task: Write failing CLI seam tests for `--config -` (`stdin`) and `--config <file>` JSON ingestion (Red Phase)
+- [x] Task: Write failing CLI seam tests for `--config -` (`stdin`) and `--config <file>` JSON ingestion (Red Phase) aeb6580
   - [ ] Add unit and integration tests in `engine/tests/test_cli_seam.py` verifying that `engine.cli --config -` accepts an `ExecutionConfig`-shaped JSON payload over `stdin` (including multi-target arrays, port lists/ranges, and `check_http: false` / `rate` flags) and emits expected NDJSON output
   - [ ] Add test verifying that `SIGTERM` abort handling works identically when launched via `--config -`
   - [ ] Add test verifying that missing both positional `target` and `--config` exits with a non-zero error code
