@@ -226,3 +226,121 @@ def test_finalize_run_preserves_active_and_ghost_hosts_while_pruning_void(test_e
             assert summary["active"] == 1
             assert summary["ghost"] == 1
             assert summary["void"] == 2
+
+
+@pytest.mark.asyncio
+async def test_run_engine_cli_stdin_dispatch(test_engine):
+    import json
+    import asyncio
+    from unittest.mock import AsyncMock, patch, MagicMock
+    from api.services.runner import run_engine_cli
+    from api.models import ScanRun, ScanRunStatus
+    from datetime import datetime, timezone
+
+    run_id = str(uuid.uuid4())
+    snapshot = {
+        "targets": ["10.0.0.1", "10.0.0.2"],
+        "ports": [80, 443],
+        "flags": {"check_http": False, "rate": 25.0}
+    }
+
+    with patch("api.services.runner.db_engine", test_engine):
+        with Session(test_engine) as session:
+            session.add(ScanRun(
+                id=run_id,
+                status=ScanRunStatus.PENDING,
+                started_at=datetime.now(timezone.utc),
+                execution_config_snapshot_json=snapshot
+            ))
+            session.commit()
+
+        mock_process = AsyncMock()
+        mock_process.stdin = MagicMock()
+        mock_process.stdin.write = MagicMock()
+        mock_process.stdin.drain = AsyncMock()
+        mock_process.stdin.close = MagicMock()
+        mock_process.stdin.wait_closed = AsyncMock()
+        mock_process.stdout = AsyncMock()
+        mock_process.stdout.readline = AsyncMock(side_effect=[
+            b'{"status": "completed"}\n',
+            b''
+        ])
+        mock_process.stderr = AsyncMock()
+        mock_process.stderr.readline = AsyncMock(return_value=b'')
+        mock_process.wait = AsyncMock(return_value=0)
+
+        mock_app_state = MagicMock()
+        mock_app_state.run_logs = {}
+        mock_app_state.log_subscribers = {}
+        mock_app_state.processes = {}
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process) as mock_exec:
+            await run_engine_cli(run_id, snapshot, mock_app_state)
+
+            mock_exec.assert_called_once()
+            cmd_args = mock_exec.call_args[0]
+            assert cmd_args[1:] == ("-u", "-m", "engine.cli", "--config", "-")
+            assert mock_exec.call_args[1].get("stdin") == asyncio.subprocess.PIPE
+
+            written_payload = b"".join(call.args[0] for call in mock_process.stdin.write.call_args_list).decode("utf-8")
+            loaded = json.loads(written_payload)
+            assert loaded["targets"] == ["10.0.0.1", "10.0.0.2"]
+            assert loaded["ports"] == [80, 443]
+            assert loaded["flags"]["check_http"] is False
+
+
+def test_upsert_delta_sync_preserves_open_tcp_and_merges_discovered_from(test_engine):
+    with patch("api.services.runner.db_engine", test_engine):
+        run_id = str(uuid.uuid4())
+        ip = "192.168.1.50"
+
+        # Delta 1: TCP probe reveals port 443 open with latency 15ms and subrun_id
+        delta1 = {
+            "metadata": {
+                "resolved_from": "host1.local",
+                "discovered_from": ["192.168.1.1"],
+                "subrun_id": "192.168.1.0/24"
+            },
+            "ports": {
+                "443": {
+                    "tcp_status": "open",
+                    "tcp_latency_ms": 15
+                }
+            }
+        }
+        _upsert_delta_sync(run_id, ip, delta1)
+
+        # Delta 2: VHost probe arrives where TCP check was skipped (tcp_status closed/None, subrun_id None)
+        delta2 = {
+            "metadata": {
+                "resolved_from": "vhost.local",
+                "discovered_from": ["192.168.1.2"],
+                "subrun_id": None
+            },
+            "ports": {
+                "443": {
+                    "tcp_status": "closed",
+                    "tcp_latency_ms": None,
+                    "http_routing_checks": {
+                        "vhost.local": {
+                            "status_code": 200,
+                            "path_checked": "/"
+                        }
+                    }
+                }
+            }
+        }
+        _upsert_delta_sync(run_id, ip, delta2)
+
+        with Session(test_engine) as session:
+            host = session.exec(select(HostState).where(HostState.scan_run_id == run_id, HostState.ip_address == ip)).first()
+            assert host is not None
+            assert host.subrun_id == "192.168.1.0/24"
+            assert "192.168.1.1" in host.metadata_discovered_from_json
+            assert "192.168.1.2" in host.metadata_discovered_from_json
+
+            port = session.exec(select(PortState).where(PortState.host_state_id == host.id, PortState.port_number == 443)).first()
+            assert port is not None
+            assert port.tcp_status == "open"
+            assert port.tcp_latency_ms == 15
+
