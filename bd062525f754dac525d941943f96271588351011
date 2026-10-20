@@ -1,0 +1,11 @@
+Task: Implement --config (-c) and stdin reader in engine/src/engine/cli.py (Green & Refactor Phase)
+Summary of changes:
+- Updated build_parser() in engine/src/engine/cli.py to make positional target optional (nargs='?') and added -c/--config option.
+- Implemented execution config JSON loading from stdin (--config -) or file path (-c <path>), validating targets, ports, and flags, expanding segments, and converting to TaskConfig payloads.
+- Preserved existing positional CLI target behavior and ensured missing both target and config errors out.
+- Handled workers_count from flags.workers when loading from config.
+Files:
+- engine/src/engine/cli.py
+- engine/tests/test_cli_seam.py
+Why:
+- Enables the Engine CLI to ingest execution configurations directly via stdin or file as structured JSON without string reconstruction.
