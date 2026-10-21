@@ -30,12 +30,12 @@
 ---
 
 ## Phase 3: Deterministic Backend Evaluation Pipeline (`evaluator.py`) (TDD)
-- [ ] Task: Write failing tests for canonical finding codes, bottom-up rollups, and run evaluation (Red Phase)
-  - [ ] Test canonical finding code generation (`TCP_CLOSED`, `TLS_INVALID`, `TLS_EXPIRED`, `TLS_EXPIRING_SOON`, `TLS_DEPRECATED_VERSION`, `HTTP_5XX`, `HTTP_4XX`, `HTTP_ERROR`, `HOST_GHOST`, `RUN_ABORTED`)
-  - [ ] Test Level 1 HTTP check evaluation (`status`, `finding_code`)
-  - [ ] Test Level 2 `PortState` rollups (`san_count`, `http_check_count`, `worst_http_status`, `finding_codes`, status `failed` if `HTTP_ERROR`)
-  - [ ] Test Level 3 `HostState` rollups (`depth`, `vhost_count`, `open_port_count`, latency/tls/http rollups, host-level `status` and `finding_codes`)
-  - [ ] Test end-to-end `evaluate_scan_run(scan_run_id, session)` execution on run completion
+- [x] Task: Write failing tests for canonical finding codes, bottom-up rollups, and run evaluation (Red Phase) 1fd1f57
+  - [x] Test canonical finding code generation (`TCP_CLOSED`, `TLS_INVALID`, `TLS_EXPIRED`, `TLS_EXPIRING_SOON`, `TLS_DEPRECATED_VERSION`, `HTTP_5XX`, `HTTP_4XX`, `HTTP_ERROR`, `HOST_GHOST`, `RUN_ABORTED`)
+  - [x] Test Level 1 HTTP check evaluation (`status`, `finding_code`)
+  - [x] Test Level 2 `PortState` rollups (`san_count`, `http_check_count`, `worst_http_status`, `finding_codes`, status `failed` if `HTTP_ERROR`)
+  - [x] Test Level 3 `HostState` rollups (`depth`, `vhost_count`, `open_port_count`, latency/tls/http rollups, host-level `status` and `finding_codes`)
+  - [x] Test end-to-end `evaluate_scan_run(scan_run_id, session)` execution on run completion
 - [ ] Task: Implement `api/src/api/services/evaluator.py` and hook into run finalization (Green & Refactor Phase)
   - [ ] Add pre-computed columns to `HttpRoutingCheck`, `PortState`, and `HostState` in `api/src/api/models.py`
   - [ ] Implement bottom-up evaluation algorithms in `api/src/api/services/evaluator.py`
