@@ -1,0 +1,6 @@
+Task: Implement api/src/api/services/evaluator.py and hook into run finalization (Green & Refactor Phase)
+- Added pre-computed columns to HttpRoutingCheck (status, finding_code)
+- Added pre-computed columns to PortState (status, san_count, http_check_count, worst_http_status, finding_codes)
+- Added pre-computed columns to HostState (status, scanned_port_count, open_port_count, vhost_count, min_tcp_latency_ms, min_tls_expires_days, worst_tls_version, worst_http_status, finding_codes)
+- Implemented evaluate_scan_run in api/src/api/services/evaluator.py with Level 1 -> Level 2 -> Level 3 bottom-up evaluation
+- Hooked evaluate_scan_run into _finalize_run in api/src/api/services/runner.py
