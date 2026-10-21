@@ -36,10 +36,10 @@
   - [x] Test Level 2 `PortState` rollups (`san_count`, `http_check_count`, `worst_http_status`, `finding_codes`, status `failed` if `HTTP_ERROR`)
   - [x] Test Level 3 `HostState` rollups (`depth`, `vhost_count`, `open_port_count`, latency/tls/http rollups, host-level `status` and `finding_codes`)
   - [x] Test end-to-end `evaluate_scan_run(scan_run_id, session)` execution on run completion
-- [ ] Task: Implement `api/src/api/services/evaluator.py` and hook into run finalization (Green & Refactor Phase)
-  - [ ] Add pre-computed columns to `HttpRoutingCheck`, `PortState`, and `HostState` in `api/src/api/models.py`
-  - [ ] Implement bottom-up evaluation algorithms in `api/src/api/services/evaluator.py`
-  - [ ] Hook `evaluate_scan_run` into `_finalize_run` in `api/src/api/services/runner.py` within an atomic transaction
+- [x] Task: Implement `api/src/api/services/evaluator.py` and hook into run finalization (Green & Refactor Phase) 3b4bc39
+  - [x] Add pre-computed columns to `HttpRoutingCheck`, `PortState`, and `HostState` in `api/src/api/models.py`
+  - [x] Implement bottom-up evaluation algorithms in `api/src/api/services/evaluator.py`
+  - [x] Hook `evaluate_scan_run` into `_finalize_run` in `api/src/api/services/runner.py` within an atomic transaction
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
