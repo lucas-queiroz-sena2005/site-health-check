@@ -15,7 +15,7 @@
 
 ---
 
-## Phase 2: HostState Lineage Set-Union & Void Sentinel Purge (TDD)
+## Phase 2: HostState Lineage Set-Union & Void Sentinel Purge (TDD) [checkpoint: 88c5d9a]
 - [x] Task: Write failing tests for set-union domain/lineage storage and complete removal of Void sentinels (Red Phase) 0a83a50
   - [x] Test `runner.py` delta ingestion merging `resolved_domains` and `discovered_from` without clobbering existing vhost probes
   - [x] Test that non-responsive targets never produce `"Void (X)"` sentinel strings in SQLite or API responses
@@ -25,7 +25,7 @@
   - [x] Update `_upsert_delta_sync` in `api/src/api/services/runner.py` to perform set-union on `resolved_domains` and `discovered_from`
   - [x] Eliminate all `ip_address.startswith("Void")` checks and synthetic node logic across `runner.py`, `aggregation.py`, and `alerts.py`
   - [x] Refactor legacy assertions in `api/tests/` that assert dictionary indexing or Void sentinel strings
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 88c5d9a
 
 ---
 
