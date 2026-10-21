@@ -6,11 +6,11 @@
   - [x] Test `UniqueConstraint("port_state_id")` enforcement on `TlsCertificate`
   - [x] Test direct `Scan.targets` JSON storage and absence of `TargetGroup` / `ScanTargetGroupLink`
   - [x] Test removal of `@model_serializer` on `HostState` and `PortState`, ensuring standard attribute and relationship access
-- [ ] Task: Implement model updates, SQLite PRAGMAs, and scan router adjustments (Green & Refactor Phase)
-  - [ ] Configure engine event listeners in `api/src/api/database.py` for WAL mode, foreign keys, and busy timeout
-  - [ ] Drop `TargetGroup` & `ScanTargetGroupLink`, add `targets` JSON column to `Scan`, add SQLite migration in `init_db()`
-  - [ ] Refactor `api/src/api/routers/scans.py` to create, read, and serialize `targets` directly on `Scan`
-  - [ ] Remove `@model_serializer` and rename relationships (`ports`, `http_routing_checks`) in `api/src/api/models.py`
+- [x] Task: Implement model updates, SQLite PRAGMAs, and scan router adjustments (Green & Refactor Phase) 05df7e8
+  - [x] Configure engine event listeners in `api/src/api/database.py` for WAL mode, foreign keys, and busy timeout
+  - [x] Drop `TargetGroup` & `ScanTargetGroupLink`, add `targets` JSON column to `Scan`, add SQLite migration in `init_db()`
+  - [x] Refactor `api/src/api/routers/scans.py` to create, read, and serialize `targets` directly on `Scan`
+  - [x] Remove `@model_serializer` and rename relationships (`ports`, `http_routing_checks`) in `api/src/api/models.py`
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
