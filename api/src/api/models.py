@@ -89,6 +89,9 @@ class HttpRoutingCheck(SQLModel, table=True):
     server_header: str | None = None
     notes: str | None = None
 
+    status: str = Field(default="ok")  # ok | warning | failed
+    finding_code: str | None = None
+
 class TlsCertificate(SQLModel, table=True):
     __tablename__: str = "tls_certificates"  # type: ignore
     __table_args__ = (UniqueConstraint("port_state_id"),)
@@ -112,6 +115,12 @@ class PortState(SQLModel, table=True):
     port_number: int
     tcp_status: str = "closed"
     tcp_latency_ms: int | None = None
+
+    status: str = Field(default="ok")  # ok | warning | failed
+    san_count: int = Field(default=0)
+    http_check_count: int = Field(default=0)
+    worst_http_status: int | None = None
+    finding_codes: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     
     tls_certificate: TlsCertificate | None = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
     http_routing_checks: list[HttpRoutingCheck] = Relationship(
@@ -131,12 +140,24 @@ class HostState(SQLModel, table=True):
     discovered_from: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     depth: int = Field(default=0)
 
+    status: str = Field(default="ok")  # ok | warning | failed | ghost
+    open_port_count: int = Field(default=0)
+    scanned_port_count: int = Field(default=0)
+    vhost_count: int = Field(default=0)
+    min_tcp_latency_ms: int | None = None
+    min_tls_expires_days: int | None = None
+    worst_tls_version: str | None = None
+    worst_http_status: int | None = None
+    finding_codes: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
         if self.depth == 0 and self.discovered_from:
             filtered = [d for d in self.discovered_from if d != self.ip_address]
             if filtered:
                 self.depth = len(filtered)
+        if self.vhost_count == 0 and self.resolved_domains:
+            self.vhost_count = len(self.resolved_domains)
     
     ports: list[PortState] = Relationship(
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}

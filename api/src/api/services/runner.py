@@ -263,6 +263,10 @@ def _finalize_run(run_id: str, returncode: int):
 
         session.commit()
 
+        # 4. Deterministic Backend Evaluation Pipeline
+        from api.services.evaluator import evaluate_scan_run
+        evaluate_scan_run(run_id, session)
+
         # 4. Anomalies and operational summary
         anomalies = 0
         for host in kept_hosts:
