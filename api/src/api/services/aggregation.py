@@ -16,7 +16,7 @@ def aggregate_void_nodes(
     for ip in ip_states:
         if ip.ip_address.startswith("Void"):
             continue
-        has_open = any(p.tcp_status == "open" for p in ip.ports_list)
+        has_open = any(p.tcp_status == "open" for p in ip.ports)
         if has_open or ip.ip_address in historical_active_ips:
             kept_ips.append(ip)
 

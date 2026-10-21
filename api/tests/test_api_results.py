@@ -75,18 +75,18 @@ def test_get_results(client: TestClient, session: Session):
     print("DATA: ", data)
     assert len(data) == 1
     assert data[0]["ip_address"] == "8.8.8.8"
-    assert data[0]["metadata"]["resolved_from"] == "google.com"
+    assert data[0]["metadata_resolved_from"] == "google.com"
     
-    # Assert dictionary structure for ports
-    assert "443" in data[0]["ports"]
-    port_443 = data[0]["ports"]["443"]
-    assert port_443["tcp_status"] == "open"
-    assert port_443["tls_certificate"]["valid"] is True
-    
-    # Assert dictionary structure for http_routing_checks
-    assert "google.com" in port_443["http_routing_checks"]
-    http_res = port_443["http_routing_checks"]["google.com"]
-    assert http_res["status_code"] == 200
+    # Assert relational models maintain direct object hierarchy without dict wrappers
+    session.refresh(ip_state)
+    assert len(ip_state.ports) == 1
+    port_443 = ip_state.ports[0]
+    assert port_443.port_number == 443
+    assert port_443.tcp_status == "open"
+    assert port_443.tls_certificate.valid is True
+    assert len(port_443.http_routing_checks) == 1
+    assert port_443.http_routing_checks[0].domain == "google.com"
+    assert port_443.http_routing_checks[0].status_code == 200
 
 def test_host_state_subrun_id(session: Session):
     job = ScanRun(execution_config_snapshot_json={"targets": ["10.0.0.0/24"]}, status=ScanRunStatus.COMPLETED)

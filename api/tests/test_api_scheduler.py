@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from api.models import Scan, ScanRun, ScanRunStatus, ScanTargetGroupLink, TargetGroup
+from api.models import Scan, ScanRun, ScanRunStatus
 from api.services.scheduler import check_and_run_scheduled_scans
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
@@ -35,16 +35,12 @@ async def test_scheduler_triggers_due_scan(monkeypatch):
         scan = Scan(
             name="Periodic Scan",
             cron_expression="*/5 * * * *",
+            targets=["10.0.0.1"],
             ports_json=[80],
             flags_json={}
         )
         session.add(scan)
-        tg = TargetGroup(name="TG1", targets_json=["10.0.0.1"])
-        session.add(tg)
         session.commit()
-
-        link = ScanTargetGroupLink(scan_id=scan.id, target_group_id=tg.id)
-        session.add(link)
 
         # Pretend a run occurred 6 minutes ago
         past_time = datetime.now(timezone.utc) - timedelta(minutes=6)

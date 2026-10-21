@@ -82,9 +82,7 @@ async def check_and_run_scheduled_scans(app_state):
                             
                 if should_run:
                     logger.info(f"Triggering scheduled scan: {scan.name} ({scan.id})")
-                    targets = []
-                    for tg in scan.target_groups:
-                        targets.extend(tg.targets_json)
+                    targets = scan.targets or []
                         
                     snapshot = {
                         "targets": targets,

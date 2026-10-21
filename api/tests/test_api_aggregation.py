@@ -45,13 +45,13 @@ def test_void_aggregation_and_ghosting(client: TestClient, session: Session):
     old_ip = HostState(scan_run_id=old_job.id, ip_address="10.0.0.1", metadata_resolved_from="10.0.0.0/24")
     session.add(old_ip)
     session.flush()
-    old_ip.ports_list = [PortState(host_state_id=old_ip.id, port_number=80, tcp_status="open")]
+    old_ip.ports = [PortState(host_state_id=old_ip.id, port_number=80, tcp_status="open")]
     
     # IP 2: Active 2 days ago, now dead. Should be GHOST because it's inside the 7d window.
     recent_ip = HostState(scan_run_id=recent_job.id, ip_address="10.0.0.2", metadata_resolved_from="10.0.0.0/24")
     session.add(recent_ip)
     session.flush()
-    recent_ip.ports_list = [PortState(host_state_id=recent_ip.id, port_number=80, tcp_status="open")]
+    recent_ip.ports = [PortState(host_state_id=recent_ip.id, port_number=80, tcp_status="open")]
     
     session.commit()
     
@@ -67,10 +67,10 @@ def test_void_aggregation_and_ghosting(client: TestClient, session: Session):
     session.add_all([curr_ip1, curr_ip2, curr_ip3, curr_ip4])
     session.flush()
     
-    curr_ip1.ports_list = [PortState(host_state_id=curr_ip1.id, port_number=80, tcp_status="closed")]
-    curr_ip2.ports_list = [PortState(host_state_id=curr_ip2.id, port_number=80, tcp_status="closed")]
-    curr_ip3.ports_list = [PortState(host_state_id=curr_ip3.id, port_number=80, tcp_status="closed")]
-    curr_ip4.ports_list = [PortState(host_state_id=curr_ip4.id, port_number=80, tcp_status="open")]
+    curr_ip1.ports = [PortState(host_state_id=curr_ip1.id, port_number=80, tcp_status="closed")]
+    curr_ip2.ports = [PortState(host_state_id=curr_ip2.id, port_number=80, tcp_status="closed")]
+    curr_ip3.ports = [PortState(host_state_id=curr_ip3.id, port_number=80, tcp_status="closed")]
+    curr_ip4.ports = [PortState(host_state_id=curr_ip4.id, port_number=80, tcp_status="open")]
     session.commit()
     
     # Request results for the current job with default 7d window

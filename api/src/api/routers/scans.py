@@ -16,8 +16,6 @@ from api.models import (
     Scan,
     ScanRun,
     ScanRunStatus,
-    ScanTargetGroupLink,
-    TargetGroup,
 )
 from api.routers.runs import ScanRunResponse, run_engine_cli
 from api.services.alerts import dispatch_mute_status_notification
@@ -46,9 +44,7 @@ def _build_scan_response(
     scan: Scan, session: SessionDep, targets: list[str] | None = None
 ) -> ScanResponse:
     if targets is None:
-        targets = []
-        for tg in scan.target_groups:
-            targets.extend(tg.targets_json)
+        targets = scan.targets or []
 
     run_stmt = (
         select(ScanRun)
@@ -96,18 +92,10 @@ def _build_scan_response(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse:
-    # 1. Create an ad-hoc target group for these targets
-    target_group = TargetGroup(
-        name=f"Ad-hoc Target Group for {request.name}",
-        is_ad_hoc=True,
-        targets_json=request.targets,
-    )
-    session.add(target_group)
-
-    # 2. Create the scan
     scan = Scan(
         name=request.name,
         cron_expression=request.cron_expression,
+        targets=request.targets,
         ports_json=request.ports,
         flags_json=request.flags.model_dump(),
         ghost_window=request.ghost_window,
@@ -118,19 +106,10 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         alerts_muted=request.alerts_muted,
     )
     session.add(scan)
-
-    session.commit()  # Commit to get IDs
-
-    # 3. Link them
-    link = ScanTargetGroupLink(
-        scan_id=scan.id,
-        target_group_id=target_group.id,
-    )
-    session.add(link)
     session.commit()
     session.refresh(scan)
 
-    return _build_scan_response(scan, session, targets=request.targets)
+    return _build_scan_response(scan, session, targets=scan.targets)
 
 
 @router.get("")
@@ -150,6 +129,7 @@ def update_scan(
 
     scan.name = request.name
     scan.cron_expression = request.cron_expression
+    scan.targets = request.targets
     scan.ports_json = request.ports
     scan.flags_json = request.flags.model_dump()
     scan.ghost_window = request.ghost_window
@@ -159,30 +139,10 @@ def update_scan(
     )
     scan.alerts_muted = request.alerts_muted
     session.add(scan)
-
-    # Update targets (delete old links, recreate ad-hoc)
-    for tg in scan.target_groups:
-        if tg.is_ad_hoc:
-            session.delete(tg)
-    scan.target_groups = []
-
-    target_group = TargetGroup(
-        name=f"Ad-hoc Target Group for {request.name}",
-        is_ad_hoc=True,
-        targets_json=request.targets,
-    )
-    session.add(target_group)
-    session.commit()
-
-    link = ScanTargetGroupLink(
-        scan_id=scan.id,
-        target_group_id=target_group.id,
-    )
-    session.add(link)
     session.commit()
     session.refresh(scan)
 
-    return _build_scan_response(scan, session, targets=request.targets)
+    return _build_scan_response(scan, session, targets=scan.targets)
 
 
 @router.post("/{id}/alerts/mute", response_model=ScanResponse)
@@ -307,9 +267,7 @@ async def launch_scheduled_scan(
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
         
-    targets = []
-    for tg in scan.target_groups:
-        targets.extend(tg.targets_json)
+    targets = scan.targets or []
         
     snapshot = {
         "targets": targets,

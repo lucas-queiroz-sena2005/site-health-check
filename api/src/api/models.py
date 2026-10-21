@@ -3,7 +3,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, model_serializer
+from engine.schemas.engine import ExecutionFlags, TaskFlags
+from pydantic import BaseModel
 from pydantic import Field as PydanticField
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
@@ -17,8 +18,6 @@ class ScanRunStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     ABORTED = "ABORTED"
-
-from engine.schemas.engine import ExecutionFlags, TaskFlags
 
 class AlertConfig(BaseModel):
     webhook_url: str | None = PydanticField(default=None, title="Webhook URL")
@@ -35,21 +34,6 @@ class ExecutionConfig(BaseModel):
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
     ghost_window: str = PydanticField(default="7d", title="Ghost Window")
     tls_warning_days: int = PydanticField(default=30, title="TLS Expiry Warning Threshold (days)")
-    
-class ScanTargetGroupLink(SQLModel, table=True):
-    __tablename__: str = "scan_target_groups"  # type: ignore
-    scan_id: str = Field(foreign_key="scans.id", primary_key=True)
-    target_group_id: str = Field(foreign_key="target_groups.id", primary_key=True)
-
-class TargetGroup(SQLModel, table=True):
-    __tablename__: str = "target_groups"  # type: ignore
-    id: str = Field(default_factory=generate_uuid, primary_key=True)
-    name: str
-    is_ad_hoc: bool = False
-    targets_json: list[str] = Field(sa_column=Column(JSON))
-    deleted_at: datetime | None = None
-    
-    scans: list["Scan"] = Relationship(back_populates="target_groups", link_model=ScanTargetGroupLink)
 
 class Scan(SQLModel, table=True):
     __tablename__: str = "scans"  # type: ignore
@@ -58,6 +42,7 @@ class Scan(SQLModel, table=True):
     cron_expression: str | None = None
     is_active: bool = True
     
+    targets: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     ports_json: list[str | int] = Field(sa_column=Column(JSON))
     flags_json: dict[str, Any] = Field(sa_column=Column(JSON))
     ghost_window: str = Field(default="7d")
@@ -66,8 +51,6 @@ class Scan(SQLModel, table=True):
     alerts_muted: bool = Field(default=False)
     
     deleted_at: datetime | None = None
-    
-    target_groups: list[TargetGroup] = Relationship(back_populates="scans", link_model=ScanTargetGroupLink)
 
 class ScanRun(SQLModel, table=True):
     __tablename__: str = "scan_runs"  # type: ignore
@@ -108,6 +91,7 @@ class HttpRoutingCheck(SQLModel, table=True):
 
 class TlsCertificate(SQLModel, table=True):
     __tablename__: str = "tls_certificates"  # type: ignore
+    __table_args__ = (UniqueConstraint("port_state_id"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     port_state_id: str = Field(foreign_key="port_states.id", exclude=True)
@@ -130,23 +114,9 @@ class PortState(SQLModel, table=True):
     tcp_latency_ms: int | None = None
     
     tls_certificate: TlsCertificate | None = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
-    http_routing_checks_list: list[HttpRoutingCheck] = Relationship(
+    http_routing_checks: list[HttpRoutingCheck] = Relationship(
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
     )
-
-    @model_serializer(mode='wrap')
-    def serialize_model(self, handler):
-        res = handler(self)
-        res["http_routing_checks"] = {c.domain: c for c in self.http_routing_checks_list}
-        if self.tls_certificate:
-            res["tls_certificate"] = self.tls_certificate
-        else:
-            res["tls_certificate"] = None
-        return res
-
-    @property
-    def http_routing_checks(self) -> list[HttpRoutingCheck]:
-        return self.http_routing_checks_list
 
 class HostState(SQLModel, table=True):
     __tablename__: str = "host_states"  # type: ignore
@@ -160,21 +130,6 @@ class HostState(SQLModel, table=True):
     metadata_resolved_from: str | None = None
     metadata_discovered_from_json: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     
-    ports_list: list[PortState] = Relationship(
+    ports: list[PortState] = Relationship(
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
     )
-
-    @property
-    def ports(self) -> list[PortState]:
-        return self.ports_list
-
-    @model_serializer(mode='wrap')
-    def serialize_model(self, handler):
-        res = handler(self)
-        res["ports"] = {str(p.port_number): p for p in self.ports_list}
-        res["metadata"] = {
-            "resolved_from": res.pop("metadata_resolved_from", None),
-            "discovered_from": res.pop("metadata_discovered_from_json", [])
-        }
-        return res
-
