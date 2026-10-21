@@ -1,0 +1,7 @@
+Phase 1 Verification Report:
+- All 82 tests passing (api/tests and engine/tests).
+- Verified SQLite PRAGMAs (WAL journal mode, foreign_keys=ON, busy_timeout=5000).
+- Retired TargetGroup & ScanTargetGroupLink models.
+- Scan model directly persists targets: list[str] in JSON column.
+- Removed @model_serializer dictionary wrappers from HostState and PortState.
+- UniqueConstraint enforced on TlsCertificate(port_state_id).
