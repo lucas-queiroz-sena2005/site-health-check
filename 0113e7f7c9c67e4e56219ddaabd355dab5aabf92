@@ -1,0 +1,3 @@
+Task: Write failing unit tests for schema changes, WAL configuration, foreign key cascades, and direct Scan.targets (Red Phase)
+- Added tests in api/tests/test_database.py verifying SQLite WAL, foreign keys, busy timeout pragmas
+- Added tests verifying TargetGroup retirement, direct Scan.targets JSON storage, UniqueConstraint on TlsCertificate(port_state_id), and removal of @model_serializer wrapping
