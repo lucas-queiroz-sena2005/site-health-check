@@ -1,6 +1,6 @@
 # Implementation Plan: Database Normalization & Backend Evaluation Pipeline (`db_and_evaluation_pipeline`)
 
-## Phase 1: SQLite Hardening, Model Normalization & TargetGroup Retirement (TDD)
+## Phase 1: SQLite Hardening, Model Normalization & TargetGroup Retirement (TDD) [checkpoint: 7c556d8]
 - [x] Task: Write failing unit tests for schema changes, WAL configuration, foreign key cascades, and direct `Scan.targets` (Red Phase) 0113e7f
   - [x] Test SQLite PRAGMA configuration (`journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`) in `api/tests/test_database.py`
   - [x] Test `UniqueConstraint("port_state_id")` enforcement on `TlsCertificate`
@@ -11,7 +11,7 @@
   - [x] Drop `TargetGroup` & `ScanTargetGroupLink`, add `targets` JSON column to `Scan`, add SQLite migration in `init_db()`
   - [x] Refactor `api/src/api/routers/scans.py` to create, read, and serialize `targets` directly on `Scan`
   - [x] Remove `@model_serializer` and rename relationships (`ports`, `http_routing_checks`) in `api/src/api/models.py`
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 7c556d8
 
 ---
 
