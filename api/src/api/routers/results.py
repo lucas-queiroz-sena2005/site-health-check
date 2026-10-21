@@ -76,40 +76,44 @@ def get_results_summary(
 
     statement = (
         select(
-            HostState.metadata_resolved_from,
             HostState.subrun_id,
             func.count(col(HostState.id).distinct()).label("total_ips"),
-            func.count(col(PortState.id).distinct()).label("active_ports")
+            func.count(col(PortState.id).distinct()).label("active_ports"),
         )
-        .outerjoin(PortState, and_(
-            col(HostState.id) == col(PortState.host_state_id), 
-            col(PortState.tcp_status) == "open"
-        ))
+        .outerjoin(
+            PortState,
+            and_(
+                col(HostState.id) == col(PortState.host_state_id),
+                col(PortState.tcp_status) == "open",
+            ),
+        )
     )
-    
-    assert HostState.subrun_id
+
     if run_id is not None:
         statement = statement.where(HostState.scan_run_id == run_id)
     if subrun_id is not None:
         statement = statement.where(HostState.subrun_id == subrun_id)
-    statement = statement.group_by(HostState.metadata_resolved_from, HostState.subrun_id)
+    statement = statement.group_by(HostState.subrun_id)
     results = session.exec(statement).all()
-    
+
     summaries = []
     for row in results:
-        target, subrun, total, active = row
-        summaries.append(TargetSummary(
-            target=target or "unknown",
-            subrun_id=subrun,
-            total_ips=total,
-            active_ips=active
-        ))
+        subrun, total, active = row
+        summaries.append(
+            TargetSummary(
+                target=subrun or "unknown",
+                subrun_id=subrun,
+                total_ips=total,
+                active_ips=active,
+            )
+        )
 
     return RunResultsSummaryResponse(
         run_id=run_id,
         summary=run_summary,
         targets=summaries,
     )
+
 
 @router.get("")
 def get_results(
@@ -119,7 +123,7 @@ def get_results(
     subrun_id: str | None = None,
     ip_address: str | None = None,
     resolved_from: str | None = None,
-    status: str | None = None
+    status: str | None = None,
 ) -> list[HostState]:
     statement = select(HostState)
     if run_id is not None:
@@ -129,7 +133,7 @@ def get_results(
     if ip_address is not None:
         statement = statement.where(HostState.ip_address == ip_address)
     if resolved_from is not None:
-        statement = statement.where(HostState.metadata_resolved_from == resolved_from)
+        statement = statement.where(col(HostState.resolved_domains).contains(resolved_from))
         
     if status == "active":
         statement = statement.join(PortState).where(PortState.tcp_status == "open").distinct()

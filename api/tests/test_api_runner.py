@@ -36,7 +36,7 @@ def test_upsert_delta_sync_inserts_and_updates(test_engine):
         with Session(test_engine) as session:
             host = session.exec(select(HostState).where(HostState.scan_run_id == run_id, HostState.ip_address == ip)).first()
             assert host is not None
-            assert host.metadata_resolved_from == "test.local"
+            assert host.resolved_domains == ["test.local"]
             
             ports = session.exec(select(PortState).where(PortState.host_state_id == host.id)).all()
             assert len(ports) == 1
@@ -74,7 +74,7 @@ def test_upsert_delta_sync_inserts_and_updates(test_engine):
         
         with Session(test_engine) as session:
             host = session.exec(select(HostState).where(HostState.scan_run_id == run_id, HostState.ip_address == ip)).first()
-            assert host.metadata_discovered_from_json == ["initial", "second"]
+            assert host.discovered_from == ["initial", "second"]
             
             ports = session.exec(select(PortState).where(PortState.host_state_id == host.id)).all()
             assert len(ports) == 1 # still 1 port
@@ -115,7 +115,7 @@ def test_finalize_run_prunes_void_hosts_and_inserts_synthetic_void_on_clean_db(t
                     id=f"{run_id}_10.0.0.{i}",
                     scan_run_id=run_id,
                     ip_address=f"10.0.0.{i}",
-                    metadata_resolved_from="10.0.0.0/24"
+                    resolved_domains=["10.0.0.0/24"]
                 )
                 session.add(h)
                 session.flush()
@@ -169,7 +169,7 @@ def test_finalize_run_preserves_active_and_ghost_hosts_while_pruning_void(test_e
                 id=f"{prev_run_id}_10.0.0.2",
                 scan_run_id=prev_run_id,
                 ip_address="10.0.0.2",
-                metadata_resolved_from="10.0.0.0/24"
+                resolved_domains=["10.0.0.0/24"]
             )
             session.add(h_prev)
             session.flush()
@@ -190,20 +190,20 @@ def test_finalize_run_preserves_active_and_ghost_hosts_while_pruning_void(test_e
             session.add(curr_run)
 
             # Host 1: Active
-            h1 = HostState(id=f"{curr_run_id}_10.0.0.1", scan_run_id=curr_run_id, ip_address="10.0.0.1", metadata_resolved_from="10.0.0.0/24")
+            h1 = HostState(id=f"{curr_run_id}_10.0.0.1", scan_run_id=curr_run_id, ip_address="10.0.0.1", resolved_domains=["10.0.0.0/24"])
             session.add(h1)
             session.flush()
             session.add(PortState(id=f"{h1.id}_80", host_state_id=h1.id, port_number=80, tcp_status="open"))
 
             # Host 2: Dead now, but was active 2d ago -> Ghost
-            h2 = HostState(id=f"{curr_run_id}_10.0.0.2", scan_run_id=curr_run_id, ip_address="10.0.0.2", metadata_resolved_from="10.0.0.0/24")
+            h2 = HostState(id=f"{curr_run_id}_10.0.0.2", scan_run_id=curr_run_id, ip_address="10.0.0.2", resolved_domains=["10.0.0.0/24"])
             session.add(h2)
             session.flush()
             session.add(PortState(id=f"{h2.id}_80", host_state_id=h2.id, port_number=80, tcp_status="closed"))
 
             # Host 3 & 4: Dead now, never active -> Void
             for i in (3, 4):
-                h = HostState(id=f"{curr_run_id}_10.0.0.{i}", scan_run_id=curr_run_id, ip_address=f"10.0.0.{i}", metadata_resolved_from="10.0.0.0/24")
+                h = HostState(id=f"{curr_run_id}_10.0.0.{i}", scan_run_id=curr_run_id, ip_address=f"10.0.0.{i}", resolved_domains=["10.0.0.0/24"])
                 session.add(h)
                 session.flush()
                 session.add(PortState(id=f"{h.id}_80", host_state_id=h.id, port_number=80, tcp_status="closed"))
@@ -336,8 +336,8 @@ def test_upsert_delta_sync_preserves_open_tcp_and_merges_discovered_from(test_en
             host = session.exec(select(HostState).where(HostState.scan_run_id == run_id, HostState.ip_address == ip)).first()
             assert host is not None
             assert host.subrun_id == "192.168.1.0/24"
-            assert "192.168.1.1" in host.metadata_discovered_from_json
-            assert "192.168.1.2" in host.metadata_discovered_from_json
+            assert "192.168.1.1" in host.discovered_from
+            assert "192.168.1.2" in host.discovered_from
 
             port = session.exec(select(PortState).where(PortState.host_state_id == host.id, PortState.port_number == 443)).first()
             assert port is not None

@@ -31,34 +31,49 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
         host_id = f"{run_id}_{ip}"
         existing_host = session.get(HostState, host_id)
 
-        resolved_from = metadata.get("resolved_from")
-        if not resolved_from and existing_host:
-            resolved_from = existing_host.metadata_resolved_from
+        incoming_resolved = metadata.get("resolved_domains")
+        if incoming_resolved is None:
+            rf = metadata.get("resolved_from")
+            incoming_resolved = [rf] if rf else []
+        elif isinstance(incoming_resolved, str):
+            incoming_resolved = [incoming_resolved]
+
+        if existing_host and existing_host.resolved_domains:
+            merged_resolved = list(dict.fromkeys(existing_host.resolved_domains + incoming_resolved))
+        else:
+            merged_resolved = list(dict.fromkeys(incoming_resolved))
 
         subrun_id = metadata.get("subrun_id")
         if not subrun_id and existing_host:
             subrun_id = existing_host.subrun_id
 
         new_discovered = metadata.get("discovered_from") or []
-        if existing_host and existing_host.metadata_discovered_from_json:
-            merged_discovered = list(dict.fromkeys(existing_host.metadata_discovered_from_json + new_discovered))
+        if isinstance(new_discovered, str):
+            new_discovered = [new_discovered]
+        if existing_host and existing_host.discovered_from:
+            merged_discovered = list(dict.fromkeys(existing_host.discovered_from + new_discovered))
         else:
             merged_discovered = list(dict.fromkeys(new_discovered))
+
+        filtered_lineage = [d for d in merged_discovered if d != ip]
+        depth = len(filtered_lineage)
 
         stmt_host = insert(HostState).values(
             id=host_id,
             scan_run_id=run_id,
             ip_address=ip,
-            metadata_resolved_from=resolved_from,
-            metadata_discovered_from_json=merged_discovered,
-            subrun_id=subrun_id
+            resolved_domains=merged_resolved,
+            discovered_from=merged_discovered,
+            depth=depth,
+            subrun_id=subrun_id,
         ).on_conflict_do_update(
             index_elements=["scan_run_id", "ip_address"],
             set_={
-                "metadata_resolved_from": resolved_from,
-                "metadata_discovered_from_json": merged_discovered,
-                "subrun_id": subrun_id
-            }
+                "resolved_domains": merged_resolved,
+                "discovered_from": merged_discovered,
+                "depth": depth,
+                "subrun_id": subrun_id,
+            },
         ).returning(column("id"))
         
         result_host = session.exec(stmt_host).first()
@@ -209,7 +224,7 @@ def _finalize_run(run_id: str, returncode: int):
             units = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
             delta = timedelta(**{units[unit]: amount})
             cutoff = datetime.now(UTC) - delta
-            current_ips = [h.ip_address for h in hosts if not h.ip_address.startswith("Void")]
+            current_ips = [h.ip_address for h in hosts]
             if current_ips:
                 historical_stmt = (
                     select(HostState.ip_address)
@@ -228,10 +243,6 @@ def _finalize_run(run_id: str, returncode: int):
         kept_hosts: list[HostState] = []
 
         for host in hosts:
-            if host.ip_address.startswith("Void"):
-                void_host_ids.append(host.id)
-                continue
-
             has_open = any(p.tcp_status == "open" for p in host.ports)
             if has_open:
                 kept_hosts.append(host)

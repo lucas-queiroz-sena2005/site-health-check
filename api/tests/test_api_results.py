@@ -36,8 +36,8 @@ def test_get_results(client: TestClient, session: Session):
     ip_state = HostState(
         scan_run_id=job.id,
         ip_address="8.8.8.8",
-        metadata_resolved_from="google.com",
-        metadata_discovered_from_json=[],
+        resolved_domains=["google.com"],
+        discovered_from=[],
     )
     session.add(ip_state)
     session.flush()
@@ -75,7 +75,7 @@ def test_get_results(client: TestClient, session: Session):
     print("DATA: ", data)
     assert len(data) == 1
     assert data[0]["ip_address"] == "8.8.8.8"
-    assert data[0]["metadata_resolved_from"] == "google.com"
+    assert data[0]["resolved_domains"] == ["google.com"]
     
     # Assert relational models maintain direct object hierarchy without dict wrappers
     session.refresh(ip_state)

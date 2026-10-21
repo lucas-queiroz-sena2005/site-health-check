@@ -127,8 +127,16 @@ class HostState(SQLModel, table=True):
     ip_address: str = Field(index=True)
     subrun_id: str | None = Field(default=None, index=True)
     
-    metadata_resolved_from: str | None = None
-    metadata_discovered_from_json: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    resolved_domains: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    discovered_from: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    depth: int = Field(default=0)
+
+    def model_post_init(self, __context: Any) -> None:
+        super().model_post_init(__context)
+        if self.depth == 0 and self.discovered_from:
+            filtered = [d for d in self.discovered_from if d != self.ip_address]
+            if filtered:
+                self.depth = len(filtered)
     
     ports: list[PortState] = Relationship(
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}

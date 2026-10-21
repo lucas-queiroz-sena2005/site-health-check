@@ -416,7 +416,7 @@ def test_compute_run_summary_counts_void_hosts(session: Session):
     session.commit()
     session.refresh(run)
 
-    # Add 1 active host and 1 synthetic void host
+    # Add 1 active host and 1 inactive (void) host
     h_active = HostState(scan_run_id=run.id, ip_address="10.0.0.1")
     session.add(h_active)
     session.flush()
@@ -424,16 +424,16 @@ def test_compute_run_summary_counts_void_hosts(session: Session):
 
     h_void = HostState(
         scan_run_id=run.id,
-        ip_address="Void (255)",
-        metadata_resolved_from="10.0.0.0/24",
-        metadata_discovered_from_json=["void_aggregated"],
+        ip_address="10.0.0.2",
+        resolved_domains=["10.0.0.0/24"],
+        discovered_from=[],
     )
     session.add(h_void)
     session.commit()
 
     summary = compute_run_summary(session=session, run=run)
     assert summary["active"] == 1
-    assert summary["void"] == 255
+    assert summary["void"] == 1
 
 
 def test_get_results_summary_returns_persisted_summary(client: TestClient, session: Session):

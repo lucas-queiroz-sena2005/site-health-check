@@ -42,13 +42,13 @@ def test_void_aggregation_and_ghosting(client: TestClient, session: Session):
     session.commit()
     
     # IP 1: Active 8 days ago, now dead. Should be VOID because it's outside the 7d window.
-    old_ip = HostState(scan_run_id=old_job.id, ip_address="10.0.0.1", metadata_resolved_from="10.0.0.0/24")
+    old_ip = HostState(scan_run_id=old_job.id, ip_address="10.0.0.1", resolved_domains=["10.0.0.0/24"])
     session.add(old_ip)
     session.flush()
     old_ip.ports = [PortState(host_state_id=old_ip.id, port_number=80, tcp_status="open")]
     
     # IP 2: Active 2 days ago, now dead. Should be GHOST because it's inside the 7d window.
-    recent_ip = HostState(scan_run_id=recent_job.id, ip_address="10.0.0.2", metadata_resolved_from="10.0.0.0/24")
+    recent_ip = HostState(scan_run_id=recent_job.id, ip_address="10.0.0.2", resolved_domains=["10.0.0.0/24"])
     session.add(recent_ip)
     session.flush()
     recent_ip.ports = [PortState(host_state_id=recent_ip.id, port_number=80, tcp_status="open")]
@@ -60,10 +60,10 @@ def test_void_aggregation_and_ghosting(client: TestClient, session: Session):
     # 10.0.0.2 -> dead -> Ghost (from recent_job)
     # 10.0.0.3 -> dead -> Void
     # 10.0.0.4 -> active -> Active
-    curr_ip1 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.1", metadata_resolved_from="10.0.0.0/24")
-    curr_ip2 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.2", metadata_resolved_from="10.0.0.0/24")
-    curr_ip3 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.3", metadata_resolved_from="10.0.0.0/24")
-    curr_ip4 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.4", metadata_resolved_from="10.0.0.0/24")
+    curr_ip1 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.1", resolved_domains=["10.0.0.0/24"])
+    curr_ip2 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.2", resolved_domains=["10.0.0.0/24"])
+    curr_ip3 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.3", resolved_domains=["10.0.0.0/24"])
+    curr_ip4 = HostState(scan_run_id=current_job.id, ip_address="10.0.0.4", resolved_domains=["10.0.0.0/24"])
     session.add_all([curr_ip1, curr_ip2, curr_ip3, curr_ip4])
     session.flush()
     

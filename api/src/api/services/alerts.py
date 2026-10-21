@@ -556,11 +556,6 @@ def compute_run_summary(
     calculated_void = 0
 
     for h in hosts:
-        if h.ip_address.startswith("Void"):
-            match_void = re.search(r"\d+", h.ip_address)
-            calculated_void += int(match_void.group(0)) if match_void else 1
-            continue
-
         host_has_open = False
         host_has_failed = False
         host_has_warning = False
@@ -606,9 +601,9 @@ def compute_run_summary(
 
         current_active_ips = {
             h.ip_address for h in hosts
-            if not h.ip_address.startswith("Void") and any(p.tcp_status == "open" for p in h.ports)
+            if any(p.tcp_status == "open" for p in h.ports)
         }
-        target_ips = [h.ip_address for h in hosts if not h.ip_address.startswith("Void")]
+        target_ips = [h.ip_address for h in hosts]
         if target_ips:
             historical_stmt = (
                 select(HostState.ip_address)
@@ -630,8 +625,7 @@ def compute_run_summary(
             # In case raw unaggregated hosts are passed before finalization
             raw_void_ips = [
                 h for h in hosts
-                if not h.ip_address.startswith("Void")
-                and h.ip_address not in current_active_ips
+                if h.ip_address not in current_active_ips
                 and h.ip_address not in historical_active
             ]
             calculated_void += len(raw_void_ips)
