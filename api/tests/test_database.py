@@ -95,3 +95,49 @@ def test_no_model_serializer_dict_wrappers():
 
     host.ports = [port]
     assert isinstance(host.ports, list)
+
+
+def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
+    """Verify that init_db() automatically migrates existing SQLite databases missing new columns."""
+    import sqlite3
+    from api.database import init_db
+
+    db_file = tmp_path / "legacy.db"
+    conn = sqlite3.connect(db_file)
+    # Create legacy tables missing evaluation columns
+    conn.execute("CREATE TABLE scans (id VARCHAR PRIMARY KEY, name VARCHAR, is_active BOOLEAN, ports_json JSON, flags_json JSON, ghost_window VARCHAR, tls_warning_days INTEGER, alert_config_json JSON, alerts_muted BOOLEAN, deleted_at TIMESTAMP);")
+    conn.execute("CREATE TABLE host_states (id VARCHAR PRIMARY KEY, scan_run_id VARCHAR, ip_address VARCHAR, subrun_id VARCHAR);")
+    conn.execute("CREATE TABLE port_states (id VARCHAR PRIMARY KEY, host_state_id VARCHAR, port_number INTEGER, tcp_status VARCHAR, tcp_latency_ms INTEGER);")
+    conn.execute("CREATE TABLE http_routing_checks (id VARCHAR PRIMARY KEY, port_state_id VARCHAR, domain VARCHAR, status_code INTEGER, http_latency_ms INTEGER, path_checked VARCHAR, redirects_to_url VARCHAR, server_header VARCHAR, notes VARCHAR);")
+    conn.commit()
+    conn.close()
+
+    legacy_engine = create_engine(f"sqlite:///{db_file}", connect_args={"check_same_thread": False})
+    monkeypatch.setattr("api.database.engine", legacy_engine)
+
+    init_db()
+
+    # Verify columns were added
+    conn2 = sqlite3.connect(db_file)
+    c = conn2.cursor()
+
+    host_cols = {row[1] for row in c.execute("PRAGMA table_info(host_states);").fetchall()}
+    assert "status" in host_cols
+    assert "open_port_count" in host_cols
+    assert "finding_codes" in host_cols
+    assert "vhost_count" in host_cols
+
+    scan_cols = {row[1] for row in c.execute("PRAGMA table_info(scans);").fetchall()}
+    assert "targets" in scan_cols
+
+    port_cols = {row[1] for row in c.execute("PRAGMA table_info(port_states);").fetchall()}
+    assert "status" in port_cols
+    assert "san_count" in port_cols
+    assert "finding_codes" in port_cols
+
+    check_cols = {row[1] for row in c.execute("PRAGMA table_info(http_routing_checks);").fetchall()}
+    assert "status" in check_cols
+    assert "finding_code" in check_cols
+
+    conn2.close()
+
