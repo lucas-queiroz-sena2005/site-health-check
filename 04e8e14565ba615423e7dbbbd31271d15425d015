@@ -1,0 +1,7 @@
+Phase 3 Checkpoint: Deterministic Backend Evaluation Pipeline
+- Automated tests: ./.venv/bin/pytest api/tests engine/tests (89 passed)
+- Bottom-up evaluation pipeline implemented in api/src/api/services/evaluator.py (Level 1 HttpRoutingCheck -> Level 2 PortState -> Level 3 HostState)
+- Pre-computed columns for status, finding_codes, and rollups on models.py
+- SQLite auto-column migrations in database.py:init_db() for existing tables
+- Cascade deletes on child relationships under foreign_keys=ON
+- Verified live with site_health_check.db
