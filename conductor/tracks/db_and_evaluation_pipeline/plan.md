@@ -29,7 +29,7 @@
 
 ---
 
-## Phase 3: Deterministic Backend Evaluation Pipeline (`evaluator.py`) (TDD)
+## Phase 3: Deterministic Backend Evaluation Pipeline (`evaluator.py`) (TDD) [checkpoint: 04e8e14]
 - [x] Task: Write failing tests for canonical finding codes, bottom-up rollups, and run evaluation (Red Phase) 1fd1f57
   - [x] Test canonical finding code generation (`TCP_CLOSED`, `TLS_INVALID`, `TLS_EXPIRED`, `TLS_EXPIRING_SOON`, `TLS_DEPRECATED_VERSION`, `HTTP_5XX`, `HTTP_4XX`, `HTTP_ERROR`, `HOST_GHOST`, `RUN_ABORTED`)
   - [x] Test Level 1 HTTP check evaluation (`status`, `finding_code`)
@@ -40,7 +40,7 @@
   - [x] Add pre-computed columns to `HttpRoutingCheck`, `PortState`, and `HostState` in `api/src/api/models.py`
   - [x] Implement bottom-up evaluation algorithms in `api/src/api/services/evaluator.py`
   - [x] Hook `evaluate_scan_run` into `_finalize_run` in `api/src/api/services/runner.py` within an atomic transaction
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 04e8e14
 
 ---
 
