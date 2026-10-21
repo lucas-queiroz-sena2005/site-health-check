@@ -1,0 +1,4 @@
+Task: Update legacy test suite and verify end-to-end regression
+- Executed full pytest suite across api/tests and engine/tests (90 tests passing)
+- Verified database initialization and dynamic schema migration across fresh and existing SQLite databases in test_database.py
+- Zero regressions across subprocess dispatch, lineage set-union, void purging, and deterministic evaluation pipeline
