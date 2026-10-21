@@ -45,20 +45,5 @@ def init_db() -> None:
                 conn.execute(
                     text("ALTER TABLE scans ADD COLUMN targets JSON DEFAULT '[]'")
                 )
-                try:
-                    # Optional data migration if old target_groups tables exist
-                    rows = conn.execute(text("""
-                        SELECT s.id, tg.targets_json
-                        FROM scans s
-                        JOIN scan_target_groups stg ON s.id = stg.scan_id
-                        JOIN target_groups tg ON stg.target_group_id = tg.id
-                    """)).fetchall()
-                    for scan_id, targets_json in rows:
-                        conn.execute(
-                            text("UPDATE scans SET targets = :targets WHERE id = :id"),
-                            {"targets": targets_json, "id": scan_id},
-                        )
-                except Exception:
-                    pass
         except Exception:
             pass
