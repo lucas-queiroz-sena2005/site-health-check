@@ -4,15 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Track 2 Technical Report: Database Normalization & Backend Evaluation Pipeline</title>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-  <script>
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: 'neutral',
-      flowchart: { curve: 'basis' },
-      er: { useMaxWidth: true }
-    });
-  </script>
   <style>
     :root {
       --bg: #0f172a;
@@ -149,14 +140,37 @@
       border-left: 4px solid var(--success);
     }
 
-    .diagram-container {
-      background: #ffffff;
+    .diagram-wrapper {
+      background: #0b1120;
+      border: 1px solid var(--card-border);
       border-radius: 8px;
-      padding: 1.5rem;
+      padding: 1.25rem;
       margin: 1.5rem 0;
-      overflow-x: auto;
-      display: flex;
-      justify-content: center;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .report-diagram {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 6px;
+    }
+
+    .diagram-caption {
+      margin-top: 0.85rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .diagram-caption a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .diagram-caption a:hover {
+      text-decoration: underline;
     }
 
     pre code {
@@ -254,87 +268,13 @@
         The normalized schema enforces strict parent-child relationships with cascading deletes. Synthetic void nodes and polymorphic wrapper dictionaries were eliminated.
       </p>
       
-      <div class="diagram-container">
-        <pre class="mermaid">
-erDiagram
-    SCAN ||--o{ SCAN_RUN : "executes"
-    SCAN_RUN ||--o{ HOST_STATE : "discovers (cascade)"
-    HOST_STATE ||--o{ PORT_STATE : "contains (cascade)"
-    PORT_STATE ||--o| TLS_CERTIFICATE : "secures (cascade)"
-    PORT_STATE ||--o{ HTTP_ROUTING_CHECK : "routes"
-
-    SCAN {
-        uuid id PK
-        string name
-        json targets "list[str] (domains / IPs)"
-        string schedule_cron
-        boolean enabled
-        datetime created_at
-    }
-
-    SCAN_RUN {
-        uuid id PK
-        uuid scan_id FK
-        string status "pending | running | completed | failed"
-        datetime started_at
-        datetime completed_at
-        string error_message
-    }
-
-    HOST_STATE {
-        uuid id PK
-        uuid scan_run_id FK
-        string ip_address "Direct IP / hostname"
-        json resolved_domains "Set-union list[str]"
-        json discovered_from "Parent lineage list[str]"
-        int depth "Hop count from root"
-        string status "ok | warning | critical"
-        int open_port_count "Pre-computed rollup"
-        int scanned_port_count "Total ports tested"
-        int vhost_count "Unique virtual hosts"
-        float min_tcp_latency_ms "Fastest responsive port"
-        int min_tls_expires_days "Soonest expiring cert"
-        string worst_tls_version "Least secure TLS protocol"
-        int worst_http_status "Highest severity HTTP status"
-        json finding_codes "Deduplicated list[str]"
-    }
-
-    PORT_STATE {
-        uuid id PK
-        uuid host_state_id FK
-        int port
-        string service
-        string status "open | closed | filtered"
-        float response_time_ms
-        string tls_version
-        int tls_expires_days
-        int worst_http_status
-        json finding_codes "Deduplicated list[str]"
-    }
-
-    TLS_CERTIFICATE {
-        uuid id PK
-        uuid port_state_id FK
-        string subject
-        string issuer
-        datetime valid_from
-        datetime valid_until
-        boolean is_valid
-        boolean is_self_signed
-        int days_until_expiry
-    }
-
-    HTTP_ROUTING_CHECK {
-        uuid id PK
-        uuid port_state_id FK
-        string vhost
-        string initial_url
-        int status_code
-        string final_url
-        int redirect_count
-        json finding_codes "Deduplicated list[str]"
-    }
-        </pre>
+      <div class="diagram-wrapper">
+        <img src="er_diagram.svg" alt="Normalized Entity-Relationship Architecture" class="report-diagram" />
+        <div class="diagram-caption">
+          Figure 1: Normalized relational model with CASCADE foreign keys and JSON lineage arrays.
+          &bull; <a href="er_diagram.svg" target="_blank">Open Vector SVG</a>
+          &bull; <a href="er_diagram.png" target="_blank">High-Resolution PNG (3928&times;1388)</a>
+        </div>
       </div>
     </section>
 
@@ -345,47 +285,13 @@ erDiagram
         In asynchronous architectures like FastAPI and asyncio workers, concurrent access to a file-based SQLite database frequently triggers <code>sqlite3.OperationalError: database is locked</code> if multiple workers attempt write operations simultaneously. Track 2 implemented a multi-layered defense to ensure strict thread-safety and high write availability.
       </p>
 
-      <div class="diagram-container">
-        <pre class="mermaid">
-sequenceDiagram
-    autonumber
-    participant UI as Frontend / API Client
-    participant API as FastAPI Router
-    participant RM as Runner / Execution Seam
-    participant ENG as Scan Engine (Async Workers)
-    participant EV as Bottom-Up Evaluator
-    participant DB as SQLite (WAL + Busy Timeout)
-
-    UI->>API: POST /scans/{id}/run
-    API->>RM: trigger_run(scan_id)
-    Note over RM: asyncio.Lock(scan_id) ensures single writer per scan
-    RM->>DB: INSERT scan_runs (status='running')
-    RM->>ENG: execute_scan(targets)
-    
-    par Concurrent HTTP Reads during scan
-        UI->>API: GET /scans/{id}/runs
-        API->>DB: Read state via WAL (Non-blocking!)
-        DB-->>API: Snapshot stream
-        API-->>UI: 200 OK
-    and Engine Target Scanning
-        ENG->>ENG: TCP probe, TLS handshake, HTTP redirects
-    end
-
-    ENG-->>RM: Yields Host/Port/VHost results
-    RM->>DB: Write raw HostState & PortState rows
-    
-    rect rgb(20, 30, 50)
-        Note over RM, EV: Bottom-Up Atomic Evaluation
-        RM->>EV: evaluate_scan_run(session, scan_run_id)
-        EV->>EV: 1. Evaluate HttpRoutingCheck findings
-        EV->>EV: 2. Rollup to PortState (worst TLS, HTTP, findings)
-        EV->>EV: 3. Rollup to HostState (min latency, days, open ports)
-        EV->>DB: UPDATE HostState & PortState pre-computed fields
-    end
-
-    RM->>DB: UPDATE scan_runs (status='completed')
-    RM-->>API: Run Finished
-        </pre>
+      <div class="diagram-wrapper">
+        <img src="concurrency_architecture.svg" alt="Concurrency Architecture & SQLite Lock Prevention Flow" class="report-diagram" />
+        <div class="diagram-caption">
+          Figure 2: Multi-layer concurrency architecture: In-Memory Runner Locks, SQLite WAL non-blocking reads, 5000ms busy queueing, and single-pass atomic evaluation transaction.
+          &bull; <a href="concurrency_architecture.svg" target="_blank">Open Vector SVG</a>
+          &bull; <a href="concurrency_architecture.png" target="_blank">High-Resolution PNG (2480&times;1960)</a>
+        </div>
       </div>
 
       <div class="grid-2">
