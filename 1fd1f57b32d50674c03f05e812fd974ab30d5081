@@ -1,0 +1,6 @@
+Task: Write failing tests for canonical finding codes, bottom-up rollups, and run evaluation (Red Phase)
+- Added tests in api/tests/test_evaluator.py
+- Validates Level 1 HttpRoutingCheck findings (HTTP_ERROR, HTTP_5XX, HTTP_4XX)
+- Validates Level 2 PortState rollups (TCP_CLOSED, TLS_EXPIRING_SOON, TLS_DEPRECATED_VERSION, san_count, http_check_count)
+- Validates Level 3 HostState rollups (depth, vhost_count, open_port_count, latency/tls rollups, Ghost host classification)
+- Validates evaluate_scan_run end-to-end execution
