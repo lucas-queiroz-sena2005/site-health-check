@@ -55,7 +55,7 @@ class Scan(SQLModel, table=True):
 class ScanRun(SQLModel, table=True):
     __tablename__: str = "scan_runs"  # type: ignore
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    scan_id: str | None = Field(default=None, foreign_key="scans.id")
+    scan_id: str | None = Field(default=None, foreign_key="scans.id", ondelete="CASCADE")
     
     # Snapshot of what was requested
     execution_config_snapshot_json: dict[str, Any] = Field(sa_column=Column(JSON))
@@ -64,6 +64,10 @@ class ScanRun(SQLModel, table=True):
     started_at: datetime | None = None
     finished_at: datetime | None = None
     metrics_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
+
+    hosts: list["HostState"] = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
+    )
 
 class SavedView(SQLModel, table=True):
     __tablename__: str = "saved_views"  # type: ignore
@@ -79,7 +83,7 @@ class HttpRoutingCheck(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("port_state_id", "domain"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    port_state_id: str = Field(foreign_key="port_states.id", exclude=True)
+    port_state_id: str = Field(foreign_key="port_states.id", ondelete="CASCADE", exclude=True)
     
     domain: str
     status_code: int | None = None
@@ -97,7 +101,7 @@ class TlsCertificate(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("port_state_id"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    port_state_id: str = Field(foreign_key="port_states.id", exclude=True)
+    port_state_id: str = Field(foreign_key="port_states.id", ondelete="CASCADE", exclude=True)
     
     valid: bool = False
     expires_in_days: int = 0
@@ -110,7 +114,7 @@ class PortState(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("host_state_id", "port_number"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    host_state_id: str = Field(foreign_key="host_states.id", exclude=True)
+    host_state_id: str = Field(foreign_key="host_states.id", ondelete="CASCADE", exclude=True)
     
     port_number: int
     tcp_status: str = "closed"
@@ -122,7 +126,9 @@ class PortState(SQLModel, table=True):
     worst_http_status: int | None = None
     finding_codes: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     
-    tls_certificate: TlsCertificate | None = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
+    tls_certificate: TlsCertificate | None = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
+    )
     http_routing_checks: list[HttpRoutingCheck] = Relationship(
         sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
     )
@@ -132,7 +138,7 @@ class HostState(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("scan_run_id", "ip_address"),)
     
     id: str = Field(default_factory=generate_uuid, primary_key=True)
-    scan_run_id: str = Field(foreign_key="scan_runs.id")
+    scan_run_id: str = Field(foreign_key="scan_runs.id", ondelete="CASCADE")
     ip_address: str = Field(index=True)
     subrun_id: str | None = Field(default=None, index=True)
     
