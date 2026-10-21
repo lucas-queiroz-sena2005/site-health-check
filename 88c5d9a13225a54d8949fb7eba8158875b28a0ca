@@ -1,0 +1,6 @@
+Task: Implement resolved_domains / discovered_from and purge Void sentinels (Green & Refactor Phase)
+- Replaced scalar metadata_resolved_from with resolved_domains: list[str] and discovered_from: list[str] on HostState
+- Updated _upsert_delta_sync in api/src/api/services/runner.py to merge domains and discovery lineage via set union
+- Inferred depth from discovery lineage on HostState
+- Purged all ip_address.startswith('Void') checks and synthetic node manipulation across runner.py, aggregation.py, and alerts.py
+- Updated legacy tests in api/tests/ to assert normalized model fields
