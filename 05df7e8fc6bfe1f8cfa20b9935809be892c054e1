@@ -1,0 +1,7 @@
+Task: Implement model updates, SQLite PRAGMAs, and scan router adjustments (Green & Refactor Phase)
+- Configured SQLite connection PRAGMAs (WAL journal mode, foreign keys ON, busy_timeout 5000ms) in api/src/api/database.py
+- Retired TargetGroup and ScanTargetGroupLink models from api/src/api/models.py
+- Added direct targets JSON column to Scan model and updated init_db() migration
+- Refactored api/src/api/routers/scans.py and scheduler.py to handle Scan.targets directly
+- Removed @model_serializer wrapping from HostState and PortState models, exposing clean relational fields
+- Updated UniqueConstraint on TlsCertificate(port_state_id)
