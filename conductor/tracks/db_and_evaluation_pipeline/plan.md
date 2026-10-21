@@ -45,8 +45,8 @@
 ---
 
 ## Phase 4: Full Test Suite Migration & System Regression Verification
-- [ ] Task: Update legacy test suite and verify end-to-end regression
-  - [ ] Execute full pytest suite across `api/tests/` and `engine/tests/`
-  - [ ] Clean up any remaining legacy fixtures or assertions expecting old serializer schemas
-  - [ ] Verify database initialization and migrations across fresh and existing SQLite databases
+- [x] Task: Update legacy test suite and verify end-to-end regression 1b82d4a
+  - [x] Execute full pytest suite across `api/tests/` and `engine/tests/`
+  - [x] Clean up any remaining legacy fixtures or assertions expecting old serializer schemas
+  - [x] Verify database initialization and migrations across fresh and existing SQLite databases
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
