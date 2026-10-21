@@ -16,10 +16,10 @@
 ---
 
 ## Phase 2: HostState Lineage Set-Union & Void Sentinel Purge (TDD)
-- [ ] Task: Write failing tests for set-union domain/lineage storage and complete removal of Void sentinels (Red Phase)
-  - [ ] Test `runner.py` delta ingestion merging `resolved_domains` and `discovered_from` without clobbering existing vhost probes
-  - [ ] Test that non-responsive targets never produce `"Void (X)"` sentinel strings in SQLite or API responses
-  - [ ] Test `depth` lineage inference from `discovered_from` (0 for root target, >= 1 for SAN/redirect hops)
+- [x] Task: Write failing tests for set-union domain/lineage storage and complete removal of Void sentinels (Red Phase) 0a83a50
+  - [x] Test `runner.py` delta ingestion merging `resolved_domains` and `discovered_from` without clobbering existing vhost probes
+  - [x] Test that non-responsive targets never produce `"Void (X)"` sentinel strings in SQLite or API responses
+  - [x] Test `depth` lineage inference from `discovered_from` (0 for root target, >= 1 for SAN/redirect hops)
 - [ ] Task: Implement `resolved_domains` / `discovered_from` and purge Void sentinels (Green & Refactor Phase)
   - [ ] Replace `metadata_resolved_from` on `HostState` with `resolved_domains: list[str]` and `discovered_from: list[str]`
   - [ ] Update `_upsert_delta_sync` in `api/src/api/services/runner.py` to perform set-union on `resolved_domains` and `discovered_from`
