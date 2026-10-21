@@ -1,11 +1,11 @@
 # Implementation Plan: Database Normalization & Backend Evaluation Pipeline (`db_and_evaluation_pipeline`)
 
 ## Phase 1: SQLite Hardening, Model Normalization & TargetGroup Retirement (TDD)
-- [ ] Task: Write failing unit tests for schema changes, WAL configuration, foreign key cascades, and direct `Scan.targets` (Red Phase)
-  - [ ] Test SQLite PRAGMA configuration (`journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`) in `api/tests/test_database.py`
-  - [ ] Test `UniqueConstraint("port_state_id")` enforcement on `TlsCertificate`
-  - [ ] Test direct `Scan.targets` JSON storage and absence of `TargetGroup` / `ScanTargetGroupLink`
-  - [ ] Test removal of `@model_serializer` on `HostState` and `PortState`, ensuring standard attribute and relationship access
+- [x] Task: Write failing unit tests for schema changes, WAL configuration, foreign key cascades, and direct `Scan.targets` (Red Phase) 0113e7f
+  - [x] Test SQLite PRAGMA configuration (`journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`) in `api/tests/test_database.py`
+  - [x] Test `UniqueConstraint("port_state_id")` enforcement on `TlsCertificate`
+  - [x] Test direct `Scan.targets` JSON storage and absence of `TargetGroup` / `ScanTargetGroupLink`
+  - [x] Test removal of `@model_serializer` on `HostState` and `PortState`, ensuring standard attribute and relationship access
 - [ ] Task: Implement model updates, SQLite PRAGMAs, and scan router adjustments (Green & Refactor Phase)
   - [ ] Configure engine event listeners in `api/src/api/database.py` for WAL mode, foreign keys, and busy timeout
   - [ ] Drop `TargetGroup` & `ScanTargetGroupLink`, add `targets` JSON column to `Scan`, add SQLite migration in `init_db()`
