@@ -1,0 +1,4 @@
+Task: Write failing tests for set-union domain/lineage storage and complete removal of Void sentinels (Red Phase)
+- Added tests in api/tests/test_host_lineage_and_void.py verifying resolved_domains and discovered_from list columns
+- Added tests verifying set-union delta merging for resolved_domains and discovered_from
+- Added tests asserting non-responsive hosts produce no Void sentinel strings and depth lineage inference
