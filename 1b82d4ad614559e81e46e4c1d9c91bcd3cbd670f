@@ -1,4 +1,10 @@
-Task: Update legacy test suite and verify end-to-end regression
-- Executed full pytest suite across api/tests and engine/tests (90 tests passing)
-- Verified database initialization and dynamic schema migration across fresh and existing SQLite databases in test_database.py
-- Zero regressions across subprocess dispatch, lineage set-union, void purging, and deterministic evaluation pipeline
+Phase 4 Checkpoint: Full Test Suite Migration & System Regression Verification
+- Automated test command: ./.venv/bin/pytest api/tests engine/tests (90 passed)
+- Comprehensive test coverage across all layers:
+  - SQLite hardening and dynamic auto-column migration on existing files
+  - Direct Scan.targets storage without TargetGroup indirection
+  - Non-destructive HostState set-union domain/lineage storage
+  - Complete purge of 'Void' sentinel strings and synthetic nodes
+  - Deterministic bottom-up evaluation pipeline (evaluator.py)
+  - Engine subprocess JSON stdin ingestion and abort seam
+- Zero regressions across 90 automated tests
