@@ -1,0 +1,10 @@
+Phase Checkpoint: Phase 3 - Finding-Driven Alert Matching & Summary Simplification
+Scope:
+- api/src/api/services/alerts.py
+- api/tests/test_alert_service.py
+
+Summary:
+- Transitioned compute_run_summary to pre-computed metrics_json['summary'].
+- Implemented modular Callable Rule Strategy pattern for alert trigger evaluation with function injection.
+- Enriched Google Chat Cards v2 and Slack webhook payloads with canonical finding codes.
+- All 105 unit and integration tests across api/tests and engine/tests passing.
