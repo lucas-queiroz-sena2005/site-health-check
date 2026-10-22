@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 
 
@@ -11,10 +12,18 @@ def no_engine_subprocess(monkeypatch):
     async def fake_run_engine_cli(run_id, snapshot, app_state):
         launched.append(run_id)
 
+    async def fake_dispatch_run(self, run_id, snapshot, scan_id=None):
+        launched.append(run_id)
+        async def dummy():
+            pass
+        return asyncio.create_task(dummy())
+
     for target in (
         "api.routers.runs.run_engine_cli",
         "api.routers.scans.run_engine_cli",
         "api.services.scheduler.run_engine_cli",
     ):
         monkeypatch.setattr(target, fake_run_engine_cli)
+
+    monkeypatch.setattr("api.services.run_manager.RunManager.dispatch_run", fake_dispatch_run)
     return launched

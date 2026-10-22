@@ -347,6 +347,7 @@ def test_upsert_delta_sync_preserves_open_tcp_and_merges_discovered_from(test_en
 
 @pytest.mark.asyncio
 async def test_run_manager_dispatch_run_pipeline(test_engine):
+    import asyncio
     from unittest.mock import AsyncMock, MagicMock, patch
     from api.models import ScanRun, ScanRunStatus
     from api.services.run_manager import RunManager
@@ -364,12 +365,33 @@ async def test_run_manager_dispatch_run_pipeline(test_engine):
         session.commit()
 
     manager = RunManager()
+    async def real_dispatch_run(r, s, scan_id=None):
+        return asyncio.create_task(manager._execute_run(r, s, scan_id))
+    manager.dispatch_run = real_dispatch_run
+
+    mock_process = AsyncMock()
+    mock_process.stdin = MagicMock()
+    mock_process.stdin.write = MagicMock()
+    mock_process.stdin.drain = AsyncMock()
+    mock_process.stdin.close = MagicMock()
+    mock_process.stdin.wait_closed = AsyncMock()
+    mock_process.stdout = AsyncMock()
+    mock_process.stdout.readline = AsyncMock(side_effect=[
+        b'{"status": "completed"}\n',
+        b''
+    ])
+    mock_process.stderr = AsyncMock()
+    mock_process.stderr.readline = AsyncMock(return_value=b'')
+    mock_process.wait = AsyncMock(return_value=0)
+    mock_process.returncode = 0
 
     # dispatch_run should execute the full unified pipeline:
     # 1. Spawns engine CLI subprocess and streams deltas
     # 2. Finalizes with evaluate_scan_run
     # 3. Dispatches alerts if scan_id provided
     with patch("api.services.run_manager.db_engine", test_engine), \
+         patch("api.services.runner.db_engine", test_engine), \
+         patch("asyncio.create_subprocess_exec", return_value=mock_process), \
          patch("api.services.run_manager.evaluate_scan_run") as mock_evaluate, \
          patch("api.services.run_manager.check_and_dispatch_alerts", new_callable=AsyncMock) as mock_alerts:
         
@@ -383,5 +405,6 @@ async def test_run_manager_dispatch_run_pipeline(test_engine):
         with Session(test_engine) as session:
             final_run = session.get(ScanRun, run_id)
             assert final_run.status == ScanRunStatus.COMPLETED
+
 
 

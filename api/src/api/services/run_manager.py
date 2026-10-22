@@ -1,11 +1,21 @@
 import asyncio
+import json
 import logging
 import signal
+import sys
 from collections import defaultdict, deque
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi.sse import ServerSentEvent
+from sqlmodel import Session
+
+from api.database import engine as db_engine
+from api.models import ScanRun, ScanRunStatus
+from api.services.alerts import evaluate_and_dispatch_alert as check_and_dispatch_alerts
+from api.services.evaluator import evaluate_scan_run
+from api.services.runner import _finalize_run, _ingest_stdout
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +23,7 @@ logger = logging.getLogger(__name__)
 class RunManager:
     """Centralized service managing scan run subprocess lifecycles, abort coordination,
 
-    bounded log buffering, and SSE distribution.
+    bounded log buffering, SSE distribution, and post-finalization alert triggers.
     """
 
     def __init__(self, log_buffer_maxlen: int = 1000, subscriber_queue_maxsize: int = 100):
@@ -101,10 +111,10 @@ class RunManager:
         """Returns the number of active SSE subscribers for run_id."""
         return len(self._subscribers.get(run_id, []))
 
-    async def subscribe_logs(self, run_id: str) -> AsyncGenerator[ServerSentEvent, None]:
+    async def subscribe_logs(self, run_id: str, is_finished: bool = False) -> AsyncGenerator[ServerSentEvent, None]:
         """Subscribes to log events for run_id: first yields an initial attachment info event,
 
-        replays historical events from buffer, then streams live events.
+        replays historical events from buffer, then streams live events if not finished.
         Automatically unsubscribes on generator termination or client disconnect.
         """
         queue: asyncio.Queue[ServerSentEvent | None] = asyncio.Queue(maxsize=self._subscriber_queue_maxsize)
@@ -118,6 +128,9 @@ class RunManager:
             for event in historical:
                 yield event
 
+            if is_finished:
+                return
+
             # Stream live logs
             while True:
                 event = await queue.get()
@@ -130,6 +143,103 @@ class RunManager:
                 subs.remove(queue)
             if not subs and run_id in self._subscribers:
                 del self._subscribers[run_id]
+
+    async def dispatch_run(
+        self,
+        run_id: str,
+        snapshot: dict[str, Any],
+        scan_id: str | None = None,
+    ) -> asyncio.Task:
+        """Dispatches background scan execution, returning the created asyncio.Task."""
+        task = asyncio.create_task(self._execute_run(run_id, snapshot, scan_id))
+        return task
+
+    async def _execute_run(
+        self,
+        run_id: str,
+        snapshot: dict[str, Any],
+        scan_id: str | None = None,
+    ) -> None:
+        """Executes the unified scan run pipeline: Ingest -> Finalize & Evaluate -> Match Alerts."""
+        try:
+            with Session(db_engine) as session:
+                run = session.get(ScanRun, run_id)
+                if run:
+                    run.status = ScanRunStatus.RUNNING
+                    if not run.started_at:
+                        run.started_at = datetime.now(UTC)
+                    session.add(run)
+                    session.commit()
+
+            cmd = [sys.executable, "-u", "-m", "engine.cli", "--config", "-"]
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            if process.stdin:
+                process.stdin.write(json.dumps(snapshot).encode("utf-8") + b"\n")
+                await process.stdin.drain()
+                process.stdin.close()
+                try:
+                    await process.stdin.wait_closed()
+                except Exception:
+                    pass
+
+            self.register_process(run_id, process)
+
+            async def read_stderr():
+                if not process.stderr:
+                    return
+                while True:
+                    line = await process.stderr.readline()
+                    if not line:
+                        break
+                    self.publish_log(
+                        run_id,
+                        ServerSentEvent(data={"message": line.decode("utf-8").strip()}, event="log"),
+                    )
+
+            await asyncio.gather(
+                _ingest_stdout(run_id, process),
+                read_stderr(),
+            )
+
+            await process.wait()
+
+            rc = process.returncode if process.returncode is not None else 1
+            if rc in (130, 143):
+                self.publish_log(run_id, ServerSentEvent(data={"message": "Run aborted by user"}, event="status"))
+            else:
+                self.publish_log(run_id, ServerSentEvent(data={"message": f"Run finished with code {rc}"}, event="status"))
+
+            await asyncio.to_thread(_finalize_run, run_id, rc)
+
+            with Session(db_engine) as session:
+                evaluate_scan_run(run_id, session)
+
+            if scan_id:
+                try:
+                    with Session(db_engine) as session:
+                        await check_and_dispatch_alerts(run_id, session)
+                except Exception as e:
+                    logger.error("Failed to process alerts for run %s: %s", run_id, e)
+
+        except Exception as e:
+            logger.exception("Engine error during run %s: %s", run_id, e)
+            self.publish_log(run_id, ServerSentEvent(data={"message": f"Engine error: {e!s}"}, event="error"))
+            with Session(db_engine) as session:
+                run = session.get(ScanRun, run_id)
+                if run:
+                    run.status = ScanRunStatus.FAILED
+                    run.finished_at = datetime.now(UTC)
+                    session.add(run)
+                    session.commit()
+        finally:
+            self.unregister_process(run_id)
+            self.broadcast_sentinel(run_id)
 
     def cleanup_run(self, run_id: str) -> None:
         """Evicts subprocess, buffers, and subscriber queues for a completed run."""

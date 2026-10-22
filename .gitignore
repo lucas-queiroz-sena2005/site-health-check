@@ -18,6 +18,7 @@ conductor/**/*.html
 venv/
 env/
 *.db
+*.db-*
 
 # Ignore environment variable files
 .env

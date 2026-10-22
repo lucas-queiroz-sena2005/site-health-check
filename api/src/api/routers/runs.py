@@ -34,33 +34,26 @@ async def abort_run(
     request: Request,
     session: SessionDep
 ):
-    app_state = request.app.state
-    if not hasattr(app_state, "processes"):
-        raise HTTPException(status_code=404, detail="Run process not found in memory")
-        
-    process = app_state.processes.get(id)
-    if not process:
-        run = session.get(ScanRun, id)
-        if run and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED, ScanRunStatus.ABORTED):
-            raise HTTPException(status_code=409, detail=f"Run is already {run.status.value}")
-        raise HTTPException(status_code=404, detail="Run process not running locally")
-        
-    try:
-        process.send_signal(signal.SIGTERM)
-        
-        # Schedule a SIGKILL if it doesn't die in 10s
-        async def force_kill():
-            await asyncio.sleep(10)
-            if process.returncode is None:
-                try:
-                    process.kill()
-                except OSError:
-                    pass
-        asyncio.create_task(force_kill())
-        
+    run_manager = getattr(request.app.state, "run_manager", None)
+    if run_manager and run_manager.is_active(id):
+        aborted = run_manager.abort_run(id)
+        if not aborted:
+            raise HTTPException(status_code=404, detail="Process exited before signal could be sent")
         return {"message": "Abort signal sent to engine"}
-    except ProcessLookupError:
-        raise HTTPException(status_code=404, detail="Process exited before signal could be sent")
+
+    # Fallback to checking processes map if present
+    process = getattr(request.app.state, "processes", {}).get(id) if hasattr(request.app.state, "processes") else None
+    if process:
+        try:
+            process.send_signal(signal.SIGTERM)
+            return {"message": "Abort signal sent to engine"}
+        except ProcessLookupError:
+            raise HTTPException(status_code=404, detail="Process exited before signal could be sent")
+
+    run = session.get(ScanRun, id)
+    if run and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED, ScanRunStatus.ABORTED):
+        raise HTTPException(status_code=409, detail=f"Run is already {run.status.value}")
+    raise HTTPException(status_code=404, detail="Run process not running locally")
 
 @router.post("/launch", status_code=status.HTTP_201_CREATED)
 async def launch_run(
@@ -79,7 +72,11 @@ async def launch_run(
     session.commit()
     session.refresh(run)
     
-    asyncio.create_task(run_engine_cli(run.id, snapshot, request.app.state))
+    run_manager = getattr(request.app.state, "run_manager", None)
+    if run_manager:
+        await run_manager.dispatch_run(run.id, snapshot, scan_id=config.scan_id)
+    else:
+        asyncio.create_task(run_engine_cli(run.id, snapshot, request.app.state))
     
     # Retrieve scan name if scan_id is present
     scan_name = None
@@ -201,8 +198,17 @@ def get_run(
 @router.get("/{id}/stream", response_class=EventSourceResponse)
 async def stream_run_logs(
     id: Annotated[str, Path()], 
-    request: Request
+    request: Request,
+    session: SessionDep,
 ) -> AsyncIterable[ServerSentEvent]:
+    run_manager = getattr(request.app.state, "run_manager", None)
+    if run_manager:
+        run = session.get(ScanRun, id)
+        is_finished = run is not None and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED, ScanRunStatus.ABORTED)
+        async for event in run_manager.subscribe_logs(id, is_finished=is_finished):
+            yield event
+        return
+
     app_state = request.app.state
     if not hasattr(app_state, "log_subscribers"):
         app_state.log_subscribers = {}
@@ -210,8 +216,6 @@ async def stream_run_logs(
         app_state.run_logs = {}
 
     # Register queue BEFORE replaying history.
-    # Without this, broadcast(None) can fire between replay and registration,
-    # leaving queue.get() hanging forever.
     queue: asyncio.Queue[ServerSentEvent | None] = asyncio.Queue()
     app_state.log_subscribers.setdefault(id, []).append(queue)
     historical = list(app_state.run_logs.get(id, []))
@@ -222,12 +226,9 @@ async def stream_run_logs(
         for past_event in historical:
             yield past_event
 
-        # If run finished before we registered, broadcast(None) was missed.
-        # DB check catches that edge case.
         from sqlmodel import Session
 
         from api.database import engine as db_engine
-        from api.models import ScanRun, ScanRunStatus
         with Session(db_engine) as session:
             run = session.get(ScanRun, id)
             if run and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED):

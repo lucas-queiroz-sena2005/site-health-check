@@ -131,15 +131,19 @@ def test_abort_finished_run_returns_409(client: TestClient, session: Session):
     assert resp.status_code == 409
 
 
-def test_stream_run_logs_delegates_to_run_manager(client: TestClient):
+def test_stream_run_logs_delegates_to_run_manager(client: TestClient, session: Session):
     from fastapi.sse import ServerSentEvent
+    from api.models import ScanRun, ScanRunStatus
 
     run_id = "test-stream-endpoint-run"
+    run = ScanRun(id=run_id, execution_config_snapshot_json={}, status=ScanRunStatus.COMPLETED)
+    session.add(run)
+    session.commit()
+
     app.state.run_manager.publish_log(run_id, ServerSentEvent(data={"msg": "first"}, event="log"))
 
     with client.stream("GET", f"/api/runs/{run_id}/stream") as response:
         assert response.status_code == 200
-        lines = list(response.iter_lines())
-        content = "\n".join(lines)
+        content = "\n".join(response.iter_lines())
         assert "first" in content
 

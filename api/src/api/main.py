@@ -77,6 +77,7 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+app.state.run_manager = RunManager()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

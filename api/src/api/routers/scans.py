@@ -288,7 +288,11 @@ async def launch_scheduled_scan(
     session.commit()
     session.refresh(run)
     
-    asyncio.create_task(run_scheduled_scan_with_alerts(run.id, snapshot, request.app.state))
+    run_manager = getattr(request.app.state, "run_manager", None)
+    if run_manager:
+        await run_manager.dispatch_run(run.id, snapshot, scan_id=scan.id)
+    else:
+        asyncio.create_task(run_scheduled_scan_with_alerts(run.id, snapshot, request.app.state))
     
     return ScanRunResponse(
         id=run.id,
