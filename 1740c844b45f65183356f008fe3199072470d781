@@ -1,0 +1,2 @@
+Task: Implement RunManager service in api/src/api/services/run_manager.py (Green & Refactor Phase)
+Summary: Created api/src/api/services/run_manager.py implementing RunManager with process registration, abort signaling with SIGTERM, log ring buffering (maxlen=1000), bounded SSE subscriber queues (maxsize=100), subscriber cleanup on generator termination, and graceful process shutdown. Registered app.state.run_manager in api/src/api/main.py lifespan.
