@@ -46,3 +46,16 @@
   - [x] Verify manual scan launch, live SSE log streaming, abort handling, and alert trigger dispatch end-to-end
   - [x] Verify scheduled scan execution via scheduler loop with zero errors
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 4a1aa4e
+
+---
+
+## Phase 5: Review Fixes & 4-Stage Orthogonal Pipeline Alignment (See `review-and-pipeline-retrospective.md`)
+- [ ] Task: Align Stage 1 (Compact API Progress Stream & Sliding-Window SSE Queue)
+  - [ ] Demote per-IP `[Routine ...] Processing <IP>` log in `engine/src/engine/engine.py` from `INFO` to `DEBUG`
+  - [ ] Emit compact API-generated progress & active-hit SSE events during `_ingest_stdout` and finalization in `runner.py` / `run_manager.py`
+  - [ ] Update `RunManager.publish_log` and `broadcast_sentinel` to use sliding-window eviction without warning floods and guarantee `None` EOF sentinel delivery
+- [ ] Task: Align Stage 2 & Stage 3 (Evaluator Summary Ownership, Void vs. Ghost Port Rollup, and Legacy Loop Deletion)
+  - [ ] Update `evaluator.py` so void (never-active) closed ports on active hosts do not fail the host, while historically active closed ports trigger ghost warnings
+  - [ ] Compute and persist `ScanRun.metrics_json["summary"]` directly from evaluated `HostState.status` rows during finalization/evaluation and remove duplicate `evaluate_scan_run` call in `RunManager`
+  - [ ] Delete the 100-line legacy port/certificate inspection loop in `api/src/api/services/alerts.py:compute_run_summary()`
+- [ ] Task: Re-verify with pytest suite and live network + mock webhook harness (`verify_live_pipeline.py`)

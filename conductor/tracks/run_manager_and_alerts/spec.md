@@ -1,7 +1,8 @@
 # Specification: Encapsulated RunManager & Finding-Based Alert Matcher (`run_manager_and_alerts`)
 
 Status: ready-for-agent  
-Related ADR: [ADR 0023](../../adr/0023-control-plane-and-flat-explorer-modernization.md) (Implements Track 3)
+Related ADR: [ADR 0023](../../adr/0023-control-plane-and-flat-explorer-modernization.md) (Implements Track 3)  
+Review Retrospective: [review-and-pipeline-retrospective.md](./review-and-pipeline-retrospective.md)
 
 ---
 

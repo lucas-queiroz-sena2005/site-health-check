@@ -3,3 +3,4 @@
 - [Metadata](./metadata.json)
 - [Spec](./spec.md)
 - [Plan](./plan.md)
+- [Architectural Review & Pipeline Retrospective](./review-and-pipeline-retrospective.md)
