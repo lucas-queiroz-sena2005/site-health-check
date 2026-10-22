@@ -25,39 +25,38 @@ class ScanRunResponse(ExecutionConfig):
     finished_at: datetime | None = None
     metrics_json: dict[str, Any] | None = None
 
-from api.services.runner import run_engine_cli
-import signal
 
 @router.post("/{id}/abort", status_code=status.HTTP_202_ACCEPTED)
 async def abort_run(
-    id: Annotated[str, Path()], 
+    id: Annotated[str, Path()],
     request: Request,
-    session: SessionDep
+    session: SessionDep,
 ):
-    run_manager = getattr(request.app.state, "run_manager", None)
-    if run_manager and run_manager.is_active(id):
+    run_manager = request.app.state.run_manager
+    if run_manager.is_active(id):
         aborted = run_manager.abort_run(id)
         if not aborted:
-            raise HTTPException(status_code=404, detail="Process exited before signal could be sent")
+            raise HTTPException(
+                status_code=404,
+                detail="Process exited before signal could be sent",
+            )
         return {"message": "Abort signal sent to engine"}
 
-    # Fallback to checking processes map if present
-    process = getattr(request.app.state, "processes", {}).get(id) if hasattr(request.app.state, "processes") else None
-    if process:
-        try:
-            process.send_signal(signal.SIGTERM)
-            return {"message": "Abort signal sent to engine"}
-        except ProcessLookupError:
-            raise HTTPException(status_code=404, detail="Process exited before signal could be sent")
-
     run = session.get(ScanRun, id)
-    if run and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED, ScanRunStatus.ABORTED):
-        raise HTTPException(status_code=409, detail=f"Run is already {run.status.value}")
+    if run and run.status in (
+        ScanRunStatus.COMPLETED,
+        ScanRunStatus.FAILED,
+        ScanRunStatus.ABORTED,
+    ):
+        raise HTTPException(
+            status_code=409, detail=f"Run is already {run.status.value}"
+        )
     raise HTTPException(status_code=404, detail="Run process not running locally")
+
 
 @router.post("/launch", status_code=status.HTTP_201_CREATED)
 async def launch_run(
-    config: LaunchRunRequest, 
+    config: LaunchRunRequest,
     session: SessionDep,
     request: Request,
 ) -> ScanRunResponse:
@@ -66,17 +65,15 @@ async def launch_run(
         scan_id=config.scan_id,
         execution_config_snapshot_json=snapshot,
         status=ScanRunStatus.PENDING,
-        started_at=datetime.now(timezone.utc)
+        started_at=datetime.now(timezone.utc),
     )
     session.add(run)
     session.commit()
     session.refresh(run)
-    
-    run_manager = getattr(request.app.state, "run_manager", None)
-    if run_manager:
-        await run_manager.dispatch_run(run.id, snapshot, scan_id=config.scan_id)
-    else:
-        asyncio.create_task(run_engine_cli(run.id, snapshot, request.app.state))
+
+    await request.app.state.run_manager.dispatch_run(
+        run.id, snapshot, scan_id=config.scan_id
+    )
     
     # Retrieve scan name if scan_id is present
     scan_name = None
@@ -197,89 +194,37 @@ def get_run(
 
 @router.get("/{id}/stream", response_class=EventSourceResponse)
 async def stream_run_logs(
-    id: Annotated[str, Path()], 
+    id: Annotated[str, Path()],
     request: Request,
     session: SessionDep,
 ) -> AsyncIterable[ServerSentEvent]:
-    run_manager = getattr(request.app.state, "run_manager", None)
-    if run_manager:
-        run = session.get(ScanRun, id)
-        is_finished = run is not None and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED, ScanRunStatus.ABORTED)
-        async for event in run_manager.subscribe_logs(id, is_finished=is_finished):
-            yield event
-        return
+    run_manager = request.app.state.run_manager
+    run = session.get(ScanRun, id)
+    is_finished = run is not None and run.status in (
+        ScanRunStatus.COMPLETED,
+        ScanRunStatus.FAILED,
+        ScanRunStatus.ABORTED,
+    )
+    async for event in run_manager.subscribe_logs(id, is_finished=is_finished):
+        yield event
 
-    app_state = request.app.state
-    if not hasattr(app_state, "log_subscribers"):
-        app_state.log_subscribers = {}
-    if not hasattr(app_state, "run_logs"):
-        app_state.run_logs = {}
-
-    # Register queue BEFORE replaying history.
-    queue: asyncio.Queue[ServerSentEvent | None] = asyncio.Queue()
-    app_state.log_subscribers.setdefault(id, []).append(queue)
-    historical = list(app_state.run_logs.get(id, []))
-
-    try:
-        yield ServerSentEvent(data={"message": f"Attached to run {id} log stream"}, event="info")
-
-        for past_event in historical:
-            yield past_event
-
-        from sqlmodel import Session
-
-        from api.database import engine as db_engine
-        with Session(db_engine) as session:
-            run = session.get(ScanRun, id)
-            if run and run.status in (ScanRunStatus.COMPLETED, ScanRunStatus.FAILED):
-                while not queue.empty():
-                    event = queue.get_nowait()
-                    if event is not None:
-                        yield event
-                return
-
-        while True:
-            event = await queue.get()
-            if event is None:
-                break
-            yield event
-    finally:
-        subscribers = app_state.log_subscribers.get(id, [])
-        if queue in subscribers:
-            subscribers.remove(queue)
 
 @router.get("/{id}/results")
 def get_run_results(
     id: Annotated[str, Path()],
-    session: SessionDep
+    session: SessionDep,
 ) -> dict[str, Any]:
-    from sqlmodel import select
-
     from api.models import HostState
-    
+
     run = session.get(ScanRun, id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
-        
+
     stmt = select(HostState).where(HostState.scan_run_id == id)
     hosts = session.exec(stmt).all()
-    
     metadata = dict(run.metrics_json or {})
-    if not metadata.get("summary"):
-        from api.services.alerts import compute_run_summary
-        snapshot = run.execution_config_snapshot_json or {}
-        summary = compute_run_summary(
-            session=session,
-            run=run,
-            ghost_window_str=snapshot.get("ghost_window", "7d"),
-            tls_warning_days=snapshot.get("tls_warning_days", 30),
-        )
-        metadata["summary"] = summary
-        run.metrics_json = metadata
-        session.add(run)
-        session.commit()
 
     return {
         "results": hosts,
-        "metadata": metadata
+        "metadata": metadata,
     }

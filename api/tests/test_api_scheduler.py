@@ -8,25 +8,20 @@ from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 
+from api.services.run_manager import RunManager
+
+
 class DummyAppState:
     def __init__(self):
-        self.log_subscribers = {}
-        self.run_logs = {}
+        self.run_manager = RunManager()
 
 @pytest.mark.asyncio
-async def test_scheduler_triggers_due_scan(monkeypatch):
+async def test_scheduler_triggers_due_scan(monkeypatch, no_engine_subprocess):
     test_engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     SQLModel.metadata.create_all(test_engine)
     monkeypatch.setattr("api.services.scheduler.engine", test_engine)
-
-    # Mock run_engine_cli so it doesn't actually launch a subprocess in test
-    called_runs = []
-    async def mock_run_engine_cli(run_id, snapshot, app_state):
-        called_runs.append(run_id)
-
-    monkeypatch.setattr("api.services.scheduler.run_engine_cli", mock_run_engine_cli)
 
     app_state = DummyAppState()
 
@@ -60,8 +55,8 @@ async def test_scheduler_triggers_due_scan(monkeypatch):
     await asyncio.sleep(0)  # let the create_task()'d run start
 
     # Verify a new run was created and triggered
-    assert len(called_runs) == 1
-    new_run_id = called_runs[0]
+    assert len(no_engine_subprocess) == 1
+    new_run_id = no_engine_subprocess[0]
 
     with Session(test_engine) as session:
         new_run = session.get(ScanRun, new_run_id)
@@ -125,19 +120,13 @@ def test_settings_timezone_resolution(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_scheduler_respects_custom_timezone(monkeypatch):
+async def test_scheduler_respects_custom_timezone(monkeypatch, no_engine_subprocess):
     from zoneinfo import ZoneInfo
     test_engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     SQLModel.metadata.create_all(test_engine)
     monkeypatch.setattr("api.services.scheduler.engine", test_engine)
-
-    called_runs = []
-    async def mock_run_engine_cli(run_id, snapshot, app_state):
-        called_runs.append(run_id)
-
-    monkeypatch.setattr("api.services.scheduler.run_engine_cli", mock_run_engine_cli)
     monkeypatch.setattr("api.services.scheduler.settings.timezone", "America/Sao_Paulo")
 
     tz = ZoneInfo("America/Sao_Paulo")
@@ -160,5 +149,5 @@ async def test_scheduler_respects_custom_timezone(monkeypatch):
     await check_and_run_scheduled_scans(app_state)
     await asyncio.sleep(0)
 
-    assert len(called_runs) == 1
+    assert len(no_engine_subprocess) == 1
 

@@ -368,7 +368,7 @@ def test_compute_run_summary_closed_port_with_open_tls_warning(session: Session)
     assert summary["ghost"] == 0
 
 
-def test_compute_run_summary_invalid_tls_is_warning(session: Session):
+def test_compute_run_summary_invalid_tls_is_failed(session: Session):
     from api.models import HostState, PortState, ScanRun, ScanRunStatus, TlsCertificate
     from api.services.alerts import compute_run_summary
 
@@ -399,8 +399,8 @@ def test_compute_run_summary_invalid_tls_is_warning(session: Session):
         tls_warning_days=30,
     )
     assert summary["active"] == 0
-    assert summary["warning"] == 1
-    assert summary["failed"] == 0
+    assert summary["warning"] == 0
+    assert summary["failed"] == 1
     assert summary["ghost"] == 0
 
 

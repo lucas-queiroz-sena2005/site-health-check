@@ -8,25 +8,9 @@ from sqlmodel import Session, col, desc, select
 from api.config import settings
 from api.database import engine
 from api.models import Scan, ScanRun, ScanRunStatus
-from api.routers.runs import run_engine_cli
-from api.services.alerts import evaluate_and_dispatch_alert
 
 logger = logging.getLogger("scheduler")
 
-async def run_scheduled_scan_with_alerts(run_id: str, snapshot: dict, app_state):
-    """Runs the engine and evaluates alerts sequentially in the background."""
-    run_manager = getattr(app_state, "run_manager", None)
-    if run_manager:
-        task = await run_manager.dispatch_run(run_id, snapshot, scan_id=snapshot.get("scan_id"))
-        await task
-    else:
-        await run_engine_cli(run_id, snapshot, app_state)
-        
-        try:
-            with Session(engine) as session:
-                await evaluate_and_dispatch_alert(run_id, session)
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Failed to process alerts for scheduled scan {run_id}: {e}")
 
 async def check_and_run_scheduled_scans(app_state):
     tz = settings.get_tz()
@@ -108,11 +92,9 @@ async def check_and_run_scheduled_scans(app_state):
                     session.commit()
                     session.refresh(run)
                     
-                    run_manager = getattr(app_state, "run_manager", None)
-                    if run_manager:
-                        await run_manager.dispatch_run(run.id, snapshot, scan_id=scan.id)
-                    else:
-                        asyncio.create_task(run_scheduled_scan_with_alerts(run.id, snapshot, app_state))
+                    await app_state.run_manager.dispatch_run(
+                        run.id, snapshot, scan_id=scan.id
+                    )
             except Exception as e:
                 logger.exception(f"Error checking schedule for scan {scan.id}: {e}", exc_info=True)
 

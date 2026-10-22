@@ -202,13 +202,15 @@ def evaluate_scan_run(
                     if _is_deprecated_tls(cert.protocol_version):
                         port_findings.append(FINDING_TLS_DEPRECATED_VERSION)
 
-                # Assign Port status: HTTP 5xx / timeout errors fail the service;
-                # TLS certificate issues and HTTP 4xx are warnings.
-                has_port_failure = any(s == "failed" for s in check_statuses)
-                has_port_warning = (
-                    any(s == "warning" for s in check_statuses)
+                # Assign Port status: HTTP 5xx / timeout errors and invalid/expired TLS fail the service;
+                # expiring-soon / deprecated TLS and HTTP 4xx are warnings.
+                has_port_failure = (
+                    any(s == "failed" for s in check_statuses)
                     or FINDING_TLS_INVALID in port_findings
                     or FINDING_TLS_EXPIRED in port_findings
+                )
+                has_port_warning = (
+                    any(s == "warning" for s in check_statuses)
                     or FINDING_TLS_EXPIRING_SOON in port_findings
                     or FINDING_TLS_DEPRECATED_VERSION in port_findings
                 )

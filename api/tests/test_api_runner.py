@@ -229,11 +229,11 @@ def test_finalize_run_preserves_active_and_ghost_hosts_while_pruning_void(test_e
 
 
 @pytest.mark.asyncio
-async def test_run_engine_cli_stdin_dispatch(test_engine):
+async def test_run_manager_stdin_dispatch(test_engine):
     import json
     import asyncio
     from unittest.mock import AsyncMock, patch, MagicMock
-    from api.services.runner import run_engine_cli
+    from api.services.run_manager import RunManager
     from api.models import ScanRun, ScanRunStatus
     from datetime import datetime, timezone
 
@@ -244,7 +244,8 @@ async def test_run_engine_cli_stdin_dispatch(test_engine):
         "flags": {"check_http": False, "rate": 25.0}
     }
 
-    with patch("api.services.runner.db_engine", test_engine):
+    with patch("api.services.runner.db_engine", test_engine), \
+         patch("api.services.run_manager.db_engine", test_engine):
         with Session(test_engine) as session:
             session.add(ScanRun(
                 id=run_id,
@@ -268,14 +269,12 @@ async def test_run_engine_cli_stdin_dispatch(test_engine):
         mock_process.stderr = AsyncMock()
         mock_process.stderr.readline = AsyncMock(return_value=b'')
         mock_process.wait = AsyncMock(return_value=0)
+        mock_process.returncode = 0
 
-        mock_app_state = MagicMock()
-        mock_app_state.run_logs = {}
-        mock_app_state.log_subscribers = {}
-        mock_app_state.processes = {}
+        manager = RunManager()
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process) as mock_exec:
-            await run_engine_cli(run_id, snapshot, mock_app_state)
+            await manager._execute_run(run_id, snapshot)
 
             mock_exec.assert_called_once()
             cmd_args = mock_exec.call_args[0]

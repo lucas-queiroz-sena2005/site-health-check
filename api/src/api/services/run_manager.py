@@ -14,7 +14,6 @@ from sqlmodel import Session
 from api.database import engine as db_engine
 from api.models import ScanRun, ScanRunStatus
 from api.services.alerts import evaluate_and_dispatch_alert as check_and_dispatch_alerts
-from api.services.evaluator import evaluate_scan_run
 from api.services.runner import _finalize_run, _ingest_stdout
 
 logger = logging.getLogger(__name__)
@@ -26,9 +25,15 @@ class RunManager:
     bounded log buffering, SSE distribution, and post-finalization alert triggers.
     """
 
-    def __init__(self, log_buffer_maxlen: int = 1000, subscriber_queue_maxsize: int = 100):
+    def __init__(
+        self,
+        log_buffer_maxlen: int = 1000,
+        subscriber_queue_maxsize: int = 100,
+        max_retained_runs: int = 100,
+    ):
         self._log_buffer_maxlen = log_buffer_maxlen
         self._subscriber_queue_maxsize = subscriber_queue_maxsize
+        self._max_retained_runs = max_retained_runs
         self._processes: dict[str, asyncio.subprocess.Process] = {}
         self._log_buffers: dict[str, deque[ServerSentEvent]] = defaultdict(
             lambda: deque(maxlen=self._log_buffer_maxlen)
@@ -275,6 +280,19 @@ class RunManager:
         finally:
             self.unregister_process(run_id)
             self.broadcast_sentinel(run_id)
+            self._evict_old_buffers()
+
+    def _evict_old_buffers(self) -> None:
+        """Evicts oldest completed run log buffers when count exceeds max_retained_runs."""
+        while len(self._log_buffers) > self._max_retained_runs:
+            evicted = False
+            for old_run_id in list(self._log_buffers.keys()):
+                if not self.is_active(old_run_id) and not self._subscribers.get(old_run_id):
+                    self._log_buffers.pop(old_run_id, None)
+                    evicted = True
+                    break
+            if not evicted:
+                break
 
     def cleanup_run(self, run_id: str) -> None:
         """Evicts subprocess, buffers, and subscriber queues for a completed run."""
