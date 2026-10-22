@@ -95,9 +95,10 @@ async def test_run_manager_sse_streaming_replay_and_live():
 
     async def client():
         async for event in manager.subscribe_logs(run_id):
-            received.append(event)
-            if len(received) == 3:  # 2 historical + 1 live
-                break
+            if event.event == "log":
+                received.append(event)
+                if len(received) == 3:  # 2 historical + 1 live
+                    break
 
     client_task = asyncio.create_task(client())
     await asyncio.sleep(0.05)
@@ -118,9 +119,11 @@ async def test_run_manager_subscriber_cleanup_on_disconnect():
     manager = RunManager()
     run_id = "test-run-cleanup"
 
-    # Start generator and immediately break out (simulating client disconnect)
-    async for _ in manager.subscribe_logs(run_id):
+    # Start generator and break out, calling aclose() as EventSourceResponse does on disconnect
+    gen = manager.subscribe_logs(run_id)
+    async for _ in gen:
         break
+    await gen.aclose()
 
     # Verify subscriber queue count is 0
     assert manager.subscriber_count(run_id) == 0
@@ -132,6 +135,7 @@ async def test_run_manager_cleanup_run():
     run_id = "test-run-full-cleanup"
 
     mock_process = MagicMock(spec=asyncio.subprocess.Process)
+    mock_process.returncode = None
     manager.register_process(run_id, mock_process)
     manager.publish_log(run_id, ServerSentEvent(data={"msg": "hello"}, event="log"))
 

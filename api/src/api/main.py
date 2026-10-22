@@ -15,12 +15,14 @@ logging.basicConfig(
 
 from api.database import engine, init_db
 from api.routers import alerts, results, runs, scans, schemas, views
+from api.services.run_manager import RunManager
 from api.services.scheduler import scheduler_loop
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient()
+    app.state.run_manager = RunManager()
     
     await asyncio.to_thread(init_db)
     app.state.log_subscribers = {}
@@ -42,6 +44,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        await app.state.run_manager.shutdown()
         await app.state.http_client.aclose()
         scheduler_task.cancel()
         try:
