@@ -1,0 +1,11 @@
+Task: Implement finding-driven alert evaluation in api/src/api/services/alerts.py (Green & Refactor Phase)
+Files modified:
+- api/src/api/services/alerts.py
+- api/tests/test_alert_service.py
+
+Summary:
+- Refactored compute_run_summary to return run.metrics_json['summary'] directly when available, bypassing unnecessary DB queries.
+- Implemented TriggerContext and TriggerRule callable registry with function injection in evaluate_alert_triggers.
+- Added finding_codes support to build_alert_payload, build_google_chat_card, and build_slack_blocks.
+- Enriched evaluate_and_dispatch_alert to query distinct finding codes from HostState.
+- Added unit test verifying custom rule injection.
