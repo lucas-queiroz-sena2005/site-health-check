@@ -1,0 +1,2 @@
+Task: Write failing unit tests for RunManager process management, abort coordination, and SSE buffering (Red Phase)
+Summary: Added comprehensive unit tests in api/tests/test_run_manager.py for RunManager covering process registration, abort signals (SIGTERM), log ring-buffering (maxlen=1000), SSE live/historical fan-out, and subscriber disconnect cleanup.
