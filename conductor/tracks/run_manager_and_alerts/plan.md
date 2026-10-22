@@ -13,7 +13,7 @@
 
 ---
 
-## Phase 2: Unified Run Pipeline & Router Migration (TDD)
+## Phase 2: Unified Run Pipeline & Router Migration (TDD) [checkpoint: 10dbac1]
 - [x] Task: Write failing tests for RunManager.dispatch_run() and router integration (Red Phase) 0e22026
   - [x] Add integration tests in `api/tests/test_api_runner.py` verifying that `dispatch_run()` runs background execution, stream logging, finalization via `evaluator.evaluate_scan_run()`, and post-run alert check
   - [x] Add unit tests in `api/tests/test_api_runs.py` asserting that `POST /api/runs/{id}/abort` delegates to `run_manager.abort_run()` and `GET /api/runs/{id}/stream` consumes `run_manager.subscribe_logs()`
@@ -23,7 +23,7 @@
   - [x] Refactor `api/src/api/routers/runs.py` to remove all direct `app.state.processes`, `app.state.run_logs`, and `app.state.log_subscribers` access in favor of `request.app.state.run_manager`
   - [x] Refactor `api/src/api/services/scheduler.py` to dispatch scheduled scans via `run_manager.dispatch_run()`
   - [x] Eliminate redundant `run_scheduled_scan_with_alerts` in favor of the unified pipeline
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 10dbac1
 
 ---
 
