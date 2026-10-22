@@ -1,0 +1,2 @@
+Task: Integrate RunManager across runner, router, and scheduler (Green & Refactor Phase)
+Summary: Implemented RunManager.dispatch_run() executing the unified execution, evaluation, and alert dispatch pipeline. Refactored runs.py, scans.py, and scheduler.py to delegate execution and SSE streaming through RunManager.
