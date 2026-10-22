@@ -1,0 +1,14 @@
+Task: Align Stage 2 & Stage 3 (Evaluator Summary Ownership, Void vs. Ghost Port Rollup, and Legacy Loop Deletion)
+Files modified:
+- api/src/api/services/evaluator.py
+- api/src/api/services/runner.py
+- api/src/api/services/run_manager.py
+- api/src/api/services/alerts.py
+- api/tests/test_evaluator.py
+- api/tests/test_api_runner.py
+
+Summary:
+- Updated evaluator.py to distinguish void (never-active) closed ports from historically active ghost ports on active hosts.
+- Made evaluate_scan_run compute and persist ScanRun.metrics_json['summary'] directly as the single source of truth.
+- Removed duplicate evaluate_scan_run call from RunManager._execute_run and removed alerts.compute_run_summary call from runner._finalize_run.
+- Deleted the 100-line legacy port/certificate inspection loop from alerts.py:compute_run_summary.
