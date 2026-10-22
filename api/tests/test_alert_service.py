@@ -513,3 +513,29 @@ def test_build_alert_payload_enriches_findings():
     assert "TLS_EXPIRED" in card_text
 
 
+def test_evaluate_alert_triggers_with_custom_rule_injection():
+    from api.services.alerts import TriggerContext
+
+    def custom_rule(ctx: TriggerContext) -> list[str]:
+        if "CUSTOM_ANOMALY" in ctx.finding_codes:
+            return ["Custom Anomaly Detected"]
+        return []
+
+    config = AlertConfig(webhook_url="https://chat.googleapis.com/test")
+    summary = {"active": 5, "warning": 0, "failed": 0, "ghost": 0, "void": 0}
+
+    # With custom rule injected, triggers match
+    should_send, triggers, is_healthy = evaluate_alert_triggers(
+        alert_config=config,
+        run_status=ScanRunStatus.COMPLETED,
+        summary_stats=summary,
+        finding_codes=["CUSTOM_ANOMALY"],
+        rules=[custom_rule],
+    )
+
+    assert should_send is True
+    assert is_healthy is False
+    assert triggers == ["Custom Anomaly Detected"]
+
+
+

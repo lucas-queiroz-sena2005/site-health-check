@@ -1,5 +1,7 @@
-import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+import logging
 import re
 from typing import Any
 
@@ -29,6 +31,7 @@ def build_google_chat_card(
     table_url: str,
     is_healthy: bool = False,
     mute_url: str | None = None,
+    finding_codes: list[str] | set[str] | None = None,
 ) -> dict[str, Any]:
     """Constructs a professional Google Chat Cards v2 webhook payload.
 
@@ -41,6 +44,7 @@ def build_google_chat_card(
         table_url: Deep-link URL to the host results table.
         is_healthy: Whether the run completed with all checks healthy.
         mute_url: Optional URL to turn off alerts for this schedule.
+        finding_codes: Optional canonical finding codes detected during evaluation.
 
     Returns:
         Dictionary representation of the Cards v2 payload.
@@ -73,9 +77,13 @@ def build_google_chat_card(
         f"<b>Time:</b> {timestamp_str}",
         f"<b>Triggers:</b> {trigger_text}",
         f"<b>Summary:</b> {summary_text}",
-        "",
-        link_html,
     ]
+
+    if finding_codes:
+        distinct_findings = ", ".join(sorted(set(finding_codes)))
+        body_lines.append(f"<b>Findings:</b> {distinct_findings}")
+
+    body_lines.extend(["", link_html])
 
     widgets: list[dict[str, Any]] = [
         {"textParagraph": {"text": "<br>".join(body_lines)}}
@@ -126,6 +134,7 @@ def build_slack_blocks(
     table_url: str,
     is_healthy: bool = False,
     mute_url: str | None = None,
+    finding_codes: list[str] | set[str] | None = None,
 ) -> dict[str, Any]:
     """Constructs a clean Slack Block Kit webhook payload.
 
@@ -138,6 +147,7 @@ def build_slack_blocks(
         table_url: Deep-link URL to the host results table.
         is_healthy: Whether the run completed with all checks healthy.
         mute_url: Optional URL to turn off alerts for this schedule.
+        finding_codes: Optional canonical finding codes detected during evaluation.
 
     Returns:
         Dictionary representation of the Slack Block Kit payload.
@@ -180,6 +190,11 @@ def build_slack_blocks(
             }
         )
 
+    findings_text = ""
+    if finding_codes:
+        distinct_findings = ", ".join(sorted(set(finding_codes)))
+        findings_text = f"\n*Findings:* `{distinct_findings}`"
+
     blocks = [
         {
             "type": "header",
@@ -196,6 +211,7 @@ def build_slack_blocks(
                     f"*Time:* {timestamp_str}\n"
                     f"*Triggers:* {trigger_text}\n"
                     f"*Summary:* {summary_text}"
+                    f"{findings_text}"
                 ),
             },
         },
@@ -380,6 +396,7 @@ def build_alert_payload(
     table_url: str,
     is_healthy: bool = False,
     mute_url: str | None = None,
+    finding_codes: list[str] | set[str] | None = None,
 ) -> dict[str, Any]:
     """Builds appropriate alert payload by detecting webhook provider.
 
@@ -393,6 +410,7 @@ def build_alert_payload(
         table_url: Deep-link URL to the host results table.
         is_healthy: Whether the run completed with all checks healthy.
         mute_url: Optional URL to turn off alerts for this schedule.
+        finding_codes: Optional canonical finding codes detected during evaluation.
 
     Returns:
         Formatted payload dict for Google Chat, Slack, or generic fallback.
@@ -407,6 +425,7 @@ def build_alert_payload(
             table_url=table_url,
             is_healthy=is_healthy,
             mute_url=mute_url,
+            finding_codes=finding_codes,
         )
     elif "hooks.slack.com" in webhook_url:
         return build_slack_blocks(
@@ -418,6 +437,7 @@ def build_alert_payload(
             table_url=table_url,
             is_healthy=is_healthy,
             mute_url=mute_url,
+            finding_codes=finding_codes,
         )
     else:
         title = "Scan: Healthy" if is_healthy else "Scan: Issues Detected"
@@ -438,11 +458,15 @@ def build_alert_payload(
             f"Time: {timestamp_str}",
             f"Triggers: {trigger_text}",
             f"Summary: {summary_text}",
-            f"Link: {table_url}",
         ]
+        if finding_codes:
+            distinct_findings = ", ".join(sorted(set(finding_codes)))
+            msg_lines.append(f"Findings: {distinct_findings}")
+        msg_lines.append(f"Link: {table_url}")
         if mute_url:
             msg_lines.append(f"Mute Alerts: {mute_url}")
-        return {
+
+        payload: dict[str, Any] = {
             "text": "\n".join(msg_lines),
             "schedule_name": schedule_name,
             "run_id": run_id,
@@ -452,42 +476,112 @@ def build_alert_payload(
             "is_healthy": is_healthy,
             "mute_url": mute_url,
         }
+        if finding_codes:
+            payload["findings"] = sorted(set(finding_codes))
+        return payload
+
+
+@dataclass(frozen=True)
+class TriggerContext:
+    """Evaluation context passed to trigger rule functions."""
+
+    alert_config: AlertConfig
+    run_status: ScanRunStatus
+    summary_stats: dict[str, int]
+    finding_codes: set[str]
+
+
+TriggerRule = Callable[[TriggerContext], list[str]]
+
+
+def rule_run_aborted_or_failed(ctx: TriggerContext) -> list[str]:
+    """Triggers when a run fails or is aborted if alert_on_abort is active."""
+    if ctx.alert_config.alert_on_abort and ctx.run_status in (
+        ScanRunStatus.FAILED,
+        ScanRunStatus.ABORTED,
+    ):
+        return ["Scan Run Aborted/Failed"]
+    return []
+
+
+def rule_service_failures(ctx: TriggerContext) -> list[str]:
+    """Triggers when failed services exist and alert_on_failure is active."""
+    if ctx.alert_config.alert_on_failure and ctx.summary_stats.get("failed", 0) > 0:
+        return [f"{ctx.summary_stats['failed']} Service Failures"]
+    return []
+
+
+def rule_ghost_hosts(ctx: TriggerContext) -> list[str]:
+    """Triggers when ghost hosts are discovered and alert_on_ghost is active."""
+    if ctx.alert_config.alert_on_ghost and ctx.summary_stats.get("ghost", 0) > 0:
+        return [f"{ctx.summary_stats['ghost']} Ghost Hosts"]
+    return []
+
+
+def rule_warnings(ctx: TriggerContext) -> list[str]:
+    """Triggers when warning hosts exist and alert_on_warning is active."""
+    if ctx.alert_config.alert_on_warning and ctx.summary_stats.get("warning", 0) > 0:
+        return [f"{ctx.summary_stats['warning']} Warnings (TLS/Redirects)"]
+    return []
+
+
+def rule_void_hosts(ctx: TriggerContext) -> list[str]:
+    """Triggers when void hosts exist and alert_on_void is active."""
+    if ctx.alert_config.alert_on_void and ctx.summary_stats.get("void", 0) > 0:
+        return [f"{ctx.summary_stats['void']} Void Hosts"]
+    return []
+
+
+def rule_finding_codes(ctx: TriggerContext) -> list[str]:
+    """Enriches notification triggers with specific canonical finding codes."""
+    if (
+        ctx.alert_config.alert_on_failure or ctx.alert_config.alert_on_warning
+    ) and ctx.finding_codes:
+        formatted = ", ".join(sorted(ctx.finding_codes))
+        return [f"Findings: {formatted}"]
+    return []
+
+
+DEFAULT_TRIGGER_RULES: list[TriggerRule] = [
+    rule_run_aborted_or_failed,
+    rule_service_failures,
+    rule_ghost_hosts,
+    rule_warnings,
+    rule_void_hosts,
+    rule_finding_codes,
+]
 
 
 def evaluate_alert_triggers(
     alert_config: AlertConfig,
     run_status: ScanRunStatus,
     summary_stats: dict[str, int],
+    finding_codes: list[str] | set[str] | None = None,
+    rules: list[TriggerRule] | None = None,
 ) -> tuple[bool, list[str], bool]:
-    """Evaluates whether the run triggers an alert based on alert_config.
+    """Evaluates whether the run triggers an alert based on alert_config and findings.
 
     Args:
         alert_config: Notification configuration with enabled trigger flags.
         run_status: Terminal status of the scan run.
         summary_stats: Counts of active, warning, failed, ghost, void hosts.
+        finding_codes: Optional canonical finding codes detected during evaluation.
+        rules: Optional custom trigger rules to evaluate (defaults to DEFAULT_TRIGGER_RULES).
 
     Returns:
         Tuple of (should_send, trigger_descriptions, is_healthy).
     """
+    ctx = TriggerContext(
+        alert_config=alert_config,
+        run_status=run_status,
+        summary_stats=summary_stats,
+        finding_codes=set(finding_codes or []),
+    )
+
+    active_rules = rules if rules is not None else DEFAULT_TRIGGER_RULES
     triggers: list[str] = []
-
-    if alert_config.alert_on_abort and run_status in (
-        ScanRunStatus.FAILED,
-        ScanRunStatus.ABORTED,
-    ):
-        triggers.append("Scan Run Aborted/Failed")
-
-    if alert_config.alert_on_failure and summary_stats.get("failed", 0) > 0:
-        triggers.append(f"{summary_stats['failed']} Service Failures")
-
-    if alert_config.alert_on_ghost and summary_stats.get("ghost", 0) > 0:
-        triggers.append(f"{summary_stats['ghost']} Ghost Hosts")
-
-    if alert_config.alert_on_warning and summary_stats.get("warning", 0) > 0:
-        triggers.append(f"{summary_stats['warning']} Warnings (TLS/Redirects)")
-
-    if alert_config.alert_on_void and summary_stats.get("void", 0) > 0:
-        triggers.append(f"{summary_stats['void']} Void Hosts")
+    for rule in active_rules:
+        triggers.extend(rule(ctx))
 
     if triggers:
         return (True, triggers, False)
@@ -537,6 +631,9 @@ def compute_run_summary(
 ) -> dict[str, int]:
     """Calculates active, warning, failed, ghost, and void counts for a run.
 
+    Prefers pre-computed summary metrics stored on the run's metrics_json.
+    Falls back to DB query computation if metrics_json summary is missing.
+
     Args:
         session: Active SQLModel database session.
         run: The ScanRun instance to summarize.
@@ -547,6 +644,21 @@ def compute_run_summary(
     Returns:
         Dictionary mapping status name to count.
     """
+    if (
+        run.metrics_json
+        and isinstance(run.metrics_json, dict)
+        and "summary" in run.metrics_json
+    ):
+        summary_data = run.metrics_json["summary"]
+        if isinstance(summary_data, dict):
+            return {
+                "active": int(summary_data.get("active", 0)),
+                "warning": int(summary_data.get("warning", 0)),
+                "failed": int(summary_data.get("failed", 0)),
+                "ghost": int(summary_data.get("ghost", 0)),
+                "void": int(summary_data.get("void", 0)),
+            }
+
     statement = select(HostState).where(HostState.scan_run_id == run.id)
     hosts = session.exec(statement).all()
 
@@ -680,10 +792,19 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
             tls_warning_days=scan.tls_warning_days or 30,
         )
 
+    # Collect distinct finding codes from HostState for this run
+    stmt_findings = select(HostState.finding_codes).where(HostState.scan_run_id == run.id)
+    raw_findings = session.exec(stmt_findings).all()
+    distinct_finding_codes: set[str] = set()
+    for f_list in raw_findings:
+        if f_list and isinstance(f_list, list):
+            distinct_finding_codes.update(f_list)
+
     should_send, triggers, is_healthy = evaluate_alert_triggers(
         alert_config=alert_config,
         run_status=run.status,
         summary_stats=summary,
+        finding_codes=distinct_finding_codes,
     )
 
     if not should_send:
@@ -704,6 +825,7 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
         table_url=table_url,
         is_healthy=is_healthy,
         mute_url=mute_url,
+        finding_codes=distinct_finding_codes,
     )
 
     success, err = await dispatch_webhook(alert_config.webhook_url, payload)
