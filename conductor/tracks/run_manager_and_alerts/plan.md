@@ -28,10 +28,10 @@
 ---
 
 ## Phase 3: Finding-Driven Alert Matching & Summary Simplification (TDD)
-- [ ] Task: Write failing tests for finding-driven alert triggers and simplified run summary (Red Phase)
-  - [ ] Add tests in `api/tests/test_alert_service.py` asserting `compute_run_summary()` accurately uses `run.metrics_json["summary"]` or fast SQL status counts without iterating individual ports or certificates
-  - [ ] Add tests verifying that `evaluate_alert_triggers()` evaluates canonical `finding_codes` (`TLS_EXPIRED`, `HTTP_5XX`, `HOST_GHOST`, etc.) alongside `AlertConfig` boolean triggers
-  - [ ] Add tests verifying enriched Google Chat Cards v2 and Slack payload generation displaying specific finding codes
+- [x] Task: Write failing tests for finding-driven alert triggers and simplified run summary (Red Phase) 3bbea81
+  - [x] Add tests in `api/tests/test_alert_service.py` asserting `compute_run_summary()` accurately uses `run.metrics_json["summary"]` or fast SQL status counts without iterating individual ports or certificates
+  - [x] Add tests verifying that `evaluate_alert_triggers()` evaluates canonical `finding_codes` (`TLS_EXPIRED`, `HTTP_5XX`, `HOST_GHOST`, etc.) alongside `AlertConfig` boolean triggers
+  - [x] Add tests verifying enriched Google Chat Cards v2 and Slack payload generation displaying specific finding codes
 - [ ] Task: Implement finding-driven alert evaluation in `api/src/api/services/alerts.py` (Green & Refactor Phase)
   - [ ] Refactor `compute_run_summary()` in `api/src/api/services/alerts.py` to read pre-computed summary metrics, deleting the legacy port/certificate inspection loop
   - [ ] Update `evaluate_alert_triggers()` to match against canonical finding codes and status aggregates while preserving all boolean triggers
