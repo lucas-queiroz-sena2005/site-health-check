@@ -1,0 +1,2 @@
+Task: Write failing tests for RunManager.dispatch_run() and router integration (Red Phase)
+Summary: Added tests verifying RunManager.dispatch_run() execution lifecycle, router /abort and /stream delegation to run_manager, and scheduler dispatches routing through run_manager.dispatch_run().
