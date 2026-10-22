@@ -32,10 +32,10 @@
   - [x] Add tests in `api/tests/test_alert_service.py` asserting `compute_run_summary()` accurately uses `run.metrics_json["summary"]` or fast SQL status counts without iterating individual ports or certificates
   - [x] Add tests verifying that `evaluate_alert_triggers()` evaluates canonical `finding_codes` (`TLS_EXPIRED`, `HTTP_5XX`, `HOST_GHOST`, etc.) alongside `AlertConfig` boolean triggers
   - [x] Add tests verifying enriched Google Chat Cards v2 and Slack payload generation displaying specific finding codes
-- [ ] Task: Implement finding-driven alert evaluation in `api/src/api/services/alerts.py` (Green & Refactor Phase)
-  - [ ] Refactor `compute_run_summary()` in `api/src/api/services/alerts.py` to read pre-computed summary metrics, deleting the legacy port/certificate inspection loop
-  - [ ] Update `evaluate_alert_triggers()` to match against canonical finding codes and status aggregates while preserving all boolean triggers
-  - [ ] Update webhook payload builders (`build_google_chat_card`, `build_slack_blocks`, `build_alert_payload`) to include finding code summaries
+- [x] Task: Implement finding-driven alert evaluation in `api/src/api/services/alerts.py` (Green & Refactor Phase) b10ea71
+  - [x] Refactor `compute_run_summary()` in `api/src/api/services/alerts.py` to read pre-computed summary metrics, deleting the legacy port/certificate inspection loop
+  - [x] Implement modular Callable Rule Strategy pattern (`TriggerContext`, `TriggerRule`, `DEFAULT_TRIGGER_RULES`) with function injection in `evaluate_alert_triggers()`
+  - [x] Update webhook payload builders (`build_google_chat_card`, `build_slack_blocks`, `build_alert_payload`) to include finding code summaries
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
