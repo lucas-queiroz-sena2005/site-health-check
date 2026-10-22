@@ -45,4 +45,4 @@
   - [x] Execute full pytest test suite across `api/tests/` and `engine/tests/`
   - [x] Verify manual scan launch, live SSE log streaming, abort handling, and alert trigger dispatch end-to-end
   - [x] Verify scheduled scan execution via scheduler loop with zero errors
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 4a1aa4e
