@@ -1,0 +1,2 @@
+Task: Write failing tests for finding-driven alert triggers and simplified run summary (Red Phase)
+Summary: Added tests in test_alert_service.py asserting evaluate_alert_triggers and build_alert_payload accept finding_codes and compute_run_summary prefers pre-computed metrics_json.
