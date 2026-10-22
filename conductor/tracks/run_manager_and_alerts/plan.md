@@ -5,10 +5,10 @@
   - [x] Add unit tests in `api/tests/test_run_manager.py` verifying process registration, unregistration, active status checks, and `abort_run()` sending `SIGTERM`
   - [x] Add unit tests verifying `publish_log()` buffering in `deque(maxlen=1000)` and fan-out broadcasting to subscriber queues
   - [x] Add unit tests verifying `subscribe_logs()` historical replay, bounded `asyncio.Queue(maxsize=100)` streaming, and subscriber cleanup on generator termination
-- [ ] Task: Implement RunManager service in `api/src/api/services/run_manager.py` (Green & Refactor Phase)
-  - [ ] Create `api/src/api/services/run_manager.py` implementing `RunManager` with thread-safe process maps, bounded log buffers, and subscriber lifecycle management
-  - [ ] Register `app.state.run_manager` during FastAPI lifespan in `api/src/api/main.py` and implement graceful shutdown
-  - [ ] Verify unit tests pass in `api/tests/test_run_manager.py`
+- [x] Task: Implement RunManager service in `api/src/api/services/run_manager.py` (Green & Refactor Phase) 1740c84
+  - [x] Create `api/src/api/services/run_manager.py` implementing `RunManager` with thread-safe process maps, bounded log buffers, and subscriber lifecycle management
+  - [x] Register `app.state.run_manager` during FastAPI lifespan in `api/src/api/main.py` and implement graceful shutdown
+  - [x] Verify unit tests pass in `api/tests/test_run_manager.py`
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
