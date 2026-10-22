@@ -159,29 +159,65 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
                 
         session.commit()
 
-async def _ingest_stdout(run_id: str, process: asyncio.subprocess.Process):
+async def _ingest_stdout(
+    run_id: str,
+    process: asyncio.subprocess.Process,
+    publish_log: Any = None,
+):
     if not process.stdout:
         return
-        
+
+    seen_ips: set[str] = set()
+    seen_active_ips: set[str] = set()
+
     while True:
         line = await process.stdout.readline()
         if not line:
             break
-            
-        line_str = line.decode('utf-8').strip()
+
+        line_str = line.decode("utf-8").strip()
         if not line_str:
             continue
-            
+
         try:
             payload = json.loads(line_str)
             # Check if this is the final summary line
             if "status" in payload:
                 # The process might be done or aborted, we let the main loop handle the final state update.
                 continue
-                
+
             # Otherwise it's a delta
             for ip, data in payload.items():
                 await asyncio.to_thread(_upsert_delta_sync, run_id, ip, data)
+                is_new_ip = ip not in seen_ips
+                seen_ips.add(ip)
+
+                if publish_log is not None:
+                    ports_dict = data.get("ports", {})
+                    open_ports = [
+                        str(p)
+                        for p, pdata in ports_dict.items()
+                        if isinstance(pdata, dict) and pdata.get("tcp_status") == "open"
+                    ]
+                    if open_ports and ip not in seen_active_ips:
+                        seen_active_ips.add(ip)
+                        publish_log(
+                            ServerSentEvent(
+                                data={
+                                    "message": f"[+] Active host {ip} (open: {', '.join(open_ports)})"
+                                },
+                                event="log",
+                            )
+                        )
+                    if is_new_ip and len(seen_ips) % 250 == 0:
+                        publish_log(
+                            ServerSentEvent(
+                                data={
+                                    "message": f"[~] Progress: {len(seen_ips)} IPs probed ({len(seen_active_ips)} responsive)..."
+                                },
+                                event="log",
+                            )
+                        )
         except json.JSONDecodeError:
             pass
 

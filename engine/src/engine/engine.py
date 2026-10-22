@@ -60,10 +60,10 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                 
             max_depth = task.context.flags.out_of_scope_depth
             if current_depth > max_depth:
-                logger.info(f"[Routine {routine_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
+                logger.debug(f"[Routine {routine_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
                 continue
 
-            logger.info(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
+            logger.debug(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
             
             # Initialize localized IpState for this task
             local_state = IpState()

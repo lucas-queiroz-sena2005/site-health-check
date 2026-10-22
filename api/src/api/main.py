@@ -25,9 +25,6 @@ async def lifespan(app: FastAPI):
     app.state.run_manager = RunManager()
     
     await asyncio.to_thread(init_db)
-    app.state.log_subscribers = {}
-    app.state.run_logs = {}
-    app.state.processes = {}
     
     from sqlmodel import Session, select
 

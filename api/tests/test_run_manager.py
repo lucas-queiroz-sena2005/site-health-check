@@ -147,3 +147,28 @@ async def test_run_manager_cleanup_run():
     assert not manager.is_active(run_id)
     assert len(manager.get_buffered_logs(run_id)) == 0
     assert manager.subscriber_count(run_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_run_manager_sliding_window_and_sentinel_on_full_queue():
+    manager = RunManager(subscriber_queue_maxsize=5)
+    run_id = "test-run-full-queue"
+
+    gen = manager.subscribe_logs(run_id)
+    first_event = await anext(gen)
+    assert first_event.event == "info"
+
+    # Publish 10 events in a synchronous burst (exceeding maxsize=5) and then broadcast EOF sentinel
+    for i in range(10):
+        manager.publish_log(run_id, ServerSentEvent(data={"seq": i}, event="log"))
+    manager.broadcast_sentinel(run_id)
+
+    remaining = []
+    async def drain():
+        async for ev in gen:
+            remaining.append(ev.data["seq"])
+
+    # Must complete cleanly without hanging on a dropped sentinel, and keep the newest items
+    await asyncio.wait_for(drain(), timeout=1.0)
+    assert 9 in remaining
+

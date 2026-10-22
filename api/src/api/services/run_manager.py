@@ -82,20 +82,34 @@ class RunManager:
             return False
 
     def publish_log(self, run_id: str, event: ServerSentEvent) -> None:
-        """Appends event to the bounded ring-buffer and broadcasts to all active subscriber queues."""
+        """Appends event to the bounded ring-buffer and broadcasts to all active subscriber queues
+        using a sliding window (evicting the oldest item if a subscriber queue is full).
+        """
         self._log_buffers[run_id].append(event)
 
         subscribers = list(self._subscribers.get(run_id, []))
         for q in subscribers:
+            if q.full():
+                try:
+                    q.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
             try:
                 q.put_nowait(event)
             except asyncio.QueueFull:
-                logger.warning("Subscriber queue full for run %s; dropping event for slow consumer", run_id)
+                pass
 
     def broadcast_sentinel(self, run_id: str) -> None:
-        """Signals stream termination to all active subscribers for run_id."""
+        """Signals stream termination to all active subscribers for run_id,
+        guaranteeing delivery of the None EOF sentinel even if the queue is full.
+        """
         subscribers = list(self._subscribers.get(run_id, []))
         for q in subscribers:
+            if q.full():
+                try:
+                    q.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
             try:
                 q.put_nowait(None)
             except asyncio.QueueFull:
@@ -203,7 +217,11 @@ class RunManager:
                     )
 
             await asyncio.gather(
-                _ingest_stdout(run_id, process),
+                _ingest_stdout(
+                    run_id,
+                    process,
+                    publish_log=lambda ev: self.publish_log(run_id, ev),
+                ),
                 read_stderr(),
             )
 
