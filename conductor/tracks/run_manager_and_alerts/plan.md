@@ -1,6 +1,6 @@
 # Implementation Plan: Encapsulated RunManager & Finding-Based Alert Matcher (`run_manager_and_alerts`)
 
-## Phase 1: Typed RunManager Service & SSE Ring-Buffer (TDD)
+## Phase 1: Typed RunManager Service & SSE Ring-Buffer (TDD) [checkpoint: 7d7c7fd]
 - [x] Task: Write failing unit tests for RunManager process management, abort coordination, and SSE buffering (Red Phase) e73cc9e
   - [x] Add unit tests in `api/tests/test_run_manager.py` verifying process registration, unregistration, active status checks, and `abort_run()` sending `SIGTERM`
   - [x] Add unit tests verifying `publish_log()` buffering in `deque(maxlen=1000)` and fan-out broadcasting to subscriber queues
@@ -9,7 +9,7 @@
   - [x] Create `api/src/api/services/run_manager.py` implementing `RunManager` with thread-safe process maps, bounded log buffers, and subscriber lifecycle management
   - [x] Register `app.state.run_manager` during FastAPI lifespan in `api/src/api/main.py` and implement graceful shutdown
   - [x] Verify unit tests pass in `api/tests/test_run_manager.py`
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 7d7c7fd
 
 ---
 
