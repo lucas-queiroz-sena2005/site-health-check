@@ -344,3 +344,44 @@ def test_upsert_delta_sync_preserves_open_tcp_and_merges_discovered_from(test_en
             assert port.tcp_status == "open"
             assert port.tcp_latency_ms == 15
 
+
+@pytest.mark.asyncio
+async def test_run_manager_dispatch_run_pipeline(test_engine):
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from api.models import ScanRun, ScanRunStatus
+    from api.services.run_manager import RunManager
+
+    run_id = str(uuid.uuid4())
+    snapshot = {"targets": ["127.0.0.1"], "ports": [80], "flags": {}}
+
+    with Session(test_engine) as session:
+        run = ScanRun(
+            id=run_id,
+            execution_config_snapshot_json=snapshot,
+            status=ScanRunStatus.PENDING,
+        )
+        session.add(run)
+        session.commit()
+
+    manager = RunManager()
+
+    # dispatch_run should execute the full unified pipeline:
+    # 1. Spawns engine CLI subprocess and streams deltas
+    # 2. Finalizes with evaluate_scan_run
+    # 3. Dispatches alerts if scan_id provided
+    with patch("api.services.run_manager.db_engine", test_engine), \
+         patch("api.services.run_manager.evaluate_scan_run") as mock_evaluate, \
+         patch("api.services.run_manager.check_and_dispatch_alerts", new_callable=AsyncMock) as mock_alerts:
+        
+        task = await manager.dispatch_run(run_id, snapshot, scan_id="test-scan")
+        await task
+
+        assert mock_evaluate.called
+        assert mock_alerts.called
+        assert not manager.is_active(run_id)
+
+        with Session(test_engine) as session:
+            final_run = session.get(ScanRun, run_id)
+            assert final_run.status == ScanRunStatus.COMPLETED
+
+

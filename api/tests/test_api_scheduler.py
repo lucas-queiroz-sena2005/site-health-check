@@ -71,6 +71,42 @@ async def test_scheduler_triggers_due_scan(monkeypatch):
         assert new_run.started_at is not None
 
 
+@pytest.mark.asyncio
+async def test_scheduler_dispatches_via_run_manager(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from api.services.run_manager import RunManager
+
+    test_engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(test_engine)
+    monkeypatch.setattr("api.services.scheduler.engine", test_engine)
+
+    app_state = MagicMock()
+    app_state.run_manager = MagicMock(spec=RunManager)
+    app_state.run_manager.dispatch_run = AsyncMock()
+
+    with Session(test_engine) as session:
+        scan = Scan(
+            name="Production Periodic",
+            cron_expression="* * * * *",
+            targets=["10.0.0.2"],
+            ports_json=[443],
+            flags_json={}
+        )
+        session.add(scan)
+        session.commit()
+        scan_id = scan.id
+
+    await check_and_run_scheduled_scans(app_state)
+    await asyncio.sleep(0)
+
+    assert app_state.run_manager.dispatch_run.called
+    args, kwargs = app_state.run_manager.dispatch_run.call_args
+    assert kwargs.get("scan_id") == scan_id or (len(args) >= 3 and args[2] == scan_id)
+
+
+
 def test_settings_timezone_resolution(monkeypatch):
     from zoneinfo import ZoneInfo
     from api.config import Settings

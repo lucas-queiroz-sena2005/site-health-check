@@ -104,11 +104,11 @@ def test_abort_run_sends_sigterm(client: TestClient):
     run_id = launch_resp.json()["id"]
 
     process = FakeProcess()
-    app.state.processes = {run_id: process}
+    app.state.run_manager.register_process(run_id, process)
     try:
         abort_resp = client.post(f"/api/runs/{run_id}/abort")
     finally:
-        app.state.processes = {}
+        app.state.run_manager.unregister_process(run_id)
 
     assert abort_resp.status_code == 202
     assert "Abort signal sent" in abort_resp.json()["message"]
@@ -116,7 +116,6 @@ def test_abort_run_sends_sigterm(client: TestClient):
 
 
 def test_abort_unknown_run_returns_404(client: TestClient):
-    app.state.processes = {}
     resp = client.post("/api/runs/does-not-exist/abort")
     assert resp.status_code == 404
 
@@ -128,6 +127,19 @@ def test_abort_finished_run_returns_409(client: TestClient, session: Session):
     session.add(run)
     session.commit()
 
-    app.state.processes = {}
     resp = client.post(f"/api/runs/{run.id}/abort")
     assert resp.status_code == 409
+
+
+def test_stream_run_logs_delegates_to_run_manager(client: TestClient):
+    from fastapi.sse import ServerSentEvent
+
+    run_id = "test-stream-endpoint-run"
+    app.state.run_manager.publish_log(run_id, ServerSentEvent(data={"msg": "first"}, event="log"))
+
+    with client.stream("GET", f"/api/runs/{run_id}/stream") as response:
+        assert response.status_code == 200
+        lines = list(response.iter_lines())
+        content = "\n".join(lines)
+        assert "first" in content
+
