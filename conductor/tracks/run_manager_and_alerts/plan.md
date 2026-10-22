@@ -14,10 +14,10 @@
 ---
 
 ## Phase 2: Unified Run Pipeline & Router Migration (TDD)
-- [ ] Task: Write failing tests for RunManager.dispatch_run() and router integration (Red Phase)
-  - [ ] Add integration tests in `api/tests/test_api_runner.py` verifying that `dispatch_run()` runs background execution, stream logging, finalization via `evaluator.evaluate_scan_run()`, and post-run alert check
-  - [ ] Add unit tests in `api/tests/test_api_runs.py` asserting that `POST /api/runs/{id}/abort` delegates to `run_manager.abort_run()` and `GET /api/runs/{id}/stream` consumes `run_manager.subscribe_logs()`
-  - [ ] Add unit tests in `api/tests/test_api_scheduler.py` verifying scheduled scan dispatches route through `run_manager.dispatch_run()`
+- [x] Task: Write failing tests for RunManager.dispatch_run() and router integration (Red Phase) 0e22026
+  - [x] Add integration tests in `api/tests/test_api_runner.py` verifying that `dispatch_run()` runs background execution, stream logging, finalization via `evaluator.evaluate_scan_run()`, and post-run alert check
+  - [x] Add unit tests in `api/tests/test_api_runs.py` asserting that `POST /api/runs/{id}/abort` delegates to `run_manager.abort_run()` and `GET /api/runs/{id}/stream` consumes `run_manager.subscribe_logs()`
+  - [x] Add unit tests in `api/tests/test_api_scheduler.py` verifying scheduled scan dispatches route through `run_manager.dispatch_run()`
 - [ ] Task: Integrate RunManager across runner, router, and scheduler (Green & Refactor Phase)
   - [ ] Implement `RunManager.dispatch_run()` unifying background subprocess orchestration, log capture, and post-finalization alert triggers
   - [ ] Refactor `api/src/api/routers/runs.py` to remove all direct `app.state.processes`, `app.state.run_logs`, and `app.state.log_subscribers` access in favor of `request.app.state.run_manager`
