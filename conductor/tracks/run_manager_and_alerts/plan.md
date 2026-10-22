@@ -36,7 +36,7 @@
   - [x] Refactor `compute_run_summary()` in `api/src/api/services/alerts.py` to read pre-computed summary metrics, deleting the legacy port/certificate inspection loop
   - [x] Implement modular Callable Rule Strategy pattern (`TriggerContext`, `TriggerRule`, `DEFAULT_TRIGGER_RULES`) with function injection in `evaluate_alert_triggers()`
   - [x] Update webhook payload builders (`build_google_chat_card`, `build_slack_blocks`, `build_alert_payload`) to include finding code summaries
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) b34558d
 
 ---
 
