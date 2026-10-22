@@ -50,11 +50,11 @@
 ---
 
 ## Phase 5: Review Fixes & 4-Stage Orthogonal Pipeline Alignment (See `review-and-pipeline-retrospective.md`)
-- [ ] Task: Align Stage 1 (Compact API Progress Stream & Sliding-Window SSE Queue)
-  - [ ] Demote per-IP `[Routine ...] Processing <IP>` log in `engine/src/engine/engine.py` from `INFO` to `DEBUG`
-  - [ ] Emit compact API-generated progress & active-hit SSE events during `_ingest_stdout` and finalization in `runner.py` / `run_manager.py`
-  - [ ] Update `RunManager.publish_log` and `broadcast_sentinel` to use sliding-window eviction without warning floods and guarantee `None` EOF sentinel delivery
-- [ ] Task: Align Stage 2 & Stage 3 (Evaluator Summary Ownership, Void vs. Ghost Port Rollup, and Legacy Loop Deletion)
+- [x] Task: Align Stage 1 (Compact API Progress Stream & Sliding-Window SSE Queue) c2b8b25
+  - [x] Demote per-IP `[Routine ...] Processing <IP>` log in `engine/src/engine/engine.py` from `INFO` to `DEBUG`
+  - [x] Emit compact API-generated progress & active-hit SSE events during `_ingest_stdout` and finalization in `runner.py` / `run_manager.py`
+  - [x] Update `RunManager.publish_log` and `broadcast_sentinel` to use sliding-window eviction without warning floods and guarantee `None` EOF sentinel delivery
+- [~] Task: Align Stage 2 & Stage 3 (Evaluator Summary Ownership, Void vs. Ghost Port Rollup, and Legacy Loop Deletion)
   - [ ] Update `evaluator.py` so void (never-active) closed ports on active hosts do not fail the host, while historically active closed ports trigger ghost warnings
   - [ ] Compute and persist `ScanRun.metrics_json["summary"]` directly from evaluated `HostState.status` rows during finalization/evaluation and remove duplicate `evaluate_scan_run` call in `RunManager`
   - [ ] Delete the 100-line legacy port/certificate inspection loop in `api/src/api/services/alerts.py:compute_run_summary()`
