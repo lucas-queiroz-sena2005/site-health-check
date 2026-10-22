@@ -456,3 +456,60 @@ def test_get_results_summary_returns_persisted_summary(client: TestClient, sessi
     assert data["run_id"] == run.id
     assert data["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
 
+
+def test_compute_run_summary_prefers_metrics_json_directly(session: Session):
+    from api.models import ScanRun, ScanRunStatus
+    from api.services.alerts import compute_run_summary
+
+    run = ScanRun(
+        status=ScanRunStatus.COMPLETED,
+        metrics_json={"summary": {"active": 12, "warning": 2, "failed": 1, "ghost": 0, "void": 50}},
+    )
+    session.add(run)
+    session.commit()
+
+    summary = compute_run_summary(session=session, run=run)
+    assert summary == {"active": 12, "warning": 2, "failed": 1, "ghost": 0, "void": 50}
+
+
+def test_evaluate_alert_triggers_with_finding_codes():
+    config = AlertConfig(
+        webhook_url="https://chat.googleapis.com/test",
+        alert_on_failure=True,
+    )
+    summary = {"active": 5, "warning": 0, "failed": 2, "ghost": 0, "void": 0}
+    findings = ["TLS_EXPIRED", "HTTP_5XX"]
+
+    should_send, triggers, is_healthy = evaluate_alert_triggers(
+        alert_config=config,
+        run_status=ScanRunStatus.COMPLETED,
+        summary_stats=summary,
+        finding_codes=findings,
+    )
+
+    assert should_send is True
+    assert is_healthy is False
+    assert any("TLS_EXPIRED" in t or "HTTP_5XX" in t for t in triggers)
+
+
+def test_build_alert_payload_enriches_findings():
+    summary = {"active": 5, "warning": 0, "failed": 1, "ghost": 0, "void": 0}
+    findings = ["TLS_EXPIRED"]
+
+    payload = build_alert_payload(
+        webhook_url="https://chat.googleapis.com/test",
+        schedule_name="Core Services",
+        run_id="run-test-findings",
+        timestamp_str="2026-10-22 15:00:00 UTC",
+        triggers=["1 Service Failures"],
+        summary_stats=summary,
+        table_url="https://app.test/?run=run-test-findings",
+        is_healthy=False,
+        finding_codes=findings,
+    )
+
+    # Check that finding codes are represented in the Google Chat Card
+    card_text = str(payload)
+    assert "TLS_EXPIRED" in card_text
+
+
