@@ -54,8 +54,9 @@
   - [x] Demote per-IP `[Routine ...] Processing <IP>` log in `engine/src/engine/engine.py` from `INFO` to `DEBUG`
   - [x] Emit compact API-generated progress & active-hit SSE events during `_ingest_stdout` and finalization in `runner.py` / `run_manager.py`
   - [x] Update `RunManager.publish_log` and `broadcast_sentinel` to use sliding-window eviction without warning floods and guarantee `None` EOF sentinel delivery
-- [~] Task: Align Stage 2 & Stage 3 (Evaluator Summary Ownership, Void vs. Ghost Port Rollup, and Legacy Loop Deletion)
-  - [ ] Update `evaluator.py` so void (never-active) closed ports on active hosts do not fail the host, while historically active closed ports trigger ghost warnings
-  - [ ] Compute and persist `ScanRun.metrics_json["summary"]` directly from evaluated `HostState.status` rows during finalization/evaluation and remove duplicate `evaluate_scan_run` call in `RunManager`
-  - [ ] Delete the 100-line legacy port/certificate inspection loop in `api/src/api/services/alerts.py:compute_run_summary()`
-- [ ] Task: Re-verify with pytest suite and live network + mock webhook harness (`verify_live_pipeline.py`)
+- [x] Task: Align Stage 2 & Stage 3 (Evaluator Summary Ownership, Void vs. Ghost Port Rollup, and Legacy Loop Deletion) 185b50b
+  - [x] Update `evaluator.py` so void (never-active) closed ports on active hosts do not fail the host, while historically active closed ports trigger ghost warnings
+  - [x] Compute and persist `ScanRun.metrics_json["summary"]` directly from evaluated `HostState.status` rows during finalization/evaluation and remove duplicate `evaluate_scan_run` call in `RunManager`
+  - [x] Delete the 100-line legacy port/certificate inspection loop in `api/src/api/services/alerts.py:compute_run_summary()`
+- [x] Task: Re-verify with pytest suite and live network + mock webhook harness (`verify_live_pipeline.py`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
