@@ -392,7 +392,7 @@ async def test_run_manager_dispatch_run_pipeline(test_engine):
     with patch("api.services.run_manager.db_engine", test_engine), \
          patch("api.services.runner.db_engine", test_engine), \
          patch("asyncio.create_subprocess_exec", return_value=mock_process), \
-         patch("api.services.run_manager.evaluate_scan_run") as mock_evaluate, \
+         patch("api.services.evaluator.evaluate_scan_run", wraps=__import__("api.services.evaluator", fromlist=["evaluate_scan_run"]).evaluate_scan_run) as mock_evaluate, \
          patch("api.services.run_manager.check_and_dispatch_alerts", new_callable=AsyncMock) as mock_alerts:
         
         task = await manager.dispatch_run(run_id, snapshot, scan_id="test-scan")

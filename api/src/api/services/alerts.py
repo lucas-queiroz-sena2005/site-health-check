@@ -629,20 +629,11 @@ def compute_run_summary(
     tls_warning_days: int = 30,
     void_count: int | None = None,
 ) -> dict[str, int]:
-    """Calculates active, warning, failed, ghost, and void counts for a run.
+    """Returns active, warning, failed, ghost, and void counts for a run.
 
-    Prefers pre-computed summary metrics stored on the run's metrics_json.
-    Falls back to DB query computation if metrics_json summary is missing.
-
-    Args:
-        session: Active SQLModel database session.
-        run: The ScanRun instance to summarize.
-        ghost_window_str: Historical time window string (e.g., '7d', '24h').
-        tls_warning_days: Number of days before certificate expiry for warning.
-        void_count: Explicit void count if already known/purged during finalization.
-
-    Returns:
-        Dictionary mapping status name to count.
+    Reads pre-computed summary metrics stored on the run's metrics_json by evaluator.py.
+    If metrics_json summary is not yet populated (e.g. unfinalized test fixtures),
+    delegates to evaluator.evaluate_scan_run as the single source of truth.
     """
     if (
         run.metrics_json
@@ -656,106 +647,22 @@ def compute_run_summary(
                 "warning": int(summary_data.get("warning", 0)),
                 "failed": int(summary_data.get("failed", 0)),
                 "ghost": int(summary_data.get("ghost", 0)),
-                "void": int(summary_data.get("void", 0)),
+                "void": int(
+                    void_count
+                    if void_count is not None
+                    else summary_data.get("void", 0)
+                ),
             }
 
-    statement = select(HostState).where(HostState.scan_run_id == run.id)
-    hosts = session.exec(statement).all()
+    from api.services.evaluator import evaluate_scan_run
 
-    active_count = 0
-    warning_count = 0
-    failed_count = 0
-    calculated_void = 0
-
-    for h in hosts:
-        host_has_open = False
-        host_has_failed = False
-        host_has_warning = False
-
-        for port in h.ports:
-            if port.tcp_status == "open":
-                host_has_open = True
-            elif port.tcp_status == "error":
-                host_has_failed = True
-
-            # Check TLS
-            if port.tls_certificate:
-                valid = port.tls_certificate.valid
-                exp_days = port.tls_certificate.expires_in_days
-                if not valid or (
-                    exp_days is not None and exp_days <= tls_warning_days
-                ):
-                    host_has_warning = True
-
-            # Check HTTP
-            for http in port.http_routing_checks:
-                if http.status_code and http.status_code >= 400:
-                    host_has_failed = True
-                elif http.notes and "Failed" in http.notes:
-                    host_has_failed = True
-
-        if host_has_open:
-            if host_has_failed:
-                failed_count += 1
-            elif host_has_warning:
-                warning_count += 1
-            else:
-                active_count += 1
-
-    # Ghost count calculation
-    ghost_count = 0
-    match = re.fullmatch(r"^(\d+)([smhd])$", ghost_window_str.strip().lower())
-    if match:
-        amount, unit = int(match.group(1)), match.group(2)
-        units = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
-        delta = timedelta(**{units[unit]: amount})
-        cutoff = datetime.now(UTC) - delta
-
-        current_active_ips = {
-            h.ip_address for h in hosts
-            if any(p.tcp_status == "open" for p in h.ports)
-        }
-        target_ips = [h.ip_address for h in hosts]
-        if target_ips:
-            historical_stmt = (
-                select(HostState.ip_address)
-                .join(
-                    PortState,
-                    col(HostState.id) == col(PortState.host_state_id),
-                )
-                .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
-                .where(PortState.tcp_status == "open")
-                .where(col(ScanRun.started_at) >= cutoff)
-                .where(ScanRun.status == ScanRunStatus.COMPLETED)
-                .where(col(HostState.ip_address).in_(target_ips))
-                .distinct()
-            )
-            historical_active = set(session.exec(historical_stmt).all())
-            ghost_ips = historical_active - current_active_ips
-            ghost_count = len(ghost_ips)
-
-            # In case raw unaggregated hosts are passed before finalization
-            raw_void_ips = [
-                h for h in hosts
-                if h.ip_address not in current_active_ips
-                and h.ip_address not in historical_active
-            ]
-            calculated_void += len(raw_void_ips)
-
-    if void_count is not None:
-        final_void = void_count
-    elif run.metrics_json and isinstance(run.metrics_json, dict) and "summary" in run.metrics_json and "void" in run.metrics_json["summary"]:
-        final_void = run.metrics_json["summary"]["void"]
-    else:
-        final_void = calculated_void
-
-    return {
-        "active": active_count,
-        "warning": warning_count,
-        "failed": failed_count,
-        "ghost": ghost_count,
-        "void": final_void,
-    }
+    return evaluate_scan_run(
+        run.id,
+        session,
+        void_count=void_count,
+        ghost_window_override=ghost_window_str,
+        tls_warning_days_override=tls_warning_days,
+    )
 
 
 async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:

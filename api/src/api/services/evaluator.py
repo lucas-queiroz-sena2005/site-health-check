@@ -1,15 +1,12 @@
 from datetime import UTC, datetime, timedelta
 import re
-from typing import Any
 from sqlmodel import Session, col, select
 
 from api.models import (
     HostState,
-    HttpRoutingCheck,
     PortState,
     ScanRun,
     ScanRunStatus,
-    TlsCertificate,
 )
 
 # Canonical Finding Codes per ADR 0023
@@ -43,55 +40,76 @@ def _is_deprecated_tls(version: str | None) -> bool:
     return _TLS_VERSION_RANK.get(v, 5) < 5
 
 
-def _parse_ghost_window(window_str: str | None) -> timedelta:
+def _parse_ghost_window(window_str: str | None) -> timedelta | None:
     if not window_str:
         return timedelta(days=7)
     m = re.fullmatch(r"^(\d+)([smhd])$", window_str.strip().lower())
     if not m:
-        return timedelta(days=7)
+        return None
     amount, unit = int(m.group(1)), m.group(2)
     units = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
     return timedelta(**{units[unit]: amount})
 
 
-def evaluate_scan_run(scan_run_id: str, session: Session) -> None:
-    """Bottom-up deterministic evaluation pipeline per ADR 0023 Track 2.
+def evaluate_scan_run(
+    scan_run_id: str,
+    session: Session,
+    void_count: int | None = None,
+    ghost_window_override: str | None = None,
+    tls_warning_days_override: int | None = None,
+) -> dict[str, int]:
+    """Bottom-up deterministic evaluation pipeline per ADR 0023 Track 2 & Track 3.
+
     Computes Level 1 (HttpRoutingCheck) -> Level 2 (PortState) -> Level 3 (HostState)
-    finding codes, statuses, and rollups before committing final state.
+    finding codes, statuses, rollups, and ScanRun.metrics_json["summary"] in one pass.
     """
+    default_summary = {"active": 0, "warning": 0, "failed": 0, "ghost": 0, "void": void_count or 0}
     run = session.get(ScanRun, scan_run_id)
     if not run:
-        return
+        return default_summary
 
     snapshot = run.execution_config_snapshot_json or {}
-    ghost_window_str = snapshot.get("ghost_window") or "7d"
-    tls_warning_days = int(snapshot.get("tls_warning_days") or 30)
-
-    # Determine historical active IPs for ghost detection
-    ghost_window_td = _parse_ghost_window(ghost_window_str)
-    now_dt = run.started_at or datetime.now(UTC)
-    if now_dt.tzinfo is None:
-        now_dt = now_dt.replace(tzinfo=UTC)
-    cutoff = now_dt - ghost_window_td
+    ghost_window_str = (
+        ghost_window_override
+        if ghost_window_override is not None
+        else (snapshot.get("ghost_window") or "7d")
+    )
+    tls_warning_days = int(
+        tls_warning_days_override
+        if tls_warning_days_override is not None
+        else (snapshot.get("tls_warning_days") or 30)
+    )
 
     stmt_hosts = select(HostState).where(HostState.scan_run_id == scan_run_id)
-    hosts = session.exec(stmt_hosts).all()
-    if not hosts:
-        return
+    hosts = list(session.exec(stmt_hosts).all())
 
-    host_ips = [h.ip_address for h in hosts]
+    # Determine historical active (ip, port) pairs and IPs within ghost window
+    historical_active_ip_ports: set[tuple[str, int]] = set()
+    historical_active_ips: set[str] = set()
+    ghost_window_td = _parse_ghost_window(ghost_window_str)
 
-    hist_stmt = (
-        select(HostState.ip_address)
-        .join(PortState, col(HostState.id) == col(PortState.host_state_id))
-        .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
-        .where(PortState.tcp_status == "open")
-        .where(col(ScanRun.started_at) >= cutoff)
-        .where(ScanRun.status == ScanRunStatus.COMPLETED)
-        .where(col(HostState.ip_address).in_(host_ips))
-        .distinct()
-    )
-    historical_active_ips = set(session.exec(hist_stmt).all())
+    if hosts and ghost_window_td is not None:
+        now_dt = run.started_at or datetime.now(UTC)
+        if now_dt.tzinfo is None:
+            now_dt = now_dt.replace(tzinfo=UTC)
+        cutoff = now_dt - ghost_window_td
+        host_ips = [h.ip_address for h in hosts]
+
+        hist_stmt = (
+            select(HostState.ip_address, PortState.port_number)
+            .join(PortState, col(HostState.id) == col(PortState.host_state_id))
+            .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
+            .where(PortState.tcp_status == "open")
+            .where(col(ScanRun.started_at) >= cutoff)
+            .where(ScanRun.status == ScanRunStatus.COMPLETED)
+            .where(col(ScanRun.id) != scan_run_id)
+            .where(col(HostState.ip_address).in_(host_ips))
+            .distinct()
+        )
+        historical_active_ip_ports = set(session.exec(hist_stmt).all())
+        historical_active_ips = {ip for ip, _ in historical_active_ip_ports}
+
+    calculated_void_hosts = 0
 
     for host in hosts:
         open_ports: list[PortState] = []
@@ -99,6 +117,10 @@ def evaluate_scan_run(scan_run_id: str, session: Session) -> None:
         worst_http_statuses_on_host: list[int] = []
         tls_versions_on_host: list[str] = []
         min_tls_days_list: list[int] = []
+        has_ghost_port = False
+
+        # First check if the host has any open ports
+        has_any_open_port = any(p.tcp_status == "open" for p in host.ports)
 
         # Process each port (Level 2) and its checks (Level 1)
         for port in host.ports:
@@ -145,6 +167,20 @@ def evaluate_scan_run(scan_run_id: str, session: Session) -> None:
                 if FINDING_TCP_CLOSED not in port_findings:
                     port_findings.append(FINDING_TCP_CLOSED)
                 port.status = "failed"
+
+                # Distinguish ghost port vs void port when rolling up to HostState
+                was_port_historically_open = (
+                    host.ip_address,
+                    port.port_number,
+                ) in historical_active_ip_ports
+                if was_port_historically_open:
+                    has_ghost_port = True
+                    if FINDING_HOST_GHOST not in host_findings:
+                        host_findings.append(FINDING_HOST_GHOST)
+                elif not has_any_open_port or port.tcp_status == "error":
+                    for f in port_findings:
+                        if f not in host_findings:
+                            host_findings.append(f)
             else:
                 open_ports.append(port)
                 # TLS Certificate evaluation
@@ -166,14 +202,13 @@ def evaluate_scan_run(scan_run_id: str, session: Session) -> None:
                     if _is_deprecated_tls(cert.protocol_version):
                         port_findings.append(FINDING_TLS_DEPRECATED_VERSION)
 
-                # Assign Port status
-                has_port_failure = (
-                    any(s == "failed" for s in check_statuses)
-                    or FINDING_TLS_INVALID in port_findings
-                    or FINDING_TLS_EXPIRED in port_findings
-                )
+                # Assign Port status: HTTP 5xx / timeout errors fail the service;
+                # TLS certificate issues and HTTP 4xx are warnings.
+                has_port_failure = any(s == "failed" for s in check_statuses)
                 has_port_warning = (
                     any(s == "warning" for s in check_statuses)
+                    or FINDING_TLS_INVALID in port_findings
+                    or FINDING_TLS_EXPIRED in port_findings
                     or FINDING_TLS_EXPIRING_SOON in port_findings
                     or FINDING_TLS_DEPRECATED_VERSION in port_findings
                 )
@@ -185,12 +220,12 @@ def evaluate_scan_run(scan_run_id: str, session: Session) -> None:
                 else:
                     port.status = "ok"
 
+                for f in port_findings:
+                    if f not in host_findings:
+                        host_findings.append(f)
+
             port.finding_codes = port_findings
             session.add(port)
-
-            for f in port_findings:
-                if f not in host_findings:
-                    host_findings.append(f)
 
         # Level 3: HostState rollups
         filtered_disc = [d for d in host.discovered_from if d != host.ip_address]
@@ -215,18 +250,25 @@ def evaluate_scan_run(scan_run_id: str, session: Session) -> None:
             max(worst_http_statuses_on_host) if worst_http_statuses_on_host else None
         )
 
-        # Host status evaluation
+        # Host status evaluation (rolling up open ports + ghost port detection)
         if host.open_port_count == 0:
             if host.ip_address in historical_active_ips:
                 host.status = "ghost"
                 if FINDING_HOST_GHOST not in host_findings:
                     host_findings.append(FINDING_HOST_GHOST)
             else:
+                calculated_void_hosts += 1
                 host.status = "failed" if any(p.status == "failed" for p in host.ports) else "ok"
         else:
-            if any(p.status == "failed" for p in host.ports):
+            has_open_failure = any(p.status == "failed" for p in open_ports) or any(
+                p.tcp_status == "error" for p in host.ports
+            )
+            has_open_warning = (
+                any(p.status == "warning" for p in open_ports) or has_ghost_port
+            )
+            if has_open_failure:
                 host.status = "failed"
-            elif any(p.status == "warning" for p in host.ports):
+            elif has_open_warning:
                 host.status = "warning"
             else:
                 host.status = "ok"
@@ -234,4 +276,31 @@ def evaluate_scan_run(scan_run_id: str, session: Session) -> None:
         host.finding_codes = host_findings
         session.add(host)
 
+    existing_void = (
+        int(run.metrics_json["summary"]["void"])
+        if run.metrics_json
+        and isinstance(run.metrics_json, dict)
+        and isinstance(run.metrics_json.get("summary"), dict)
+        and "void" in run.metrics_json["summary"]
+        else None
+    )
+    final_void = (
+        void_count
+        if void_count is not None
+        else (existing_void if existing_void is not None else calculated_void_hosts)
+    )
+
+    summary = {
+        "active": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "ok"),
+        "warning": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "warning"),
+        "failed": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "failed"),
+        "ghost": sum(1 for h in hosts if h.status == "ghost"),
+        "void": final_void,
+    }
+
+    metrics = dict(run.metrics_json or {})
+    metrics["summary"] = summary
+    run.metrics_json = metrics
+    session.add(run)
     session.commit()
+    return summary

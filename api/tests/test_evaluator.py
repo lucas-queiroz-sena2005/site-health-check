@@ -218,3 +218,78 @@ def test_host_state_rollups_and_ghost_evaluation(session: Session):
     assert host_ghost.open_port_count == 0
     assert host_ghost.status == "ghost"
     assert FINDING_HOST_GHOST in host_ghost.finding_codes
+
+
+def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
+    """Void closed ports on active hosts must not fail the host, while historically open closed ports trigger ghost warning, and evaluate_scan_run writes metrics_json['summary']."""
+    past_time = datetime.now(UTC) - timedelta(days=1)
+    past_run = ScanRun(
+        execution_config_snapshot_json={},
+        started_at=past_time,
+        status=ScanRunStatus.COMPLETED,
+    )
+    session.add(past_run)
+    session.commit()
+
+    # In the past run, 10.0.0.51 had BOTH port 80 and port 443 open
+    past_host = HostState(scan_run_id=past_run.id, ip_address="10.0.0.51")
+    session.add(past_host)
+    session.commit()
+    session.add_all([
+        PortState(host_state_id=past_host.id, port_number=80, tcp_status="open"),
+        PortState(host_state_id=past_host.id, port_number=443, tcp_status="open"),
+    ])
+    session.commit()
+
+    run = ScanRun(
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+        started_at=datetime.now(UTC),
+        status=ScanRunStatus.COMPLETED,
+    )
+    session.add(run)
+    session.commit()
+
+    # Host A (10.0.0.50): port 80 open (HTTP 200), port 443 closed (never historically open -> void port)
+    host_a = HostState(scan_run_id=run.id, ip_address="10.0.0.50")
+    # Host B (10.0.0.51): port 80 open (HTTP 200), port 443 closed (WAS historically open -> ghost port!)
+    host_b = HostState(scan_run_id=run.id, ip_address="10.0.0.51")
+    session.add_all([host_a, host_b])
+    session.commit()
+
+    pa_80 = PortState(host_state_id=host_a.id, port_number=80, tcp_status="open")
+    pa_443 = PortState(host_state_id=host_a.id, port_number=443, tcp_status="closed")
+    pb_80 = PortState(host_state_id=host_b.id, port_number=80, tcp_status="open")
+    pb_443 = PortState(host_state_id=host_b.id, port_number=443, tcp_status="closed")
+    session.add_all([pa_80, pa_443, pb_80, pb_443])
+    session.commit()
+
+    session.add_all([
+        HttpRoutingCheck(port_state_id=pa_80.id, domain="10.0.0.50", status_code=200),
+        HttpRoutingCheck(port_state_id=pb_80.id, domain="10.0.0.51", status_code=200),
+    ])
+    session.commit()
+
+    evaluate_scan_run(run.id, session, void_count=10)
+
+    session.refresh(host_a)
+    session.refresh(host_b)
+    session.refresh(run)
+
+    # Host A: healthy active host; void port 443 does not fail the host
+    assert host_a.status == "ok"
+    assert FINDING_TCP_CLOSED not in host_a.finding_codes
+
+    # Host B: port 443 was historically open and is now closed -> ghost warning
+    assert host_b.status == "warning"
+    assert FINDING_HOST_GHOST in host_b.finding_codes
+
+    # Summary persisted on ScanRun.metrics_json
+    assert run.metrics_json is not None
+    assert run.metrics_json["summary"] == {
+        "active": 1,
+        "warning": 1,
+        "failed": 0,
+        "ghost": 0,
+        "void": 10,
+    }
+

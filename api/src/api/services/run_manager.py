@@ -236,7 +236,24 @@ class RunManager:
             await asyncio.to_thread(_finalize_run, run_id, rc)
 
             with Session(db_engine) as session:
-                evaluate_scan_run(run_id, session)
+                finished_run = session.get(ScanRun, run_id)
+                summary = (finished_run.metrics_json or {}).get("summary") if finished_run else None
+                if summary:
+                    self.publish_log(
+                        run_id,
+                        ServerSentEvent(
+                            data={
+                                "message": (
+                                    f"[+] Evaluation complete: {summary.get('active', 0)} active, "
+                                    f"{summary.get('warning', 0)} warning, "
+                                    f"{summary.get('failed', 0)} failed, "
+                                    f"{summary.get('ghost', 0)} ghost, "
+                                    f"{summary.get('void', 0)} void"
+                                )
+                            },
+                            event="log",
+                        ),
+                    )
 
             if scan_id:
                 try:

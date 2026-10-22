@@ -299,29 +299,20 @@ def _finalize_run(run_id: str, returncode: int):
 
         session.commit()
 
-        # 4. Deterministic Backend Evaluation Pipeline
+        # 4. Deterministic Backend Evaluation Pipeline (Single Source of Truth)
         from api.services.evaluator import evaluate_scan_run
-        evaluate_scan_run(run_id, session)
-
-        # 4. Anomalies and operational summary
-        anomalies = 0
-        for host in kept_hosts:
-            for port in host.ports:
-                if port.tcp_status != "open":
-                    anomalies += 1
-                if port.tls_certificate and not port.tls_certificate.valid:
-                    anomalies += 1
-                for route in port.http_routing_checks:
-                    if route.status_code and route.status_code >= 400:
-                        anomalies += 1
-
-        from api.services.alerts import compute_run_summary
-        summary = compute_run_summary(
-            session=session,
-            run=run,
-            ghost_window_str=ghost_window,
-            tls_warning_days=tls_warning_days,
+        summary = evaluate_scan_run(
+            run_id,
+            session,
             void_count=len(void_host_ids),
+            ghost_window_override=ghost_window,
+            tls_warning_days_override=tls_warning_days,
+        )
+
+        anomalies = (
+            summary.get("warning", 0)
+            + summary.get("failed", 0)
+            + summary.get("ghost", 0)
         )
 
         run.metrics_json = {
