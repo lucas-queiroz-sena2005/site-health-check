@@ -41,8 +41,8 @@
 ---
 
 ## Phase 4: Full System Regression & End-to-End Verification
-- [ ] Task: Comprehensive test suite verification and regression testing
-  - [ ] Execute full pytest test suite across `api/tests/` and `engine/tests/`
-  - [ ] Verify manual scan launch, live SSE log streaming, abort handling, and alert trigger dispatch end-to-end
-  - [ ] Verify scheduled scan execution via scheduler loop with zero errors
+- [x] Task: Comprehensive test suite verification and regression testing
+  - [x] Execute full pytest test suite across `api/tests/` and `engine/tests/`
+  - [x] Verify manual scan launch, live SSE log streaming, abort handling, and alert trigger dispatch end-to-end
+  - [x] Verify scheduled scan execution via scheduler loop with zero errors
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
