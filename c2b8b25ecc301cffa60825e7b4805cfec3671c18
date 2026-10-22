@@ -1,0 +1,12 @@
+Task: Align Stage 1 (Compact API Progress Stream & Sliding-Window SSE Queue)
+Files modified:
+- engine/src/engine/engine.py
+- api/src/api/services/runner.py
+- api/src/api/services/run_manager.py
+- api/src/api/main.py
+- api/tests/test_run_manager.py
+
+Summary:
+- Demoted per-IP worker trace log in engine.py from INFO to DEBUG to eliminate void-IP stderr spam.
+- Added compact API-generated active-hit and periodic progress SSE events in _ingest_stdout.
+- Implemented sliding-window eviction in RunManager.publish_log and guaranteed None EOF sentinel delivery in broadcast_sentinel.
