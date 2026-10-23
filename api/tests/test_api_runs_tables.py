@@ -393,3 +393,69 @@ def test_get_checks_endpoint_and_filtering(client: TestClient, populated_run: st
     assert resp_warn.status_code == 200
     assert len(resp_warn.json()["items"]) == 1
     assert resp_warn.json()["items"][0]["status_code"] == 404
+
+
+def test_get_host_detail_drawer_endpoint(client: TestClient, populated_run: str):
+    """GET /api/runs/{id}/hosts/{ip} returns HostDetailDTO with lineage, all services, checks, and deduplicated SANs."""
+    # Test Host 1 (10.0.0.1)
+    resp = client.get(f"/api/runs/{populated_run}/hosts/10.0.0.1")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["ip_address"] == "10.0.0.1"
+    assert data["status"] == "ok"
+    assert data["depth"] == 0
+    assert data["root_target"] == "example.com"
+    assert data["resolved_domains"] == ["example.com", "www.example.com"]
+    assert data["discovered_from"] == []
+    assert data["open_port_count"] == 2
+    assert data["scanned_port_count"] == 3
+    assert data["vhost_count"] == 2
+
+    # Deduplicated SANs from certs
+    assert sorted(data["tls_sans"]) == ["api.example.com", "cdn.example.com", "example.com"]
+
+    # All probed services on this host (including closed port 8080)
+    ports = data["services"]
+    assert len(ports) == 3
+    port_numbers = [p["port_number"] for p in ports]
+    assert sorted(port_numbers) == [80, 443, 8080]
+
+    # Verify nested TLS cert on port 443
+    p443 = next(p for p in ports if p["port_number"] == 443)
+    assert p443["tls_certificate"] is not None
+    assert p443["tls_certificate"]["issuer"] == "Google Trust Services"
+    assert p443["tls_certificate"]["protocol_version"] == "TLSv1.3"
+
+    # All HTTP routing checks on this host
+    checks = data["checks"]
+    assert len(checks) == 3
+    domains = [c["domain"] for c in checks]
+    assert "example.com" in domains
+    assert "www.example.com" in domains
+
+    # Test Host 2 (10.0.0.100 - discovered at depth 1)
+    resp_h2 = client.get(f"/api/runs/{populated_run}/hosts/10.0.0.100")
+    assert resp_h2.status_code == 200
+    data_h2 = resp_h2.json()
+    assert data_h2["ip_address"] == "10.0.0.100"
+    assert data_h2["status"] == "warning"
+    assert data_h2["depth"] == 1
+    assert data_h2["discovered_from"] == ["example.com"]
+    assert data_h2["tls_sans"] == ["api.example.com"]
+    assert len(data_h2["services"]) == 1
+    assert len(data_h2["checks"]) == 1
+    assert data_h2["checks"][0]["status_code"] == 404
+
+
+def test_get_host_detail_drawer_404_cases(client: TestClient, populated_run: str):
+    """GET /api/runs/{id}/hosts/{ip} returns 404 when run or host IP does not exist."""
+    # Non-existent run
+    resp_run = client.get("/api/runs/nonexistent-run-id/hosts/10.0.0.1")
+    assert resp_run.status_code == 404
+    assert "Run not found" in resp_run.json()["detail"]
+
+    # Non-existent host IP in existing run
+    resp_host = client.get(f"/api/runs/{populated_run}/hosts/192.168.1.99")
+    assert resp_host.status_code == 404
+    assert "not found" in resp_host.json()["detail"]
