@@ -1,0 +1,10 @@
+Phase Checkpoint: Phase 4 (Run Launch Consolidation, Idempotent Alerts & Legacy Cleanup)
+Summary:
+- Consolidated run launch into POST /api/runs.
+- Implemented PATCH /api/scans/{id} supporting partial updates and idempotent alert muting.
+- Removed HTML GET /mute and /unmute routes.
+- Updated notification webhooks to link directly to dashboard.
+- Deleted results.py and aggregation.py while preserving GET /api/runs/{id}/results bridge.
+- Updated frontend callers in LiveScanPage and ScheduledScansPage.
+- Automated Tests: 119 tests passing across api/tests/ and engine/tests/.
+- Manual Verification: Confirmed by user.
