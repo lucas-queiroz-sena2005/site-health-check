@@ -1,6 +1,6 @@
 # Implementation Plan: Orthogonal REST API for the 3 Tables & IP Drawer (`rest_api_orthogonality`)
 
-## Phase 1: DB-Agnostic Sort Key, Pruning Toggles & Evaluator Summary Counters (TDD)
+## Phase 1: DB-Agnostic Sort Key, Pruning Toggles & Evaluator Summary Counters (TDD) [checkpoint: d2102c2]
 - [x] Task: Write failing unit tests for `ip_sort_key`, finalization pruning toggles, and summary counters (Red Phase) 8dd6d95
   - [x] Add unit tests in `api/tests/test_models.py` (and `test_database.py`) verifying `HostState.ip_sort_key` calculation for IPv4 and IPv6-mapped hex strings
   - [x] Add unit tests in `api/tests/test_api_runner.py` asserting `_finalize_run` prunes void hosts when `prune_void_hosts=True` and routine closed ports when `prune_closed_ports=True`, preserving ghost ports
@@ -10,7 +10,7 @@
   - [x] Update `_upsert_delta_sync` and `_finalize_run` in `api/src/api/services/runner.py` to compute `ip_sort_key` and execute conditional pruning
   - [x] Update `evaluate_scan_run()` in `api/src/api/services/evaluator.py` to record `service_count` and `http_check_count` in `metrics_json["summary"]`
   - [x] Verify all tests pass in `api/tests/`
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) d2102c2
 
 ---
 
