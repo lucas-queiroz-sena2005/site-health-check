@@ -1,0 +1,7 @@
+Task: Write failing unit tests for unified launch, PATCH /scans/{id}, and webhook links (Red Phase)
+Summary: Added tests in test_api_runs.py for POST /api/runs (ad-hoc & schedule loading), test_api_scans.py for PATCH /api/scans/{id} and removal of HTML GET mute routes, and test_alert_service.py for dashboard webhook action links.
+Files modified:
+- api/tests/test_api_runs.py
+- api/tests/test_api_scans.py
+- api/tests/test_alert_service.py
+Why: Establishes TDD acceptance criteria for unified run launch, idempotent alert controls, and legacy route removal.
