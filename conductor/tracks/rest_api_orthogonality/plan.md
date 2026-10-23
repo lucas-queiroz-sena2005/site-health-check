@@ -20,12 +20,12 @@
   - [x] Add tests for `GET /api/runs/{id}/services` verifying `Page[ServiceRowDTO]`, open services + ghost port inclusion, and `include_closed=true` parameter
   - [x] Add tests for `GET /api/runs/{id}/checks` verifying `Page[HttpCheckRowDTO]` and field mappings
   - [x] Add tests for `TableQueryParams`: deep search `q` across IP/domains/issuer/findings, `ip` prefix, multi-status `status=warning,failed`, `port`, `finding`, `sort_by` with `ip_sort_key` and `depth`, and `.nulls_last()`
-- [~] Task: Implement DTOs, query filter engine, and table endpoints (Green & Refactor Phase)
-  - [ ] Create Pydantic DTO models (`Page[T]`, `HostRowDTO`, `ServiceRowDTO`, `HttpCheckRowDTO`) and `TableQueryParams` dependency in `api/src/api/schemas/tables.py` and `api/src/api/schemas/common.py`
-  - [ ] Implement `GET /api/runs/{id}/hosts` with SQL pagination and deep search
-  - [ ] Implement `GET /api/runs/{id}/services` with open/ghost filtering and `include_closed` flag
-  - [ ] Implement `GET /api/runs/{id}/checks` with domain and routing check filtering
-  - [ ] Verify all table tests pass in `api/tests/test_api_runs_tables.py`
+- [x] Task: Implement DTOs, query filter engine, and table endpoints (Green & Refactor Phase) f0dfe98
+  - [x] Create Pydantic DTO models (`Page[T]`, `HostRowDTO`, `ServiceRowDTO`, `HttpCheckRowDTO`) and `TableQueryParams` dependency in `api/src/api/schemas/tables.py` and `api/src/api/schemas/common.py`
+  - [x] Implement `GET /api/runs/{id}/hosts` with SQL pagination and deep search
+  - [x] Implement `GET /api/runs/{id}/services` with open/ghost filtering and `include_closed` flag
+  - [x] Implement `GET /api/runs/{id}/checks` with domain and routing check filtering
+  - [x] Verify all table tests pass in `api/tests/test_api_runs_tables.py`
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
