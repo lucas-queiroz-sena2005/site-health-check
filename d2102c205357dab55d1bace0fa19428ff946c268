@@ -1,5 +1,5 @@
-Task: Implement ip_sort_key, pruning toggles, and evaluator summary counters (Green & Refactor Phase)
-- Added ip_sort_key column on HostState and auto-calculated 32-char hex sort key for DB-agnostic sorting
-- Added prune_void_hosts and prune_closed_ports to ExecutionConfig
-- Updated _finalize_run in runner.py to respect pruning toggles, preserving ghost ports and recording accurate port counts
-- Updated evaluate_scan_run in evaluator.py to compute and persist service_count and http_check_count in metrics_json['summary']
+Verification Report - Phase 1: DB-Agnostic Sort Key, Pruning Toggles & Evaluator Summary Counters
+- Automated Test Command: ./.venv/bin/pytest api/tests/ engine/tests/
+- Result: 110 passed, 0 failed
+- Manual Verification Steps: Asserted ip_sort_key hex format (00000000000000000000ffff0a000001), default pruning toggles (True, True), and evaluator service/check counters.
+- User Confirmation: Confirmed by user.
