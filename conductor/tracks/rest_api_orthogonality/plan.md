@@ -30,7 +30,7 @@
 
 ---
 
-## Phase 3: Dedicated On-Demand IP Detail Drawer Endpoint (TDD)
+## Phase 3: Dedicated On-Demand IP Detail Drawer Endpoint (TDD) [checkpoint: 92f29ae]
 - [x] Task: Write failing unit tests for the IP Detail Drawer endpoint (Red Phase) 4ede254
   - [x] Add tests in `api/tests/test_api_runs_tables.py` asserting `GET /api/runs/{id}/hosts/{ip}` returns `HostDetailDTO` with discovery lineage, full services list with TLS certificates, HTTP checks, and deduplicated SANs
   - [x] Add tests verifying 404 behavior for non-existent run ID or IP address
@@ -38,7 +38,7 @@
   - [x] Define `HostDetailDTO` schema including nested service details, HTTP checks, and unique SAN list in `api/src/api/schemas/tables.py`
   - [x] Implement `GET /api/runs/{id}/hosts/{ip}` route handler in `api/src/api/routers/runs.py`
   - [x] Verify drawer unit tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 92f29ae
 
 ---
 
