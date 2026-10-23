@@ -14,7 +14,7 @@
 
 ---
 
-## Phase 2: Dedicated Orthogonal Table Endpoints & DTOs (Hosts, Services, Checks) (TDD)
+## Phase 2: Dedicated Orthogonal Table Endpoints & DTOs (Hosts, Services, Checks) (TDD) [checkpoint: f0dfe98]
 - [x] Task: Write failing tests for `/hosts`, `/services`, `/checks` and query filter engine (Red Phase) 2b9cb33
   - [x] Add tests in `api/tests/test_api_runs_tables.py` for `GET /api/runs/{id}/hosts` verifying `Page[HostRowDTO]` structure, field values, and pagination
   - [x] Add tests for `GET /api/runs/{id}/services` verifying `Page[ServiceRowDTO]`, open services + ghost port inclusion, and `include_closed=true` parameter
@@ -26,7 +26,7 @@
   - [x] Implement `GET /api/runs/{id}/services` with open/ghost filtering and `include_closed` flag
   - [x] Implement `GET /api/runs/{id}/checks` with domain and routing check filtering
   - [x] Verify all table tests pass in `api/tests/test_api_runs_tables.py`
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) f0dfe98
 
 ---
 
