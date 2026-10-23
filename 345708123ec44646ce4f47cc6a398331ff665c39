@@ -1,0 +1,5 @@
+Task: Comprehensive test suite verification and regression testing
+Summary: Added test_openapi_schema_contains_table_and_drawer_endpoints in test_api_main.py asserting OpenAPI schema generation for all new endpoints and DTO models. Verified full suite (120 tests) green.
+Files modified:
+- api/tests/test_api_main.py
+Why: Ensures type schema generation and system regression suite validity.
