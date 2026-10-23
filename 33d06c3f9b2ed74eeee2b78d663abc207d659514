@@ -1,0 +1,6 @@
+Phase Checkpoint: Phase 3 (Dedicated On-Demand IP Detail Drawer Endpoint)
+Summary:
+- Defined HostDetailDTO, PortDetailDTO, HttpCheckDetailDTO, and TlsCertificateDetailDTO schemas.
+- Implemented GET /api/runs/{id}/hosts/{ip} route returning complete lineage, all probed ports, HTTP routing checks, and deduplicated SANs.
+- Automated Tests: 7 tests in api/tests/test_api_runs_tables.py passed; entire test suite passing.
+- Manual Verification: Confirmed by user.
