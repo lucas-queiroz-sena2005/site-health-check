@@ -3,13 +3,31 @@ from collections.abc import AsyncIterable
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import Field as PydanticField
+from sqlalchemy import String, func, or_
 from sqlmodel import col, desc, select
 
 from api.database import SessionDep
-from api.models import ExecutionConfig, ExecutionFlags, Scan, ScanRun, ScanRunStatus
+from api.models import (
+    ExecutionConfig,
+    ExecutionFlags,
+    HostState,
+    HttpRoutingCheck,
+    PortState,
+    Scan,
+    ScanRun,
+    ScanRunStatus,
+    TlsCertificate,
+)
+from api.schemas import (
+    HostRowDTO,
+    HttpCheckRowDTO,
+    Page,
+    ServiceRowDTO,
+    TableQueryParams,
+)
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
@@ -228,3 +246,288 @@ def get_run_results(
         "results": hosts,
         "metadata": metadata,
     }
+
+
+@router.get("/{id}/hosts", response_model=Page[HostRowDTO])
+def get_run_hosts(
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    params: Annotated[TableQueryParams, Depends()],
+) -> Page[HostRowDTO]:
+    run = session.get(ScanRun, id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    stmt = select(HostState).where(HostState.scan_run_id == id)
+
+    if params.ip:
+        stmt = stmt.where(HostState.ip_address.like(f"{params.ip}%"))
+
+    if params.status and params.status.lower() != "all":
+        statuses = [s.strip() for s in params.status.split(",") if s.strip()]
+        if "anomaly" in statuses:
+            stmt = stmt.where(HostState.status != "ok")
+        else:
+            stmt = stmt.where(HostState.status.in_(statuses))
+
+    if params.finding:
+        stmt = stmt.where(col(HostState.finding_codes).contains(f'"{params.finding}"'))
+
+    if params.q:
+        q_pattern = f"%{params.q}%"
+        stmt = stmt.where(
+            or_(
+                HostState.ip_address.like(q_pattern),
+                col(HostState.resolved_domains).like(q_pattern),
+                col(HostState.finding_codes).like(q_pattern),
+            )
+        )
+
+    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
+
+    sort_column_map = {
+        "ip_address": HostState.ip_sort_key,
+        "host": HostState.ip_sort_key,
+        "status": HostState.status,
+        "depth": HostState.depth,
+        "vhost_count": HostState.vhost_count,
+        "open_port_count": HostState.open_port_count,
+        "scanned_port_count": HostState.scanned_port_count,
+        "min_tcp_latency_ms": HostState.min_tcp_latency_ms,
+        "latency": HostState.min_tcp_latency_ms,
+        "min_tls_expires_days": HostState.min_tls_expires_days,
+        "tls": HostState.min_tls_expires_days,
+        "tls_expires": HostState.min_tls_expires_days,
+        "worst_tls_version": HostState.worst_tls_version,
+        "worst_http_status": HostState.worst_http_status,
+        "http": HostState.worst_http_status,
+    }
+    sort_attr = sort_column_map.get(params.sort_by, HostState.ip_sort_key)
+    if params.sort_dir == "desc":
+        order_expr = sort_attr.desc().nulls_last()
+    else:
+        order_expr = sort_attr.asc().nulls_last()
+
+    stmt = stmt.order_by(order_expr).offset(params.offset).limit(params.limit)
+    hosts = session.exec(stmt).all()
+
+    items = [
+        HostRowDTO(
+            ip_address=h.ip_address,
+            status=h.status,
+            depth=h.depth,
+            vhost_count=h.vhost_count,
+            open_port_count=h.open_port_count,
+            scanned_port_count=h.scanned_port_count,
+            min_tcp_latency_ms=h.min_tcp_latency_ms,
+            min_tls_expires_days=h.min_tls_expires_days,
+            worst_tls_version=h.worst_tls_version,
+            worst_http_status=h.worst_http_status,
+            finding_codes=h.finding_codes or [],
+        )
+        for h in hosts
+    ]
+
+    return Page[HostRowDTO](
+        items=items,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
+
+
+@router.get("/{id}/services", response_model=Page[ServiceRowDTO])
+def get_run_services(
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    params: Annotated[TableQueryParams, Depends()],
+) -> Page[ServiceRowDTO]:
+    run = session.get(ScanRun, id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    stmt = (
+        select(PortState, HostState, TlsCertificate)
+        .join(HostState, col(PortState.host_state_id) == col(HostState.id))
+        .outerjoin(TlsCertificate, col(TlsCertificate.port_state_id) == col(PortState.id))
+        .where(HostState.scan_run_id == id)
+    )
+
+    if not params.include_closed:
+        stmt = stmt.where(or_(PortState.tcp_status == "open", PortState.status != "ok"))
+
+    if params.ip:
+        stmt = stmt.where(HostState.ip_address.like(f"{params.ip}%"))
+
+    if params.port is not None:
+        stmt = stmt.where(PortState.port_number == params.port)
+
+    if params.status and params.status.lower() != "all":
+        statuses = [s.strip() for s in params.status.split(",") if s.strip()]
+        if "anomaly" in statuses:
+            stmt = stmt.where(PortState.status != "ok")
+        else:
+            stmt = stmt.where(PortState.status.in_(statuses))
+
+    if params.finding:
+        stmt = stmt.where(col(PortState.finding_codes).contains(f'"{params.finding}"'))
+
+    if params.q:
+        q_pattern = f"%{params.q}%"
+        stmt = stmt.where(
+            or_(
+                HostState.ip_address.like(q_pattern),
+                col(PortState.port_number).cast(String).like(q_pattern),
+                col(PortState.finding_codes).like(q_pattern),
+                col(TlsCertificate.issuer).like(q_pattern),
+                col(TlsCertificate.protocol_version).like(q_pattern),
+            )
+        )
+
+    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
+
+    sort_column_map = {
+        "ip_address": HostState.ip_sort_key,
+        "host": HostState.ip_sort_key,
+        "port": PortState.port_number,
+        "depth": HostState.depth,
+        "status": PortState.status,
+        "tcp_latency_ms": PortState.tcp_latency_ms,
+        "latency": PortState.tcp_latency_ms,
+        "tls_expires_in_days": TlsCertificate.expires_in_days,
+        "tls": TlsCertificate.expires_in_days,
+        "tls_expires": TlsCertificate.expires_in_days,
+        "tls_version": TlsCertificate.protocol_version,
+        "tls_issuer": TlsCertificate.issuer,
+        "issuer": TlsCertificate.issuer,
+        "worst_http_status": PortState.worst_http_status,
+        "http": PortState.worst_http_status,
+    }
+    sort_attr = sort_column_map.get(params.sort_by, HostState.ip_sort_key)
+    if params.sort_dir == "desc":
+        order_expr = sort_attr.desc().nulls_last()
+    else:
+        order_expr = sort_attr.asc().nulls_last()
+
+    stmt = stmt.order_by(order_expr, PortState.port_number.asc()).offset(params.offset).limit(params.limit)
+    rows = session.exec(stmt).all()
+
+    items = []
+    for port, host, cert in rows:
+        items.append(
+            ServiceRowDTO(
+                ip_address=host.ip_address,
+                port=port.port_number,
+                status=port.status,
+                depth=host.depth,
+                tcp_latency_ms=port.tcp_latency_ms,
+                tls_valid=cert.valid if cert else None,
+                tls_expires_in_days=cert.expires_in_days if cert else None,
+                tls_version=cert.protocol_version if cert else None,
+                tls_issuer=cert.issuer if cert else None,
+                san_count=port.san_count,
+                http_check_count=port.http_check_count,
+                worst_http_status=port.worst_http_status,
+                finding_codes=port.finding_codes or [],
+            )
+        )
+
+    return Page[ServiceRowDTO](
+        items=items,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
+
+
+@router.get("/{id}/checks", response_model=Page[HttpCheckRowDTO])
+def get_run_checks(
+    id: Annotated[str, Path()],
+    session: SessionDep,
+    params: Annotated[TableQueryParams, Depends()],
+) -> Page[HttpCheckRowDTO]:
+    run = session.get(ScanRun, id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    stmt = (
+        select(HttpRoutingCheck, PortState.port_number, HostState.ip_address, HostState.ip_sort_key)
+        .join(PortState, col(HttpRoutingCheck.port_state_id) == col(PortState.id))
+        .join(HostState, col(PortState.host_state_id) == col(HostState.id))
+        .where(HostState.scan_run_id == id)
+    )
+
+    if params.ip:
+        stmt = stmt.where(HostState.ip_address.like(f"{params.ip}%"))
+
+    if params.port is not None:
+        stmt = stmt.where(PortState.port_number == params.port)
+
+    if params.status and params.status.lower() != "all":
+        statuses = [s.strip() for s in params.status.split(",") if s.strip()]
+        if "anomaly" in statuses:
+            stmt = stmt.where(HttpRoutingCheck.status != "ok")
+        else:
+            stmt = stmt.where(HttpRoutingCheck.status.in_(statuses))
+
+    if params.finding:
+        stmt = stmt.where(HttpRoutingCheck.finding_code == params.finding)
+
+    if params.q:
+        q_pattern = f"%{params.q}%"
+        stmt = stmt.where(
+            or_(
+                HostState.ip_address.like(q_pattern),
+                HttpRoutingCheck.domain.like(q_pattern),
+                HttpRoutingCheck.redirects_to_url.like(q_pattern),
+                HttpRoutingCheck.server_header.like(q_pattern),
+                HttpRoutingCheck.notes.like(q_pattern),
+                HttpRoutingCheck.finding_code.like(q_pattern),
+            )
+        )
+
+    total = session.exec(select(func.count()).select_from(stmt.subquery())).one()
+
+    sort_column_map = {
+        "ip_address": HostState.ip_sort_key,
+        "host": HostState.ip_sort_key,
+        "port": PortState.port_number,
+        "domain": HttpRoutingCheck.domain,
+        "status": HttpRoutingCheck.status,
+        "status_code": HttpRoutingCheck.status_code,
+        "http_latency_ms": HttpRoutingCheck.http_latency_ms,
+        "latency": HttpRoutingCheck.http_latency_ms,
+        "redirect": HttpRoutingCheck.redirects_to_url,
+        "server": HttpRoutingCheck.server_header,
+    }
+    sort_attr = sort_column_map.get(params.sort_by, HostState.ip_sort_key)
+    if params.sort_dir == "desc":
+        order_expr = sort_attr.desc().nulls_last()
+    else:
+        order_expr = sort_attr.asc().nulls_last()
+
+    stmt = stmt.order_by(order_expr, PortState.port_number.asc(), HttpRoutingCheck.domain.asc()).offset(params.offset).limit(params.limit)
+    rows = session.exec(stmt).all()
+
+    items = [
+        HttpCheckRowDTO(
+            ip_address=ip_addr,
+            port=port_num,
+            domain=check.domain,
+            status=check.status,
+            status_code=check.status_code,
+            http_latency_ms=check.http_latency_ms,
+            redirects_to_url=check.redirects_to_url,
+            server_header=check.server_header,
+            notes=check.notes,
+            finding_code=check.finding_code,
+        )
+        for check, port_num, ip_addr, _ in rows
+    ]
+
+    return Page[HttpCheckRowDTO](
+        items=items,
+        total=total,
+        limit=params.limit,
+        offset=params.offset,
+    )
