@@ -128,3 +128,46 @@ def test_delete_scan(client: TestClient):
 def test_delete_scan_not_found(client: TestClient):
     del_resp = client.delete("/api/scans/not-a-uuid")
     assert del_resp.status_code == 404
+
+
+def test_patch_scan_idempotent_controls(client: TestClient):
+    # Create scan
+    post_resp = client.post(
+        "/api/scans",
+        json={
+            "name": "Scan To Patch",
+            "cron_expression": "0 * * * *",
+            "targets": ["patch.com"],
+            "ports": [80],
+            "alerts_muted": False,
+        },
+    )
+    assert post_resp.status_code == 201
+    scan_id = post_resp.json()["id"]
+
+    # 1. Patch alerts_muted to True
+    patch1 = client.patch(f"/api/scans/{scan_id}", json={"alerts_muted": True})
+    assert patch1.status_code == 200
+    assert patch1.json()["alerts_muted"] is True
+    assert patch1.json()["name"] == "Scan To Patch"
+
+    # 2. Patch alerts_muted back to False (idempotent)
+    patch2 = client.patch(f"/api/scans/{scan_id}", json={"alerts_muted": False})
+    assert patch2.status_code == 200
+    assert patch2.json()["alerts_muted"] is False
+
+    # 3. Patch name and is_active
+    patch3 = client.patch(f"/api/scans/{scan_id}", json={"name": "Renamed Scan", "is_active": False})
+    assert patch3.status_code == 200
+    assert patch3.json()["name"] == "Renamed Scan"
+    assert patch3.json()["is_active"] is False
+
+    # 4. Non-existent scan returns 404
+    patch_404 = client.patch("/api/scans/non-existent-id", json={"alerts_muted": True})
+    assert patch_404.status_code == 404
+
+    # 5. Verify HTML GET mute and unmute are removed (return 404 or 405)
+    get_mute = client.get(f"/api/scans/{scan_id}/alerts/mute")
+    assert get_mute.status_code in (404, 405)
+    get_unmute = client.get(f"/api/scans/{scan_id}/alerts/unmute")
+    assert get_unmute.status_code in (404, 405)
