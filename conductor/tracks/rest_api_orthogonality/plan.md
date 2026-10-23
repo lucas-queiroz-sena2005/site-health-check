@@ -1,0 +1,65 @@
+# Implementation Plan: Orthogonal REST API for the 3 Tables & IP Drawer (`rest_api_orthogonality`)
+
+## Phase 1: DB-Agnostic Sort Key, Pruning Toggles & Evaluator Summary Counters (TDD)
+- [ ] Task: Write failing unit tests for `ip_sort_key`, finalization pruning toggles, and summary counters (Red Phase)
+  - [ ] Add unit tests in `api/tests/test_models.py` verifying `HostState.ip_sort_key` calculation for IPv4 and IPv6-mapped hex strings
+  - [ ] Add unit tests in `api/tests/test_api_runner.py` asserting `_finalize_run` prunes void hosts when `prune_void_hosts=True` and routine closed ports when `prune_closed_ports=True`, preserving ghost ports
+  - [ ] Add unit tests in `api/tests/test_evaluator.py` asserting `evaluate_scan_run()` calculates and populates `service_count` and `http_check_count` in `metrics_json["summary"]`
+- [ ] Task: Implement `ip_sort_key`, pruning toggles, and evaluator summary counters (Green & Refactor Phase)
+  - [ ] Add `ip_sort_key` column to `HostState` and add `prune_void_hosts` and `prune_closed_ports` to `ExecutionConfig` in `api/src/api/models.py`
+  - [ ] Update `_upsert_delta_sync` and `_finalize_run` in `api/src/api/services/runner.py` to compute `ip_sort_key` and execute conditional pruning
+  - [ ] Update `evaluate_scan_run()` in `api/src/api/services/evaluator.py` to record `service_count` and `http_check_count` in `metrics_json["summary"]`
+  - [ ] Verify all tests pass in `api/tests/`
+- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+
+---
+
+## Phase 2: Dedicated Orthogonal Table Endpoints & DTOs (Hosts, Services, Checks) (TDD)
+- [ ] Task: Write failing tests for `/hosts`, `/services`, `/checks` and query filter engine (Red Phase)
+  - [ ] Add tests in `api/tests/test_api_runs_tables.py` for `GET /api/runs/{id}/hosts` verifying `Page[HostRowDTO]` structure, field values, and pagination
+  - [ ] Add tests for `GET /api/runs/{id}/services` verifying `Page[ServiceRowDTO]`, open services + ghost port inclusion, and `include_closed=true` parameter
+  - [ ] Add tests for `GET /api/runs/{id}/checks` verifying `Page[HttpCheckRowDTO]` and field mappings
+  - [ ] Add tests for `TableQueryParams`: deep search `q` across IP/domains/issuer/findings, `ip` prefix, multi-status `status=warning,failed`, `port`, `finding`, `sort_by` with `ip_sort_key` and `depth`, and `.nulls_last()`
+- [ ] Task: Implement DTOs, query filter engine, and table endpoints (Green & Refactor Phase)
+  - [ ] Create Pydantic DTO models (`Page[T]`, `HostRowDTO`, `ServiceRowDTO`, `HttpCheckRowDTO`) and `TableQueryParams` dependency in `api/src/api/schemas/tables.py` and `api/src/api/schemas/common.py`
+  - [ ] Implement `GET /api/runs/{id}/hosts` with SQL pagination and deep search
+  - [ ] Implement `GET /api/runs/{id}/services` with open/ghost filtering and `include_closed` flag
+  - [ ] Implement `GET /api/runs/{id}/checks` with domain and routing check filtering
+  - [ ] Verify all table tests pass in `api/tests/test_api_runs_tables.py`
+- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+
+---
+
+## Phase 3: Dedicated On-Demand IP Detail Drawer Endpoint (TDD)
+- [ ] Task: Write failing unit tests for the IP Detail Drawer endpoint (Red Phase)
+  - [ ] Add tests in `api/tests/test_api_runs_tables.py` asserting `GET /api/runs/{id}/hosts/{ip}` returns `HostDetailDTO` with discovery lineage, full services list with TLS certificates, HTTP checks, and deduplicated SANs
+  - [ ] Add tests verifying 404 behavior for non-existent run ID or IP address
+- [ ] Task: Implement IP Detail Drawer endpoint in `api/src/api/routers/runs.py` (Green & Refactor Phase)
+  - [ ] Define `HostDetailDTO` schema including nested service details, HTTP checks, and unique SAN list in `api/src/api/schemas/tables.py`
+  - [ ] Implement `GET /api/runs/{id}/hosts/{ip}` route handler in `api/src/api/routers/runs.py`
+  - [ ] Verify drawer unit tests pass
+- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+
+---
+
+## Phase 4: Run Launch Consolidation, Idempotent Alerts & Legacy Cleanup (TDD)
+- [ ] Task: Write failing unit tests for unified launch, `PATCH /scans/{id}`, and webhook links (Red Phase)
+  - [ ] Add tests in `api/tests/test_api_runs.py` for `POST /api/runs` supporting both ad-hoc execution configs and `scan_id` schedule loading
+  - [ ] Add tests in `api/tests/test_api_scans.py` for `PATCH /api/scans/{id}` updating `alerts_muted` and schedule fields
+  - [ ] Add tests in `api/tests/test_alert_service.py` asserting webhook notification cards link to dashboard and do not include state-mutating GET mute URLs
+- [ ] Task: Implement unified launch, `PATCH /scans/{id}`, and remove legacy routes (Green & Refactor Phase)
+  - [ ] Consolidate run creation into `POST /api/runs` in `api/src/api/routers/runs.py`
+  - [ ] Implement `PATCH /api/scans/{id}` in `api/src/api/routers/scans.py` and delete HTML `GET /api/scans/{id}/alerts/mute` & `/unmute`
+  - [ ] Update webhook builders in `api/src/api/services/alerts.py` to point action links to `{app_base_url}/scheduled-runs`
+  - [ ] Delete `api/src/api/routers/results.py` and `api/src/api/services/aggregation.py` (preserving `GET /api/runs/{id}/results` bridge)
+  - [ ] Update frontend callers in `LiveScanPage.tsx` and `ScheduledScansPage.tsx` to use `POST /api/runs` and `PATCH /api/scans/{id}`
+- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+
+---
+
+## Phase 5: Full Regression Testing & End-to-End System Verification
+- [ ] Task: Comprehensive test suite verification and regression testing
+  - [ ] Execute full pytest test suite across `api/tests/` and `engine/tests/`
+  - [ ] Verify OpenAPI documentation and JSON schema generation (`/openapi.json`) for all new endpoints
+  - [ ] Verify manual scan launch, live SSE log streaming, table pagination, drawer inspection, and alert muting end-to-end
+- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
