@@ -31,10 +31,10 @@
 ---
 
 ## Phase 3: Dedicated On-Demand IP Detail Drawer Endpoint (TDD)
-- [ ] Task: Write failing unit tests for the IP Detail Drawer endpoint (Red Phase)
-  - [ ] Add tests in `api/tests/test_api_runs_tables.py` asserting `GET /api/runs/{id}/hosts/{ip}` returns `HostDetailDTO` with discovery lineage, full services list with TLS certificates, HTTP checks, and deduplicated SANs
-  - [ ] Add tests verifying 404 behavior for non-existent run ID or IP address
-- [ ] Task: Implement IP Detail Drawer endpoint in `api/src/api/routers/runs.py` (Green & Refactor Phase)
+- [x] Task: Write failing unit tests for the IP Detail Drawer endpoint (Red Phase) 4ede254
+  - [x] Add tests in `api/tests/test_api_runs_tables.py` asserting `GET /api/runs/{id}/hosts/{ip}` returns `HostDetailDTO` with discovery lineage, full services list with TLS certificates, HTTP checks, and deduplicated SANs
+  - [x] Add tests verifying 404 behavior for non-existent run ID or IP address
+- [~] Task: Implement IP Detail Drawer endpoint in `api/src/api/routers/runs.py` (Green & Refactor Phase)
   - [ ] Define `HostDetailDTO` schema including nested service details, HTTP checks, and unique SAN list in `api/src/api/schemas/tables.py`
   - [ ] Implement `GET /api/runs/{id}/hosts/{ip}` route handler in `api/src/api/routers/runs.py`
   - [ ] Verify drawer unit tests pass
