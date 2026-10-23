@@ -1,0 +1,8 @@
+Task: Implement DTOs, query filter engine, and table endpoints (Green & Refactor Phase)
+Summary: Implemented dedicated table endpoints for Hosts, Services, and Checks with SQL pagination, deep text search, multi-status filtering, and nulls_last sorting.
+Files created/modified:
+- api/src/api/schemas/__init__.py
+- api/src/api/schemas/common.py
+- api/src/api/schemas/tables.py
+- api/src/api/routers/runs.py
+Why: Provides lightweight, high-performance orthogonal REST endpoints for the three explorer tables as specified in Track 4 of ADR 0023.
