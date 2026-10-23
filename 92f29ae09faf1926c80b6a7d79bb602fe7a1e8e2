@@ -1,0 +1,7 @@
+Task: Implement IP Detail Drawer endpoint in api/src/api/routers/runs.py (Green & Refactor Phase)
+Summary: Defined HostDetailDTO, PortDetailDTO, HttpCheckDetailDTO, and TlsCertificateDetailDTO schemas. Implemented GET /api/runs/{id}/hosts/{ip} returning lineage, probed ports with nested TLS certs, HTTP checks, and deduplicated SANs.
+Files created/modified:
+- api/src/api/schemas/__init__.py
+- api/src/api/schemas/tables.py
+- api/src/api/routers/runs.py
+Why: Supports on-demand fetching of full IP details when a user clicks any IP in the flat explorer tables without transferring heavy SAN arrays or inline services in the main tables.
