@@ -1,0 +1,6 @@
+Phase Checkpoint: Phase 2 (Dedicated Orthogonal Table Endpoints & DTOs)
+Summary:
+- Implemented dedicated SQL-paginated table endpoints (/hosts, /services, /checks) returning Page[T] DTOs.
+- Integrated TableQueryParams with SQL deep search, IP prefix, multi-status, port, finding, and nulls_last sorting using ip_sort_key.
+- Automated Tests: 5 integration tests in api/tests/test_api_runs_tables.py passed; entire 115-test suite verified green.
+- Manual Verification: Confirmed by user.
