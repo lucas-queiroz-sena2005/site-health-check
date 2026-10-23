@@ -42,7 +42,7 @@
 
 ---
 
-## Phase 4: Run Launch Consolidation, Idempotent Alerts & Legacy Cleanup (TDD)
+## Phase 4: Run Launch Consolidation, Idempotent Alerts & Legacy Cleanup (TDD) [checkpoint: 5cd0f8c]
 - [x] Task: Write failing unit tests for unified launch, `PATCH /scans/{id}`, and webhook links (Red Phase) 60a8a81
   - [x] Add tests in `api/tests/test_api_runs.py` for `POST /api/runs` supporting both ad-hoc execution configs and `scan_id` schedule loading
   - [x] Add tests in `api/tests/test_api_scans.py` for `PATCH /api/scans/{id}` updating `alerts_muted` and schedule fields
@@ -53,7 +53,7 @@
   - [x] Update webhook builders in `api/src/api/services/alerts.py` to point action links to `{app_base_url}/scheduled-runs`
   - [x] Delete `api/src/api/routers/results.py` and `api/src/api/services/aggregation.py` (preserving `GET /api/runs/{id}/results` bridge)
   - [x] Update frontend callers in `LiveScanPage.tsx` and `ScheduledScansPage.tsx` to use `POST /api/runs` and `PATCH /api/scans/{id}`
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 5cd0f8c
 
 ---
 
