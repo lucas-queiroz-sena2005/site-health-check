@@ -57,9 +57,9 @@
 
 ---
 
-## Phase 5: Full Regression Testing & End-to-End System Verification
+## Phase 5: Full Regression Testing & End-to-End System Verification [checkpoint: 3457081]
 - [x] Task: Comprehensive test suite verification and regression testing 3457081
   - [x] Execute full pytest test suite across `api/tests/` and `engine/tests/`
   - [x] Verify OpenAPI documentation and JSON schema generation (`/openapi.json`) for all new endpoints
   - [x] Verify manual scan launch, live SSE log streaming, table pagination, drawer inspection, and alert muting end-to-end
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 3457081
