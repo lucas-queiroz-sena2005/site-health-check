@@ -285,11 +285,44 @@ def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
 
     # Summary persisted on ScanRun.metrics_json
     assert run.metrics_json is not None
-    assert run.metrics_json["summary"] == {
-        "active": 1,
-        "warning": 1,
-        "failed": 0,
-        "ghost": 0,
-        "void": 10,
-    }
+    assert run.metrics_json["summary"]["active"] == 1
+    assert run.metrics_json["summary"]["warning"] == 1
+    assert run.metrics_json["summary"]["failed"] == 0
+    assert run.metrics_json["summary"]["ghost"] == 0
+    assert run.metrics_json["summary"]["void"] == 10
+
+
+def test_evaluator_summary_service_and_check_counts(session: Session):
+    """Verify that evaluate_scan_run computes service_count and http_check_count in metrics_json['summary']."""
+    run = ScanRun(
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+        started_at=datetime.now(UTC),
+        status=ScanRunStatus.COMPLETED,
+    )
+    session.add(run)
+    session.commit()
+
+    # Host 1: 2 open ports, 1 closed routine port
+    h1 = HostState(scan_run_id=run.id, ip_address="10.0.0.1")
+    session.add(h1)
+    session.commit()
+    p1 = PortState(host_state_id=h1.id, port_number=80, tcp_status="open")
+    p2 = PortState(host_state_id=h1.id, port_number=443, tcp_status="open")
+    p3 = PortState(host_state_id=h1.id, port_number=8080, tcp_status="closed")
+    session.add_all([p1, p2, p3])
+    session.commit()
+
+    # Add HTTP checks on open ports
+    c1 = HttpRoutingCheck(port_state_id=p1.id, domain="example.com", status_code=200)
+    c2 = HttpRoutingCheck(port_state_id=p2.id, domain="example.com", status_code=200)
+    c3 = HttpRoutingCheck(port_state_id=p2.id, domain="api.example.com", status_code=200)
+    session.add_all([c1, c2, c3])
+    session.commit()
+
+    summary = evaluate_scan_run(run.id, session, void_count=0)
+
+    # service_count: count of open services + ghost port outages (here 2 open ports p1, p2)
+    assert summary["service_count"] == 2
+    # http_check_count: count of all L7 routing checks (here 3 checks c1, c2, c3)
+    assert summary["http_check_count"] == 3
 

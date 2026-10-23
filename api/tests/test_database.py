@@ -97,6 +97,35 @@ def test_no_model_serializer_dict_wrappers():
     assert isinstance(host.ports, list)
 
 
+def test_host_state_ip_sort_key_calculation(db_session: Session):
+    """Verify HostState automatically populates normalized 32-character hex ip_sort_key for DB-agnostic sorting."""
+    run = models.ScanRun(execution_config_snapshot_json={})
+    db_session.add(run)
+    db_session.commit()
+
+    h1 = models.HostState(scan_run_id=run.id, ip_address="10.0.0.100")
+    h2 = models.HostState(scan_run_id=run.id, ip_address="10.0.0.2")
+    h3 = models.HostState(scan_run_id=run.id, ip_address="8.8.8.8")
+    h4 = models.HostState(scan_run_id=run.id, ip_address="2001:db8::1")
+    db_session.add_all([h1, h2, h3, h4])
+    db_session.commit()
+
+    db_session.refresh(h1)
+    db_session.refresh(h2)
+    db_session.refresh(h3)
+    db_session.refresh(h4)
+
+    assert hasattr(h1, "ip_sort_key"), "HostState must have ip_sort_key attribute"
+    assert len(h1.ip_sort_key) == 32
+    assert len(h2.ip_sort_key) == 32
+    assert len(h3.ip_sort_key) == 32
+    assert len(h4.ip_sort_key) == 32
+
+    # Standard ASCII sorting of ip_sort_key MUST match numerical IP order
+    sorted_hosts = sorted([h1, h2, h3, h4], key=lambda h: h.ip_sort_key)
+    assert [h.ip_address for h in sorted_hosts] == ["8.8.8.8", "10.0.0.2", "10.0.0.100", "2001:db8::1"]
+
+
 def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
     """Verify that init_db() automatically migrates existing SQLite databases missing new columns."""
     import sqlite3

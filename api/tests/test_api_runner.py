@@ -406,4 +406,130 @@ async def test_run_manager_dispatch_run_pipeline(test_engine):
             assert final_run.status == ScanRunStatus.COMPLETED
 
 
+def test_finalize_run_pruning_toggles(test_engine):
+    """Verify that _finalize_run respects prune_void_hosts and prune_closed_ports flags."""
+    from datetime import datetime, timezone, timedelta
+    from api.models import ScanRun, ScanRunStatus
+    from api.services.runner import _finalize_run
+
+    with patch("api.services.runner.db_engine", test_engine):
+        now = datetime.now(timezone.utc)
+        prev_run_id = str(uuid.uuid4())
+
+        with Session(test_engine) as session:
+            # Previous run: 10.0.0.10 had port 80 open (Ghost candidate)
+            prev_run = ScanRun(
+                id=prev_run_id,
+                status=ScanRunStatus.COMPLETED,
+                started_at=now - timedelta(days=1),
+                execution_config_snapshot_json={"ghost_window": "7d"},
+            )
+            session.add(prev_run)
+            h_prev = HostState(
+                id=f"{prev_run_id}_10.0.0.10",
+                scan_run_id=prev_run_id,
+                ip_address="10.0.0.10",
+            )
+            session.add(h_prev)
+            session.flush()
+            session.add(PortState(
+                id=f"{h_prev.id}_80",
+                host_state_id=h_prev.id,
+                port_number=80,
+                tcp_status="open",
+            ))
+            session.commit()
+
+        # Run A: prune_void_hosts=False and prune_closed_ports=False -> Keep all void hosts & all closed ports
+        run_a_id = str(uuid.uuid4())
+        with Session(test_engine) as session:
+            run_a = ScanRun(
+                id=run_a_id,
+                status=ScanRunStatus.RUNNING,
+                started_at=now,
+                execution_config_snapshot_json={
+                    "prune_void_hosts": False,
+                    "prune_closed_ports": False,
+                    "ghost_window": "7d",
+                },
+            )
+            session.add(run_a)
+            # Active host with port 80 open and port 8080 routine closed
+            ha1 = HostState(id=f"{run_a_id}_10.0.0.1", scan_run_id=run_a_id, ip_address="10.0.0.1")
+            session.add(ha1)
+            session.flush()
+            session.add(PortState(id=f"{ha1.id}_80", host_state_id=ha1.id, port_number=80, tcp_status="open"))
+            session.add(PortState(id=f"{ha1.id}_8080", host_state_id=ha1.id, port_number=8080, tcp_status="closed"))
+            # Void host
+            ha2 = HostState(id=f"{run_a_id}_10.0.0.2", scan_run_id=run_a_id, ip_address="10.0.0.2")
+            session.add(ha2)
+            session.flush()
+            session.add(PortState(id=f"{ha2.id}_80", host_state_id=ha2.id, port_number=80, tcp_status="closed"))
+            session.commit()
+
+        _finalize_run(run_a_id, 0)
+
+        with Session(test_engine) as session:
+            hosts_a = session.exec(select(HostState).where(HostState.scan_run_id == run_a_id)).all()
+            assert len(hosts_a) == 2, "prune_void_hosts=False must preserve void host in SQLite"
+            ports_a = session.exec(select(PortState).where(PortState.host_state_id == f"{run_a_id}_10.0.0.1")).all()
+            assert len(ports_a) == 2, "prune_closed_ports=False must preserve routine closed port in SQLite"
+
+        # Run B: prune_void_hosts=True and prune_closed_ports=True -> Prune void hosts & routine closed ports
+        run_b_id = str(uuid.uuid4())
+        with Session(test_engine) as session:
+            run_b = ScanRun(
+                id=run_b_id,
+                status=ScanRunStatus.RUNNING,
+                started_at=now,
+                execution_config_snapshot_json={
+                    "prune_void_hosts": True,
+                    "prune_closed_ports": True,
+                    "ghost_window": "7d",
+                },
+            )
+            session.add(run_b)
+            # Active host with port 80 open and port 8080 routine closed (never historically active)
+            hb1 = HostState(id=f"{run_b_id}_10.0.0.1", scan_run_id=run_b_id, ip_address="10.0.0.1")
+            session.add(hb1)
+            session.flush()
+            session.add(PortState(id=f"{hb1.id}_80", host_state_id=hb1.id, port_number=80, tcp_status="open"))
+            session.add(PortState(id=f"{hb1.id}_8080", host_state_id=hb1.id, port_number=8080, tcp_status="closed"))
+            # Ghost host: 10.0.0.10 had port 80 open historically, now closed
+            hb_ghost = HostState(id=f"{run_b_id}_10.0.0.10", scan_run_id=run_b_id, ip_address="10.0.0.10")
+            session.add(hb_ghost)
+            session.flush()
+            session.add(PortState(id=f"{hb_ghost.id}_80", host_state_id=hb_ghost.id, port_number=80, tcp_status="closed"))
+            # Void host: 10.0.0.99 dead and never historically active
+            hb_void = HostState(id=f"{run_b_id}_10.0.0.99", scan_run_id=run_b_id, ip_address="10.0.0.99")
+            session.add(hb_void)
+            session.flush()
+            session.add(PortState(id=f"{hb_void.id}_80", host_state_id=hb_void.id, port_number=80, tcp_status="closed"))
+            session.commit()
+
+        _finalize_run(run_b_id, 0)
+
+        with Session(test_engine) as session:
+            hosts_b = session.exec(select(HostState).where(HostState.scan_run_id == run_b_id)).all()
+            assert len(hosts_b) == 2, "Void host 10.0.0.99 must be pruned; active (10.0.0.1) & ghost (10.0.0.10) must be kept"
+            b_ip_map = {h.ip_address: h for h in hosts_b}
+            assert "10.0.0.1" in b_ip_map
+            assert "10.0.0.10" in b_ip_map
+
+            # On active host hb1 (10.0.0.1), port 8080 (routine closed) must be pruned, leaving only port 80
+            ports_b1 = session.exec(select(PortState).where(PortState.host_state_id == f"{run_b_id}_10.0.0.1")).all()
+            assert len(ports_b1) == 1, "Routine closed port 8080 must be pruned from SQLite"
+            assert ports_b1[0].port_number == 80
+            # Host scanned_port_count must still reflect that 2 ports were probed!
+            hb1_final = session.get(HostState, f"{run_b_id}_10.0.0.1")
+            assert hb1_final.scanned_port_count == 2
+            assert hb1_final.open_port_count == 1
+
+            # On ghost host hb_ghost (10.0.0.10), port 80 is closed BUT was historically open -> MUST NOT BE PRUNED
+            ports_ghost = session.exec(select(PortState).where(PortState.host_state_id == f"{run_b_id}_10.0.0.10")).all()
+            assert len(ports_ghost) == 1
+            assert ports_ghost[0].port_number == 80
+            assert ports_ghost[0].tcp_status == "closed"
+
+
 
