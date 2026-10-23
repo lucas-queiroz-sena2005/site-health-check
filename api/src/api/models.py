@@ -1,3 +1,4 @@
+import ipaddress
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -34,6 +35,8 @@ class ExecutionConfig(BaseModel):
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
     ghost_window: str = PydanticField(default="7d", title="Ghost Window")
     tls_warning_days: int = PydanticField(default=30, title="TLS Expiry Warning Threshold (days)")
+    prune_void_hosts: bool = PydanticField(default=True, title="Prune Void Hosts on Finalization")
+    prune_closed_ports: bool = PydanticField(default=True, title="Prune Routine Closed Ports on Finalization")
 
 class Scan(SQLModel, table=True):
     __tablename__: str = "scans"  # type: ignore
@@ -140,6 +143,7 @@ class HostState(SQLModel, table=True):
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     scan_run_id: str = Field(foreign_key="scan_runs.id", ondelete="CASCADE")
     ip_address: str = Field(index=True)
+    ip_sort_key: str | None = Field(default=None, index=True)
     subrun_id: str | None = Field(default=None, index=True)
     
     resolved_domains: list[str] = Field(default_factory=list, sa_column=Column(JSON))
@@ -158,6 +162,15 @@ class HostState(SQLModel, table=True):
 
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
+        if self.ip_sort_key is None and self.ip_address:
+            try:
+                ip_obj = ipaddress.ip_address(self.ip_address)
+                if ip_obj.version == 4:
+                    self.ip_sort_key = f"00000000000000000000ffff{int(ip_obj):08x}"
+                else:
+                    self.ip_sort_key = f"{int(ip_obj):032x}"
+            except (ValueError, TypeError):
+                pass
         if self.depth == 0 and self.discovered_from:
             filtered = [d for d in self.discovered_from if d != self.ip_address]
             if filtered:

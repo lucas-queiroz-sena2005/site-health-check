@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import json
 import re
 import sys
@@ -58,10 +59,22 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
         filtered_lineage = [d for d in merged_discovered if d != ip]
         depth = len(filtered_lineage)
 
+        sort_key = None
+        if ip:
+            try:
+                ip_obj = ipaddress.ip_address(ip)
+                if ip_obj.version == 4:
+                    sort_key = f"00000000000000000000ffff{int(ip_obj):08x}"
+                else:
+                    sort_key = f"{int(ip_obj):032x}"
+            except (ValueError, TypeError):
+                pass
+
         stmt_host = insert(HostState).values(
             id=host_id,
             scan_run_id=run_id,
             ip_address=ip,
+            ip_sort_key=sort_key,
             resolved_domains=merged_resolved,
             discovered_from=merged_discovered,
             depth=depth,
@@ -69,6 +82,7 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
         ).on_conflict_do_update(
             index_elements=["scan_run_id", "ip_address"],
             set_={
+                "ip_sort_key": sort_key,
                 "resolved_domains": merged_resolved,
                 "discovered_from": merged_discovered,
                 "depth": depth,
@@ -247,12 +261,15 @@ def _finalize_run(run_id: str, returncode: int):
         snapshot = run.execution_config_snapshot_json or {}
         ghost_window = snapshot.get("ghost_window", "7d")
         tls_warning_days = snapshot.get("tls_warning_days", 30)
+        prune_void_hosts = bool(snapshot.get("prune_void_hosts", True))
+        prune_closed_ports = bool(snapshot.get("prune_closed_ports", True))
 
         statement = select(HostState).where(HostState.scan_run_id == run_id)
         hosts = list(session.exec(statement).all())
         initial_targets_count = len(hosts)
 
-        # 1. Resolve historical active IPs within ghost window
+        # 1. Resolve historical active (IP, port) pairs and IPs within ghost window
+        historical_active_ip_ports = set()
         historical_active_ips = set()
         match = re.fullmatch(r"^(\d+)([smhd])$", ghost_window.strip().lower())
         if match:
@@ -263,7 +280,7 @@ def _finalize_run(run_id: str, returncode: int):
             current_ips = [h.ip_address for h in hosts]
             if current_ips:
                 historical_stmt = (
-                    select(HostState.ip_address)
+                    select(HostState.ip_address, PortState.port_number)
                     .join(PortState, col(HostState.id) == col(PortState.host_state_id))
                     .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
                     .where(PortState.tcp_status == "open")
@@ -272,7 +289,8 @@ def _finalize_run(run_id: str, returncode: int):
                     .where(col(HostState.ip_address).in_(current_ips))
                     .distinct()
                 )
-                historical_active_ips = set(session.exec(historical_stmt).all())
+                historical_active_ip_ports = set(session.exec(historical_stmt).all())
+                historical_active_ips = {ip for ip, _ in historical_active_ip_ports}
 
         # 2. Classify hosts: Active, Ghost, Void
         void_host_ids: list[str] = []
@@ -287,8 +305,14 @@ def _finalize_run(run_id: str, returncode: int):
             else:
                 void_host_ids.append(host.id)
 
-        # 3. Purge individual void hosts completely from table/database
-        if void_host_ids:
+        # Record scanned_port_count and open_port_count on kept hosts BEFORE any port pruning
+        for host in kept_hosts:
+            host.scanned_port_count = len(host.ports)
+            host.open_port_count = sum(1 for p in host.ports if p.tcp_status == "open")
+            session.add(host)
+
+        # 3. Purge individual void hosts completely from table/database if prune_void_hosts is enabled
+        if prune_void_hosts and void_host_ids:
             port_stmt = select(PortState.id).where(col(PortState.host_state_id).in_(void_host_ids))
             port_ids = list(session.exec(port_stmt).all())
             if port_ids:
@@ -296,6 +320,20 @@ def _finalize_run(run_id: str, returncode: int):
                 session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(port_ids)))
                 session.exec(delete(PortState).where(col(PortState.id).in_(port_ids)))
             session.exec(delete(HostState).where(col(HostState.id).in_(void_host_ids)))
+
+        # 4. Purge routine closed ports on kept hosts if prune_closed_ports is enabled
+        if prune_closed_ports and kept_hosts:
+            routine_closed_port_ids = [
+                port.id
+                for host in kept_hosts
+                for port in host.ports
+                if port.tcp_status != "open"
+                and (host.ip_address, port.port_number) not in historical_active_ip_ports
+            ]
+            if routine_closed_port_ids:
+                session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(routine_closed_port_ids)))
+                session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(routine_closed_port_ids)))
+                session.exec(delete(PortState).where(col(PortState.id).in_(routine_closed_port_ids)))
 
         session.commit()
 

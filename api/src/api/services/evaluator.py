@@ -63,7 +63,15 @@ def evaluate_scan_run(
     Computes Level 1 (HttpRoutingCheck) -> Level 2 (PortState) -> Level 3 (HostState)
     finding codes, statuses, rollups, and ScanRun.metrics_json["summary"] in one pass.
     """
-    default_summary = {"active": 0, "warning": 0, "failed": 0, "ghost": 0, "void": void_count or 0}
+    default_summary = {
+        "active": 0,
+        "warning": 0,
+        "failed": 0,
+        "ghost": 0,
+        "void": void_count or 0,
+        "service_count": 0,
+        "http_check_count": 0,
+    }
     run = session.get(ScanRun, scan_run_id)
     if not run:
         return default_summary
@@ -233,7 +241,7 @@ def evaluate_scan_run(
         filtered_disc = [d for d in host.discovered_from if d != host.ip_address]
         host.depth = len(filtered_disc)
         host.vhost_count = len(host.resolved_domains)
-        host.scanned_port_count = len(host.ports)
+        host.scanned_port_count = max(host.scanned_port_count or 0, len(host.ports))
         host.open_port_count = len(open_ports)
 
         latencies = [p.tcp_latency_ms for p in open_ports if p.tcp_latency_ms is not None]
@@ -292,12 +300,27 @@ def evaluate_scan_run(
         else (existing_void if existing_void is not None else calculated_void_hosts)
     )
 
+    total_service_count = sum(
+        1
+        for h in hosts
+        for p in h.ports
+        if p.tcp_status == "open"
+        or (h.ip_address, p.port_number) in historical_active_ip_ports
+    )
+    total_http_check_count = sum(
+        len(p.http_routing_checks)
+        for h in hosts
+        for p in h.ports
+    )
+
     summary = {
         "active": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "ok"),
         "warning": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "warning"),
         "failed": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "failed"),
         "ghost": sum(1 for h in hosts if h.status == "ghost"),
         "void": final_void,
+        "service_count": total_service_count,
+        "http_check_count": total_http_check_count,
     }
 
     metrics = dict(run.metrics_json or {})
