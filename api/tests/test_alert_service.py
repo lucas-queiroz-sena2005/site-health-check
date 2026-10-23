@@ -450,11 +450,11 @@ def test_get_results_summary_returns_persisted_summary(client: TestClient, sessi
     session.commit()
     session.refresh(run)
 
-    resp = client.get(f"/api/results/summary?run_id={run.id}")
+    resp = client.get(f"/api/runs/{run.id}")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["run_id"] == run.id
-    assert data["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
+    assert data["id"] == run.id
+    assert data["metrics_json"]["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
 
 
 def test_compute_run_summary_prefers_metrics_json_directly(session: Session):

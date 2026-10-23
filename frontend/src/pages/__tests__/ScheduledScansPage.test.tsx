@@ -98,7 +98,7 @@ describe('ScheduledScansPage Alert Stopper Controls', () => {
           json: async () => mockScans,
         })
       }
-      if (url === '/api/scans/scan-active-alerts/alerts/mute' && options?.method === 'POST') {
+      if (url === '/api/scans/scan-active-alerts' && options?.method === 'PATCH') {
         return Promise.resolve({
           ok: true,
           json: async () => ({

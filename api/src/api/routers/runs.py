@@ -76,13 +76,46 @@ async def abort_run(
     raise HTTPException(status_code=404, detail="Run process not running locally")
 
 
+@router.post("", status_code=status.HTTP_201_CREATED)
 @router.post("/launch", status_code=status.HTTP_201_CREATED)
-async def launch_run(
+async def create_run(
     config: LaunchRunRequest,
     session: SessionDep,
     request: Request,
 ) -> ScanRunResponse:
-    snapshot = config.model_dump(exclude={"scan_id"})
+    scan_name = None
+    if config.scan_id:
+        scan = session.get(Scan, config.scan_id)
+        if not scan or scan.deleted_at is not None:
+            raise HTTPException(status_code=404, detail="Scan not found")
+        scan_name = scan.name
+
+        targets = config.targets if config.targets else (scan.targets or [])
+        if not targets:
+            raise HTTPException(status_code=400, detail="Targets cannot be empty")
+
+        fields_set = config.model_fields_set or set()
+        ports = config.ports if "ports" in fields_set else (scan.ports_json or [80, 443])
+        flags = config.flags.model_dump() if "flags" in fields_set else (scan.flags_json or {})
+        ghost_window = config.ghost_window if "ghost_window" in fields_set else scan.ghost_window
+        tls_warning_days = config.tls_warning_days if "tls_warning_days" in fields_set else scan.tls_warning_days
+        alert_config = scan.alert_config_json
+
+        snapshot = {
+            "targets": targets,
+            "ports": ports,
+            "flags": flags,
+            "ghost_window": ghost_window,
+            "tls_warning_days": tls_warning_days,
+            "alert_config": alert_config,
+            "prune_void_hosts": config.prune_void_hosts,
+            "prune_closed_ports": config.prune_closed_ports,
+        }
+    else:
+        if not config.targets:
+            raise HTTPException(status_code=400, detail="Targets cannot be empty")
+        snapshot = config.model_dump(exclude={"scan_id"})
+
     run = ScanRun(
         scan_id=config.scan_id,
         execution_config_snapshot_json=snapshot,
@@ -96,13 +129,6 @@ async def launch_run(
     await request.app.state.run_manager.dispatch_run(
         run.id, snapshot, scan_id=config.scan_id
     )
-    
-    # Retrieve scan name if scan_id is present
-    scan_name = None
-    if run.scan_id:
-        scan = session.get(Scan, run.scan_id)
-        if scan:
-            scan_name = scan.name
 
     return ScanRunResponse(
         id=run.id,

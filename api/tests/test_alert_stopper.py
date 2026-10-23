@@ -136,19 +136,21 @@ def test_get_web_action_mute_and_unmute_endpoints(client: TestClient, session: S
     session.commit()
     session.refresh(scan)
 
-    # GET action for single-click chat navigation without SPA loading
-    resp_mute = client.get(f"/api/scans/{scan.id}/alerts/mute")
+    # GET action has been removed (ADR 0023 Track 4)
+    resp_mute_get = client.get(f"/api/scans/{scan.id}/alerts/mute")
+    assert resp_mute_get.status_code in (404, 405)
+
+    # Idempotent PATCH action
+    resp_mute = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": True})
     assert resp_mute.status_code == 200
-    assert "text/html" in resp_mute.headers.get("content-type", "")
-    assert "muted" in resp_mute.text.lower() or "turned off" in resp_mute.text.lower()
+    assert resp_mute.json()["alerts_muted"] is True
 
     session.refresh(scan)
     assert scan.alerts_muted is True
 
-    resp_unmute = client.get(f"/api/scans/{scan.id}/alerts/unmute")
+    resp_unmute = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": False})
     assert resp_unmute.status_code == 200
-    assert "text/html" in resp_unmute.headers.get("content-type", "")
-    assert "active" in resp_unmute.text.lower() or "resumed" in resp_unmute.text.lower() or "turned on" in resp_unmute.text.lower()
+    assert resp_unmute.json()["alerts_muted"] is False
 
     session.refresh(scan)
     assert scan.alerts_muted is False
@@ -165,13 +167,11 @@ def test_build_google_chat_card_includes_mute_action():
         summary_stats={"active": 1, "warning": 0, "failed": 0, "ghost": 0, "void": 0},
         table_url="http://localhost:8080/?run=run-1234",
         is_healthy=True,
-        mute_url="http://localhost:8080/api/scans/scan-123/alerts/mute",
     )
     card = payload["cardsV2"][0]["card"]
     text = card["sections"][0]["widgets"][0]["textParagraph"]["text"]
     assert "View Results Table" in text
-    assert "Turn Off Alerts" in text
-    assert "http://localhost:8080/api/scans/scan-123/alerts/mute" in text
+    assert "scheduled-runs" in text
 
 
 def test_build_slack_blocks_includes_mute_action():
@@ -185,12 +185,11 @@ def test_build_slack_blocks_includes_mute_action():
         summary_stats={"active": 1, "warning": 0, "failed": 0, "ghost": 0, "void": 0},
         table_url="http://localhost:8080/?run=run-1234",
         is_healthy=True,
-        mute_url="http://localhost:8080/api/scans/scan-123/alerts/mute",
     )
     blocks = payload["blocks"]
     action_block = next(b for b in blocks if b["type"] == "actions")
     urls = [el["url"] for el in action_block["elements"]]
-    assert "http://localhost:8080/api/scans/scan-123/alerts/mute" in urls
+    assert any("scheduled-runs" in u for u in urls)
 
 
 def test_build_mute_status_payload():
@@ -206,17 +205,17 @@ def test_build_mute_status_payload():
     assert "cardsV2" in p_muted
     card_muted = p_muted["cardsV2"][0]["card"]
     assert "Alerts Muted" in card_muted["header"]["title"]
-    assert "Turn Back On" in card_muted["sections"][0]["widgets"][0]["textParagraph"]["text"]
+    assert "scheduled-runs" in card_muted["sections"][0]["widgets"][0]["textParagraph"]["text"]
 
     # Resumed payload
     p_resumed = build_mute_status_payload(
         webhook_url="https://chat.googleapis.com/test",
         schedule_name="Production Scan",
         is_muted=False,
-        mute_url="http://localhost:8080/api/scans/scan-1/alerts/mute",
     )
     card_resumed = p_resumed["cardsV2"][0]["card"]
     assert "Alerts Active" in card_resumed["header"]["title"]
+    assert "scheduled-runs" in card_resumed["sections"][0]["widgets"][0]["textParagraph"]["text"]
 
 
 @pytest.mark.asyncio
@@ -258,40 +257,31 @@ def test_concurrent_chat_clicks_idempotency_and_webhook_suppression(
     session.commit()
     session.refresh(scan)
 
-    with patch("api.routers.scans.dispatch_mute_status_notification", new_callable=AsyncMock) as mock_dispatch:
-        # User 1 clicks Turn Off Alerts from chat
-        r1 = client.get(f"/api/scans/{scan.id}/alerts/mute")
-        assert r1.status_code == 200
-        session.refresh(scan)
-        assert scan.alerts_muted is True
-        assert mock_dispatch.call_count == 1
-        assert mock_dispatch.call_args[0][1] is True  # is_muted = True
+    # User 1 sends PATCH alerts_muted=True
+    r1 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": True})
+    assert r1.status_code == 200
+    session.refresh(scan)
+    assert scan.alerts_muted is True
 
-        # User 2 clicks the same Turn Off Alerts button in chat later
-        r2 = client.get(f"/api/scans/{scan.id}/alerts/mute")
-        assert r2.status_code == 200
-        session.refresh(scan)
-        # MUST remain muted, MUST NOT toggle to False
-        assert scan.alerts_muted is True
-        # Webhook dispatch was suppressed for duplicate click!
-        assert mock_dispatch.call_count == 1
+    # User 2 sends identical PATCH alerts_muted=True (idempotent)
+    r2 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": True})
+    assert r2.status_code == 200
+    session.refresh(scan)
+    # MUST remain muted, MUST NOT toggle to False
+    assert scan.alerts_muted is True
 
-        # User 1 clicks Turn Back On from chat
-        r3 = client.get(f"/api/scans/{scan.id}/alerts/unmute")
-        assert r3.status_code == 200
-        session.refresh(scan)
-        assert scan.alerts_muted is False
-        assert mock_dispatch.call_count == 2
-        assert mock_dispatch.call_args[0][1] is False  # is_muted = False
+    # User 1 sends PATCH alerts_muted=False
+    r3 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": False})
+    assert r3.status_code == 200
+    session.refresh(scan)
+    assert scan.alerts_muted is False
 
-        # User 2 clicks Turn Back On again
-        r4 = client.get(f"/api/scans/{scan.id}/alerts/unmute")
-        assert r4.status_code == 200
-        session.refresh(scan)
-        # MUST remain unmuted
-        assert scan.alerts_muted is False
-        # Suppressed duplicate webhook!
-        assert mock_dispatch.call_count == 2
+    # User 2 sends identical PATCH alerts_muted=False (idempotent)
+    r4 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": False})
+    assert r4.status_code == 200
+    session.refresh(scan)
+    # MUST remain unmuted
+    assert scan.alerts_muted is False
 
 
 def test_dashboard_button_does_not_trigger_chat_notification(

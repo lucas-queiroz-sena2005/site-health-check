@@ -66,9 +66,9 @@ def build_google_chat_card(
     )
 
     is_https = table_url.startswith("https://")
+    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
     link_html = f"<a href='{table_url}'>View Results Table</a>"
-    if mute_url:
-        link_html += f"<br><a href='{mute_url}'>Turn Off Alerts for this Schedule</a>"
+    link_html += f"<br><a href='{dashboard_url}'>Open Scheduled Scans Dashboard</a>"
 
     body_lines = [
         f"<b>Status:</b> <font color='{status_color}'>{status_label}</font>",
@@ -94,15 +94,12 @@ def build_google_chat_card(
             {
                 "text": "View Results Table",
                 "onClick": {"openLink": {"url": table_url}},
-            }
+            },
+            {
+                "text": "Manage Schedule",
+                "onClick": {"openLink": {"url": dashboard_url}},
+            },
         ]
-        if mute_url:
-            buttons.append(
-                {
-                    "text": "Turn Off Alerts",
-                    "onClick": {"openLink": {"url": mute_url}},
-                }
-            )
         widgets.append({"buttonList": {"buttons": buttons}})
 
     return {
@@ -167,6 +164,7 @@ def build_slack_blocks(
         f"Failed: {failed_cnt} | Ghost: {ghost_cnt} | Void: {void_cnt}"
     )
 
+    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
     action_elements = [
         {
             "type": "button",
@@ -176,19 +174,16 @@ def build_slack_blocks(
             },
             "url": table_url,
             "style": "primary" if is_healthy else "danger",
-        }
+        },
+        {
+            "type": "button",
+            "text": {
+                "type": "plain_text",
+                "text": "Manage Schedule",
+            },
+            "url": dashboard_url,
+        },
     ]
-    if mute_url:
-        action_elements.append(
-            {
-                "type": "button",
-                "text": {
-                    "type": "plain_text",
-                    "text": "Turn Off Alerts",
-                },
-                "url": mute_url,
-            }
-        )
 
     findings_text = ""
     if finding_codes:
@@ -247,24 +242,18 @@ def build_mute_status_payload(
         Formatted payload dict for Google Chat, Slack, or generic fallback.
     """
     if "chat.googleapis.com" in webhook_url:
+        dashboard_url = f"{settings.app_base_url}/scheduled-runs"
         title = f"Alerts Muted: {schedule_name}" if is_muted else f"Alerts Active: {schedule_name}"
         desc = (
             f"Automated alerts for schedule <b>{schedule_name}</b> have been turned off."
             if is_muted
             else f"Automated alerts for schedule <b>{schedule_name}</b> have been resumed."
         )
-        action_link = (
-            f"<a href='{unmute_url}'>Turn Back On Alerts for this Schedule</a>"
-            if is_muted and unmute_url
-            else (f"<a href='{mute_url}'>Turn Off Alerts for this Schedule</a>" if not is_muted and mute_url else "")
-        )
-        button_text = "Turn Back On" if is_muted else "Turn Off Alerts"
-        button_url = unmute_url if is_muted else mute_url
+        action_link = f"<a href='{dashboard_url}'>Open Scheduled Scans Dashboard</a>"
+        button_text = "Open Dashboard"
+        button_url = dashboard_url
 
-        body_lines = [desc]
-        if action_link:
-            body_lines.append("")
-            body_lines.append(action_link)
+        body_lines = [desc, "", action_link]
 
         widgets: list[dict[str, Any]] = [
             {"textParagraph": {"text": "<br>".join(body_lines)}}
@@ -299,14 +288,15 @@ def build_mute_status_payload(
             ]
         }
     elif "hooks.slack.com" in webhook_url:
+        dashboard_url = f"{settings.app_base_url}/scheduled-runs"
         title = f"Alerts Muted: {schedule_name}" if is_muted else f"Alerts Active: {schedule_name}"
         desc = (
             f"Automated alerts for schedule *{schedule_name}* have been turned off."
             if is_muted
             else f"Automated alerts for schedule *{schedule_name}* have been resumed."
         )
-        btn_text = "Turn Back On" if is_muted else "Turn Off Alerts"
-        btn_url = unmute_url if is_muted else mute_url
+        btn_text = "Open Dashboard"
+        btn_url = dashboard_url
 
         blocks = [
             {"type": "header", "text": {"type": "plain_text", "text": title}},
@@ -330,18 +320,18 @@ def build_mute_status_payload(
             "blocks": blocks,
         }
     else:
+        dashboard_url = f"{settings.app_base_url}/scheduled-runs"
         desc = (
             f"Automated alerts for schedule {schedule_name} have been turned off."
             if is_muted
             else f"Automated alerts for schedule {schedule_name} have been resumed."
         )
-        url = unmute_url if is_muted else mute_url
-        msg = f"{desc}\nAction: {url}" if url else desc
+        msg = f"{desc}\nAction: {dashboard_url}"
         return {
             "text": msg,
             "schedule_name": schedule_name,
             "is_muted": is_muted,
-            "url": url,
+            "url": dashboard_url,
         }
 
 
@@ -362,15 +352,14 @@ async def dispatch_mute_status_notification(scan: Scan, is_muted: bool) -> bool:
     if not webhook_url:
         return False
 
-    mute_url = f"{settings.app_base_url}/api/scans/{scan.id}/alerts/mute"
-    unmute_url = f"{settings.app_base_url}/api/scans/{scan.id}/alerts/unmute"
+    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
 
     payload = build_mute_status_payload(
         webhook_url=webhook_url,
         schedule_name=scan.name,
         is_muted=is_muted,
-        mute_url=mute_url,
-        unmute_url=unmute_url,
+        mute_url=dashboard_url,
+        unmute_url=dashboard_url,
     )
 
     success, err = await dispatch_webhook(webhook_url, payload)
@@ -719,8 +708,7 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
 
     timestamp_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     table_url = f"{settings.app_base_url}/?run={run.id}"
-
-    mute_url = f"{settings.app_base_url}/api/scans/{scan.id}/alerts/mute"
+    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
 
     payload = build_alert_payload(
         webhook_url=alert_config.webhook_url,
@@ -731,7 +719,7 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
         summary_stats=summary,
         table_url=table_url,
         is_healthy=is_healthy,
-        mute_url=mute_url,
+        mute_url=dashboard_url,
         finding_codes=distinct_finding_codes,
     )
 
