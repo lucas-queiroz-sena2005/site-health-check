@@ -43,11 +43,11 @@
 ---
 
 ## Phase 4: Run Launch Consolidation, Idempotent Alerts & Legacy Cleanup (TDD)
-- [ ] Task: Write failing unit tests for unified launch, `PATCH /scans/{id}`, and webhook links (Red Phase)
-  - [ ] Add tests in `api/tests/test_api_runs.py` for `POST /api/runs` supporting both ad-hoc execution configs and `scan_id` schedule loading
-  - [ ] Add tests in `api/tests/test_api_scans.py` for `PATCH /api/scans/{id}` updating `alerts_muted` and schedule fields
-  - [ ] Add tests in `api/tests/test_alert_service.py` asserting webhook notification cards link to dashboard and do not include state-mutating GET mute URLs
-- [ ] Task: Implement unified launch, `PATCH /scans/{id}`, and remove legacy routes (Green & Refactor Phase)
+- [x] Task: Write failing unit tests for unified launch, `PATCH /scans/{id}`, and webhook links (Red Phase) 60a8a81
+  - [x] Add tests in `api/tests/test_api_runs.py` for `POST /api/runs` supporting both ad-hoc execution configs and `scan_id` schedule loading
+  - [x] Add tests in `api/tests/test_api_scans.py` for `PATCH /api/scans/{id}` updating `alerts_muted` and schedule fields
+  - [x] Add tests in `api/tests/test_alert_service.py` asserting webhook notification cards link to dashboard and do not include state-mutating GET mute URLs
+- [~] Task: Implement unified launch, `PATCH /scans/{id}`, and remove legacy routes (Green & Refactor Phase)
   - [ ] Consolidate run creation into `POST /api/runs` in `api/src/api/routers/runs.py`
   - [ ] Implement `PATCH /api/scans/{id}` in `api/src/api/routers/scans.py` and delete HTML `GET /api/scans/{id}/alerts/mute` & `/unmute`
   - [ ] Update webhook builders in `api/src/api/services/alerts.py` to point action links to `{app_base_url}/scheduled-runs`
