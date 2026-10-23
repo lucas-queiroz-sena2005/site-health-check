@@ -1,0 +1,17 @@
+Task: Implement unified launch, PATCH /scans/{id}, and remove legacy routes (Green & Refactor Phase)
+Summary: Consolidated scan runs into POST /api/runs (supporting ad-hoc and scan_id schedule loading), implemented idempotent PATCH /api/scans/{id}, removed state-mutating HTML GET mute routes, updated webhook cards to link to scheduled-runs dashboard, deleted dead results.py and aggregation.py, and updated frontend callers.
+Files modified/deleted:
+- api/src/api/main.py
+- api/src/api/routers/runs.py
+- api/src/api/routers/scans.py
+- api/src/api/services/alerts.py
+- api/src/api/routers/results.py (deleted)
+- api/src/api/services/aggregation.py (deleted)
+- api/tests/test_api_aggregation.py (deleted)
+- api/tests/test_alert_service.py
+- api/tests/test_alert_stopper.py
+- api/tests/test_api_results.py
+- frontend/src/pages/LiveScanPage.tsx
+- frontend/src/pages/ScheduledScansPage.tsx
+- frontend/src/pages/__tests__/ScheduledScansPage.test.tsx
+Why: Cleans up deprecated endpoints, unifies scan launching, establishes idempotent alert muting, and eliminates void aggregation legacy code as specified in Track 4 of ADR 0023.
