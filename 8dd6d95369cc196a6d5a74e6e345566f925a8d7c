@@ -1,0 +1,4 @@
+Task: Write failing unit tests for ip_sort_key, finalization pruning toggles, and summary counters (Red Phase)
+- Added test_host_state_ip_sort_key_calculation in api/tests/test_database.py
+- Added test_finalize_run_pruning_toggles in api/tests/test_api_runner.py
+- Added test_evaluator_summary_service_and_check_counts in api/tests/test_evaluator.py
