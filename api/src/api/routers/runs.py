@@ -22,11 +22,15 @@ from api.models import (
     TlsCertificate,
 )
 from api.schemas import (
+    HostDetailDTO,
     HostRowDTO,
+    HttpCheckDetailDTO,
     HttpCheckRowDTO,
     Page,
+    PortDetailDTO,
     ServiceRowDTO,
     TableQueryParams,
+    TlsCertificateDetailDTO,
 )
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -333,6 +337,97 @@ def get_run_hosts(
         total=total,
         limit=params.limit,
         offset=params.offset,
+    )
+
+
+@router.get("/{id}/hosts/{ip}", response_model=HostDetailDTO)
+def get_run_host_detail(
+    id: Annotated[str, Path()],
+    ip: Annotated[str, Path()],
+    session: SessionDep,
+) -> HostDetailDTO:
+    run = session.get(ScanRun, id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    host = session.exec(
+        select(HostState).where(HostState.scan_run_id == id, HostState.ip_address == ip)
+    ).first()
+    if not host:
+        raise HTTPException(status_code=404, detail=f"Host '{ip}' not found in run '{id}'")
+
+    ports = session.exec(
+        select(PortState)
+        .where(PortState.host_state_id == host.id)
+        .order_by(PortState.port_number.asc())
+    ).all()
+
+    services_dto: list[PortDetailDTO] = []
+    checks_dto: list[HttpCheckDetailDTO] = []
+    tls_sans_set: set[str] = set()
+
+    for p in ports:
+        cert_dto = None
+        if p.tls_certificate:
+            cert = p.tls_certificate
+            cert_dto = TlsCertificateDetailDTO(
+                valid=cert.valid,
+                expires_in_days=cert.expires_in_days,
+                issuer=cert.issuer,
+                protocol_version=cert.protocol_version,
+                domains_discovered_sans_json=cert.domains_discovered_sans_json or [],
+            )
+            for san in cert.domains_discovered_sans_json or []:
+                if san:
+                    tls_sans_set.add(san)
+
+        services_dto.append(
+            PortDetailDTO(
+                port_number=p.port_number,
+                tcp_status=p.tcp_status,
+                tcp_latency_ms=p.tcp_latency_ms,
+                status=p.status,
+                san_count=p.san_count,
+                http_check_count=p.http_check_count,
+                worst_http_status=p.worst_http_status,
+                finding_codes=p.finding_codes or [],
+                tls_certificate=cert_dto,
+            )
+        )
+
+        for c in sorted(p.http_routing_checks or [], key=lambda x: (x.domain or "", x.status_code or 0)):
+            checks_dto.append(
+                HttpCheckDetailDTO(
+                    port=p.port_number,
+                    domain=c.domain,
+                    status=c.status,
+                    status_code=c.status_code,
+                    http_latency_ms=c.http_latency_ms,
+                    redirects_to_url=c.redirects_to_url,
+                    server_header=c.server_header,
+                    notes=c.notes,
+                    finding_code=c.finding_code,
+                )
+            )
+
+    return HostDetailDTO(
+        ip_address=host.ip_address,
+        status=host.status,
+        depth=host.depth,
+        root_target=host.subrun_id,
+        resolved_domains=host.resolved_domains or [],
+        discovered_from=host.discovered_from or [],
+        open_port_count=host.open_port_count,
+        scanned_port_count=host.scanned_port_count,
+        vhost_count=host.vhost_count,
+        min_tcp_latency_ms=host.min_tcp_latency_ms,
+        min_tls_expires_days=host.min_tls_expires_days,
+        worst_tls_version=host.worst_tls_version,
+        worst_http_status=host.worst_http_status,
+        finding_codes=host.finding_codes or [],
+        tls_sans=sorted(tls_sans_set),
+        services=services_dto,
+        checks=checks_dto,
     )
 
 

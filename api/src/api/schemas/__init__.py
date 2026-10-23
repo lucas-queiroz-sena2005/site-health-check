@@ -4,6 +4,10 @@ from api.schemas.tables import (
     ServiceRowDTO,
     HttpCheckRowDTO,
     TableQueryParams,
+    HostDetailDTO,
+    PortDetailDTO,
+    HttpCheckDetailDTO,
+    TlsCertificateDetailDTO,
 )
 
 __all__ = [
@@ -12,4 +16,8 @@ __all__ = [
     "ServiceRowDTO",
     "HttpCheckRowDTO",
     "TableQueryParams",
+    "HostDetailDTO",
+    "PortDetailDTO",
+    "HttpCheckDetailDTO",
+    "TlsCertificateDetailDTO",
 ]
