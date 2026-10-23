@@ -1,0 +1,5 @@
+Task: Write failing unit tests for the IP Detail Drawer endpoint (Red Phase)
+Summary: Added tests in api/tests/test_api_runs_tables.py verifying GET /api/runs/{id}/hosts/{ip} returns HostDetailDTO with discovery lineage, services, checks, and deduplicated SANs, plus 404 handling.
+Files modified:
+- api/tests/test_api_runs_tables.py
+Why: Establishes TDD acceptance criteria for the on-demand IP Drawer endpoint.
