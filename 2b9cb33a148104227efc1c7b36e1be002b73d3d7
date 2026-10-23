@@ -1,0 +1,2 @@
+Task: Write failing tests for /hosts, /services, /checks and query filter engine (Red Phase)
+- Created api/tests/test_api_runs_tables.py testing Page[T] structure, DTO fields, deep search, multi-status, port, finding, and sorting
