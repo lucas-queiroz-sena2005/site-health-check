@@ -5,12 +5,12 @@
   - [x] Add unit tests in `api/tests/test_models.py` (and `test_database.py`) verifying `HostState.ip_sort_key` calculation for IPv4 and IPv6-mapped hex strings
   - [x] Add unit tests in `api/tests/test_api_runner.py` asserting `_finalize_run` prunes void hosts when `prune_void_hosts=True` and routine closed ports when `prune_closed_ports=True`, preserving ghost ports
   - [x] Add unit tests in `api/tests/test_evaluator.py` asserting `evaluate_scan_run()` calculates and populates `service_count` and `http_check_count` in `metrics_json["summary"]`
-- [~] Task: Implement `ip_sort_key`, pruning toggles, and evaluator summary counters (Green & Refactor Phase)
-  - [ ] Add `ip_sort_key` column to `HostState` and add `prune_void_hosts` and `prune_closed_ports` to `ExecutionConfig` in `api/src/api/models.py`
-  - [ ] Update `_upsert_delta_sync` and `_finalize_run` in `api/src/api/services/runner.py` to compute `ip_sort_key` and execute conditional pruning
-  - [ ] Update `evaluate_scan_run()` in `api/src/api/services/evaluator.py` to record `service_count` and `http_check_count` in `metrics_json["summary"]`
-  - [ ] Verify all tests pass in `api/tests/`
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Implement `ip_sort_key`, pruning toggles, and evaluator summary counters (Green & Refactor Phase) d2102c2
+  - [x] Add `ip_sort_key` column to `HostState` and add `prune_void_hosts` and `prune_closed_ports` to `ExecutionConfig` in `api/src/api/models.py`
+  - [x] Update `_upsert_delta_sync` and `_finalize_run` in `api/src/api/services/runner.py` to compute `ip_sort_key` and execute conditional pruning
+  - [x] Update `evaluate_scan_run()` in `api/src/api/services/evaluator.py` to record `service_count` and `http_check_count` in `metrics_json["summary"]`
+  - [x] Verify all tests pass in `api/tests/`
+- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
 
