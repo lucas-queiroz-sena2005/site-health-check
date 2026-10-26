@@ -1,0 +1,5 @@
+Task: Implement flat DTO types, TanStack Query hooks, and delete legacy tree artifacts (Green & Refactor Phase)
+- Replaced frontend/src/features/scans/types/index.ts with Page<T>, HostRowDTO, ServiceRowDTO, HttpCheckRowDTO, HostDetailDTO, PortDetailDTO, HttpCheckDetailDTO, TlsCertificateDetailDTO, TableQueryParams, and ScanRunSummary
+- Replaced useScanResults.ts with typed hooks useRunDetail, useRunHosts, useRunServices, useRunChecks, and useRunHostDetail
+- Deleted HierarchicalTable directory, buildTree.ts, and test-ghost.ts
+- Verified all vitest hook unit tests and tsc -b production build pass
