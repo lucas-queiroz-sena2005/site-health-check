@@ -63,3 +63,19 @@
   - [x] Verify OpenAPI documentation and JSON schema generation (`/openapi.json`) for all new endpoints
   - [x] Verify manual scan launch, live SSE log streaming, table pagination, drawer inspection, and alert muting end-to-end
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 3457081
+
+---
+
+## Phase 6: Review Fixes & Base Model Simplifications (TDD)
+- [ ] Task: Write failing unit tests for `EntityStatus` (`void`/`ghost`), unified evaluator pruning, `status=active` normalization, and SQLite `ip_sort_key` migration (Red Phase)
+  - [ ] Add unit tests in `api/tests/test_evaluator.py` asserting routine closed ports receive `status == "void"`, historically open closed ports receive `status == "ghost"` (with `HOST_GHOST`), and inactive non-ghost hosts receive `status == "void"`
+  - [ ] Add unit tests in `api/tests/test_api_runs_tables.py` verifying that when `prune_closed_ports=False`, `evaluate_scan_run()` + `GET /api/runs/{id}/services` (default `include_closed=false`) excludes `status == "void"` ports so `total == summary["service_count"]`, and `status=active` filter normalizes to `"ok"` across `/hosts`, `/services`, and `/checks`
+  - [ ] Add unit tests in `api/tests/test_database.py` asserting `init_db()` migrates legacy `host_states` tables by adding `ip_sort_key`, and `compute_ip_sort_key()` is shared across `models.py` and `runner.py`
+  - [ ] Add unit tests in `api/tests/test_api_runs_tables.py` verifying sorting by all DTO columns (`tls_valid`, `san_count`, `http_check_count`, `redirects_to_url`, `server_header`, `finding_code`)
+- [ ] Task: Implement `EntityStatus`, unified evaluator pruning, `compute_ip_sort_key`, and `TableQueryParams` helpers (Green & Refactor Phase)
+  - [ ] Define `EntityStatus(str, Enum)` (`ok`, `warning`, `failed`, `ghost`, `void`) and `compute_ip_sort_key(ip: str)` in `api/src/api/models.py`, and add `"ip_sort_key"` to `new_host_cols` in `api/src/api/database.py`
+  - [ ] Consolidate historical ghost-window lookup, `EntityStatus.VOID` / `EntityStatus.GHOST` assignment, and conditional `prune_void_hosts` / `prune_closed_ports` deletion into `evaluate_scan_run()` in `api/src/api/services/evaluator.py`, removing the duplicated historical query and classification loop from `_finalize_run()` in `api/src/api/services/runner.py`
+  - [ ] Add `apply_status_filter()` (normalizing `"active"` to `"ok"`) and `apply_sort_and_paginate()` methods to `TableQueryParams` in `api/src/api/schemas/tables.py`, and refactor `get_run_hosts`, `get_run_services` (`WHERE status != 'void'`), and `get_run_checks` in `api/src/api/routers/runs.py`
+  - [ ] Remove redundant `POST /api/scans/{id}/alerts/mute` & `/unmute` routes and unused imports in `api/src/api/routers/scans.py`
+  - [ ] Verify all automated tests and live range checks pass
+- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
