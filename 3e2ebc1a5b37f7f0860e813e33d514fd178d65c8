@@ -11,3 +11,15 @@ Summary:
 Verification:
 - tsc -b && vite build passed with 0 errors
 - npx vitest run passed all 16 tests across 3 suites
+
+Phase Checkpoint: Three-Tab Flat Relational Explorer, Filter Toolbar & URL State Binding
+
+Verification Report:
+- Unit & Component Tests: All 16 frontend vitest tests passed in HostTablePage.test.tsx, useScanResults.test.ts, and ScheduledScansPage.test.tsx.
+- Typecheck & Production Build: 'tsc -b && vite build' completed cleanly with 0 TypeScript diagnostics or bundling errors.
+- Backend Regression: Full backend pytest test suite (106 tests across 15 test modules) passed without failure.
+- Invariants Enforced:
+  1. Dumb UI Pattern: All badges, statuses, latency, HTTP statuses, and TLS stats rendered strictly from backend DTO fields without client-side rollups.
+  2. IP Leftmost Column: IP Address strictly occupies column 1 across Hosts, Services, and HTTP Checks tables.
+  3. URL State: tab, q, ip, status, sort_by, sort_dir, page fully synchronized to URL search params.
+- Checkpoint Approved: Confirmed by user.
