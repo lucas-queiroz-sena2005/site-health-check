@@ -57,6 +57,7 @@ def init_db() -> None:
                     "discovered_from": "JSON DEFAULT '[]'",
                     "depth": "INTEGER DEFAULT 0",
                     "status": "VARCHAR DEFAULT 'ok'",
+                    "ip_sort_key": "VARCHAR DEFAULT NULL",
                     "open_port_count": "INTEGER DEFAULT 0",
                     "scanned_port_count": "INTEGER DEFAULT 0",
                     "vhost_count": "INTEGER DEFAULT 0",

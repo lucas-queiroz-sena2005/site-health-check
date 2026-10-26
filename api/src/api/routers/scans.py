@@ -1,10 +1,8 @@
-import asyncio
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
 import croniter
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Path, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, HTTPException, Path, Request, status
 from sqlmodel import desc, select
 
 from api.config import settings
@@ -18,7 +16,6 @@ from api.models import (
     ScanRunStatus,
 )
 from api.routers.runs import ScanRunResponse
-from api.services.alerts import dispatch_mute_status_notification
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
@@ -197,36 +194,6 @@ def patch_scan(
     session.refresh(scan)
 
     return _build_scan_response(scan, session, targets=scan.targets)
-
-
-@router.post("/{id}/alerts/mute", response_model=ScanResponse)
-def mute_scan_alerts(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-) -> ScanResponse:
-    scan = session.get(Scan, id)
-    if not scan or scan.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    scan.alerts_muted = True
-    session.add(scan)
-    session.commit()
-    session.refresh(scan)
-    return _build_scan_response(scan, session)
-
-
-@router.post("/{id}/alerts/unmute", response_model=ScanResponse)
-def unmute_scan_alerts(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-) -> ScanResponse:
-    scan = session.get(Scan, id)
-    if not scan or scan.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    scan.alerts_muted = False
-    session.add(scan)
-    session.commit()
-    session.refresh(scan)
-    return _build_scan_response(scan, session)
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)

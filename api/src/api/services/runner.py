@@ -21,6 +21,7 @@ from api.models import (
     ScanRun,
     ScanRunStatus,
     TlsCertificate,
+    compute_ip_sort_key,
 )
 
 
@@ -59,16 +60,7 @@ def _upsert_delta_sync(run_id: str, ip: str, data: dict[str, Any]):
         filtered_lineage = [d for d in merged_discovered if d != ip]
         depth = len(filtered_lineage)
 
-        sort_key = None
-        if ip:
-            try:
-                ip_obj = ipaddress.ip_address(ip)
-                if ip_obj.version == 4:
-                    sort_key = f"00000000000000000000ffff{int(ip_obj):08x}"
-                else:
-                    sort_key = f"{int(ip_obj):032x}"
-            except (ValueError, TypeError):
-                pass
+        sort_key = compute_ip_sort_key(ip)
 
         stmt_host = insert(HostState).values(
             id=host_id,
@@ -268,81 +260,11 @@ def _finalize_run(run_id: str, returncode: int):
         hosts = list(session.exec(statement).all())
         initial_targets_count = len(hosts)
 
-        # 1. Resolve historical active (IP, port) pairs and IPs within ghost window
-        historical_active_ip_ports = set()
-        historical_active_ips = set()
-        match = re.fullmatch(r"^(\d+)([smhd])$", ghost_window.strip().lower())
-        if match:
-            amount, unit = int(match.group(1)), match.group(2)
-            units = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
-            delta = timedelta(**{units[unit]: amount})
-            cutoff = datetime.now(UTC) - delta
-            current_ips = [h.ip_address for h in hosts]
-            if current_ips:
-                historical_stmt = (
-                    select(HostState.ip_address, PortState.port_number)
-                    .join(PortState, col(HostState.id) == col(PortState.host_state_id))
-                    .join(ScanRun, col(HostState.scan_run_id) == col(ScanRun.id))
-                    .where(PortState.tcp_status == "open")
-                    .where(col(ScanRun.started_at) >= cutoff)
-                    .where(ScanRun.status == ScanRunStatus.COMPLETED)
-                    .where(col(HostState.ip_address).in_(current_ips))
-                    .distinct()
-                )
-                historical_active_ip_ports = set(session.exec(historical_stmt).all())
-                historical_active_ips = {ip for ip, _ in historical_active_ip_ports}
-
-        # 2. Classify hosts: Active, Ghost, Void
-        void_host_ids: list[str] = []
-        kept_hosts: list[HostState] = []
-
-        for host in hosts:
-            has_open = any(p.tcp_status == "open" for p in host.ports)
-            if has_open:
-                kept_hosts.append(host)
-            elif host.ip_address in historical_active_ips:
-                kept_hosts.append(host)
-            else:
-                void_host_ids.append(host.id)
-
-        # Record scanned_port_count and open_port_count on kept hosts BEFORE any port pruning
-        for host in kept_hosts:
-            host.scanned_port_count = len(host.ports)
-            host.open_port_count = sum(1 for p in host.ports if p.tcp_status == "open")
-            session.add(host)
-
-        # 3. Purge individual void hosts completely from table/database if prune_void_hosts is enabled
-        if prune_void_hosts and void_host_ids:
-            port_stmt = select(PortState.id).where(col(PortState.host_state_id).in_(void_host_ids))
-            port_ids = list(session.exec(port_stmt).all())
-            if port_ids:
-                session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(port_ids)))
-                session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(port_ids)))
-                session.exec(delete(PortState).where(col(PortState.id).in_(port_ids)))
-            session.exec(delete(HostState).where(col(HostState.id).in_(void_host_ids)))
-
-        # 4. Purge routine closed ports on kept hosts if prune_closed_ports is enabled
-        if prune_closed_ports and kept_hosts:
-            routine_closed_port_ids = [
-                port.id
-                for host in kept_hosts
-                for port in host.ports
-                if port.tcp_status != "open"
-                and (host.ip_address, port.port_number) not in historical_active_ip_ports
-            ]
-            if routine_closed_port_ids:
-                session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(routine_closed_port_ids)))
-                session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(routine_closed_port_ids)))
-                session.exec(delete(PortState).where(col(PortState.id).in_(routine_closed_port_ids)))
-
-        session.commit()
-
-        # 4. Deterministic Backend Evaluation Pipeline (Single Source of Truth)
+        # Deterministic Backend Evaluation & Pruning Pipeline (Single Source of Truth)
         from api.services.evaluator import evaluate_scan_run
         summary = evaluate_scan_run(
             run_id,
             session,
-            void_count=len(void_host_ids),
             ghost_window_override=ghost_window,
             tls_warning_days_override=tls_warning_days,
         )

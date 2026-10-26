@@ -82,7 +82,7 @@ def test_http_check_findings_evaluation(session: Session):
 
 def test_port_state_rollups_and_tls_findings(session: Session):
     """Level 2: PortState status, san_count, http_check_count, and TLS finding codes."""
-    run = ScanRun(execution_config_snapshot_json={"tls_warning_days": 30})
+    run = ScanRun(execution_config_snapshot_json={"tls_warning_days": 30, "prune_closed_ports": False})
     session.add(run)
     session.commit()
 
@@ -123,7 +123,7 @@ def test_port_state_rollups_and_tls_findings(session: Session):
     session.refresh(closed_port)
     session.refresh(deprecated_tls_port)
 
-    assert closed_port.status == "failed"
+    assert closed_port.status == "void"
     assert FINDING_TCP_CLOSED in closed_port.finding_codes
 
     assert deprecated_tls_port.san_count == 2

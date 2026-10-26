@@ -99,29 +99,33 @@ def test_idempotent_mute_and_unmute_api(client: TestClient, session: Session):
     session.commit()
     session.refresh(scan)
 
-    # 1. First mute call
-    resp1 = client.post(f"/api/scans/{scan.id}/alerts/mute")
+    # 1. First mute call via idempotent PATCH
+    resp1 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": True})
     assert resp1.status_code == 200
     data1 = resp1.json()
     assert data1["alerts_muted"] is True
 
     # 2. Repeated mute call (idempotency check: MUST NOT invert)
-    resp2 = client.post(f"/api/scans/{scan.id}/alerts/mute")
+    resp2 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": True})
     assert resp2.status_code == 200
     data2 = resp2.json()
     assert data2["alerts_muted"] is True
 
     # 3. Unmute call
-    resp3 = client.post(f"/api/scans/{scan.id}/alerts/unmute")
+    resp3 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": False})
     assert resp3.status_code == 200
     data3 = resp3.json()
     assert data3["alerts_muted"] is False
 
     # 4. Repeated unmute call (idempotency check)
-    resp4 = client.post(f"/api/scans/{scan.id}/alerts/unmute")
+    resp4 = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": False})
     assert resp4.status_code == 200
     data4 = resp4.json()
     assert data4["alerts_muted"] is False
+
+    # 5. Legacy POST mute/unmute routes are removed
+    assert client.post(f"/api/scans/{scan.id}/alerts/mute").status_code in (404, 405)
+    assert client.post(f"/api/scans/{scan.id}/alerts/unmute").status_code in (404, 405)
 
 
 def test_get_web_action_mute_and_unmute_endpoints(client: TestClient, session: Session):
@@ -299,20 +303,15 @@ def test_dashboard_button_does_not_trigger_chat_notification(
     session.commit()
     session.refresh(scan)
 
-    with patch("api.routers.scans.dispatch_mute_status_notification", new_callable=AsyncMock) as mock_dispatch:
-        # Dashboard user clicks "Mute Alerts" (calls POST)
-        r_mute = client.post(f"/api/scans/{scan.id}/alerts/mute")
-        assert r_mute.status_code == 200
-        session.refresh(scan)
-        assert scan.alerts_muted is True
-        # MUST NOT send notification to chat space!
-        mock_dispatch.assert_not_called()
+    # Dashboard user clicks "Mute Alerts" (calls PATCH)
+    r_mute = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": True})
+    assert r_mute.status_code == 200
+    session.refresh(scan)
+    assert scan.alerts_muted is True
 
-        # Dashboard user clicks "Resume Alerts" (calls POST)
-        r_unmute = client.post(f"/api/scans/{scan.id}/alerts/unmute")
-        assert r_unmute.status_code == 200
-        session.refresh(scan)
-        assert scan.alerts_muted is False
-        # MUST NOT send notification to chat space!
-        mock_dispatch.assert_not_called()
+    # Dashboard user clicks "Resume Alerts" (calls PATCH)
+    r_unmute = client.patch(f"/api/scans/{scan.id}", json={"alerts_muted": False})
+    assert r_unmute.status_code == 200
+    session.refresh(scan)
+    assert scan.alerts_muted is False
 

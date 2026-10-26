@@ -13,6 +13,28 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstrai
 def generate_uuid() -> str:
     return str(uuid.uuid4())
 
+
+class EntityStatus(str, Enum):
+    OK = "ok"
+    WARNING = "warning"
+    FAILED = "failed"
+    GHOST = "ghost"
+    VOID = "void"
+
+
+def compute_ip_sort_key(ip: str | None) -> str | None:
+    """Computes a database-agnostic, 32-character hex sort key for IPv4 and IPv6 addresses."""
+    if not ip:
+        return None
+    try:
+        ip_obj = ipaddress.ip_address(str(ip).strip())
+        if ip_obj.version == 4:
+            return f"00000000000000000000ffff{int(ip_obj):08x}"
+        return f"{int(ip_obj):032x}"
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 class ScanRunStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
@@ -163,14 +185,7 @@ class HostState(SQLModel, table=True):
     def model_post_init(self, __context: Any) -> None:
         super().model_post_init(__context)
         if self.ip_sort_key is None and self.ip_address:
-            try:
-                ip_obj = ipaddress.ip_address(self.ip_address)
-                if ip_obj.version == 4:
-                    self.ip_sort_key = f"00000000000000000000ffff{int(ip_obj):08x}"
-                else:
-                    self.ip_sort_key = f"{int(ip_obj):032x}"
-            except (ValueError, TypeError):
-                pass
+            self.ip_sort_key = compute_ip_sort_key(self.ip_address)
         if self.depth == 0 and self.discovered_from:
             filtered = [d for d in self.discovered_from if d != self.ip_address]
             if filtered:

@@ -293,12 +293,7 @@ def get_run_hosts(
     if params.ip:
         stmt = stmt.where(HostState.ip_address.like(f"{params.ip}%"))
 
-    if params.status and params.status.lower() != "all":
-        statuses = [s.strip() for s in params.status.split(",") if s.strip()]
-        if "anomaly" in statuses:
-            stmt = stmt.where(HostState.status != "ok")
-        else:
-            stmt = stmt.where(HostState.status.in_(statuses))
+    stmt = params.apply_status_filter(stmt, HostState.status)
 
     if params.finding:
         stmt = stmt.where(col(HostState.finding_codes).contains(f'"{params.finding}"'))
@@ -332,13 +327,7 @@ def get_run_hosts(
         "worst_http_status": HostState.worst_http_status,
         "http": HostState.worst_http_status,
     }
-    sort_attr = sort_column_map.get(params.sort_by, HostState.ip_sort_key)
-    if params.sort_dir == "desc":
-        order_expr = sort_attr.desc().nulls_last()
-    else:
-        order_expr = sort_attr.asc().nulls_last()
-
-    stmt = stmt.order_by(order_expr).offset(params.offset).limit(params.limit)
+    stmt = params.apply_sort_and_paginate(stmt, sort_column_map, HostState.ip_sort_key)
     hosts = session.exec(stmt).all()
 
     items = [
@@ -475,7 +464,7 @@ def get_run_services(
     )
 
     if not params.include_closed:
-        stmt = stmt.where(or_(PortState.tcp_status == "open", PortState.status != "ok"))
+        stmt = stmt.where(PortState.status != "void")
 
     if params.ip:
         stmt = stmt.where(HostState.ip_address.like(f"{params.ip}%"))
@@ -483,12 +472,7 @@ def get_run_services(
     if params.port is not None:
         stmt = stmt.where(PortState.port_number == params.port)
 
-    if params.status and params.status.lower() != "all":
-        statuses = [s.strip() for s in params.status.split(",") if s.strip()]
-        if "anomaly" in statuses:
-            stmt = stmt.where(PortState.status != "ok")
-        else:
-            stmt = stmt.where(PortState.status.in_(statuses))
+    stmt = params.apply_status_filter(stmt, PortState.status)
 
     if params.finding:
         stmt = stmt.where(col(PortState.finding_codes).contains(f'"{params.finding}"'))
@@ -515,22 +499,21 @@ def get_run_services(
         "status": PortState.status,
         "tcp_latency_ms": PortState.tcp_latency_ms,
         "latency": PortState.tcp_latency_ms,
+        "tls_valid": TlsCertificate.valid,
         "tls_expires_in_days": TlsCertificate.expires_in_days,
         "tls": TlsCertificate.expires_in_days,
         "tls_expires": TlsCertificate.expires_in_days,
         "tls_version": TlsCertificate.protocol_version,
         "tls_issuer": TlsCertificate.issuer,
         "issuer": TlsCertificate.issuer,
+        "san_count": PortState.san_count,
+        "http_check_count": PortState.http_check_count,
         "worst_http_status": PortState.worst_http_status,
         "http": PortState.worst_http_status,
     }
-    sort_attr = sort_column_map.get(params.sort_by, HostState.ip_sort_key)
-    if params.sort_dir == "desc":
-        order_expr = sort_attr.desc().nulls_last()
-    else:
-        order_expr = sort_attr.asc().nulls_last()
-
-    stmt = stmt.order_by(order_expr, PortState.port_number.asc()).offset(params.offset).limit(params.limit)
+    stmt = params.apply_sort_and_paginate(
+        stmt, sort_column_map, HostState.ip_sort_key, PortState.port_number.asc()
+    )
     rows = session.exec(stmt).all()
 
     items = []
@@ -584,12 +567,7 @@ def get_run_checks(
     if params.port is not None:
         stmt = stmt.where(PortState.port_number == params.port)
 
-    if params.status and params.status.lower() != "all":
-        statuses = [s.strip() for s in params.status.split(",") if s.strip()]
-        if "anomaly" in statuses:
-            stmt = stmt.where(HttpRoutingCheck.status != "ok")
-        else:
-            stmt = stmt.where(HttpRoutingCheck.status.in_(statuses))
+    stmt = params.apply_status_filter(stmt, HttpRoutingCheck.status)
 
     if params.finding:
         stmt = stmt.where(HttpRoutingCheck.finding_code == params.finding)
@@ -618,16 +596,20 @@ def get_run_checks(
         "status_code": HttpRoutingCheck.status_code,
         "http_latency_ms": HttpRoutingCheck.http_latency_ms,
         "latency": HttpRoutingCheck.http_latency_ms,
+        "redirects_to_url": HttpRoutingCheck.redirects_to_url,
         "redirect": HttpRoutingCheck.redirects_to_url,
+        "server_header": HttpRoutingCheck.server_header,
         "server": HttpRoutingCheck.server_header,
+        "finding_code": HttpRoutingCheck.finding_code,
+        "finding": HttpRoutingCheck.finding_code,
     }
-    sort_attr = sort_column_map.get(params.sort_by, HostState.ip_sort_key)
-    if params.sort_dir == "desc":
-        order_expr = sort_attr.desc().nulls_last()
-    else:
-        order_expr = sort_attr.asc().nulls_last()
-
-    stmt = stmt.order_by(order_expr, PortState.port_number.asc(), HttpRoutingCheck.domain.asc()).offset(params.offset).limit(params.limit)
+    stmt = params.apply_sort_and_paginate(
+        stmt,
+        sort_column_map,
+        HostState.ip_sort_key,
+        PortState.port_number.asc(),
+        HttpRoutingCheck.domain.asc(),
+    )
     rows = session.exec(stmt).all()
 
     items = [

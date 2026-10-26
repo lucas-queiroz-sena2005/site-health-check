@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 from fastapi import Query
 from pydantic import BaseModel, Field
 
@@ -152,3 +152,32 @@ class TableQueryParams:
         self.sort_dir = sort_dir.lower().strip() if sort_dir else "asc"
         self.limit = limit
         self.offset = offset
+
+    def apply_status_filter(self, stmt: Any, status_column: Any) -> Any:
+        if not self.status or self.status.lower() == "all":
+            return stmt
+        raw_statuses = [s.strip().lower() for s in self.status.split(",") if s.strip()]
+        if not raw_statuses:
+            return stmt
+        if "anomaly" in raw_statuses:
+            return stmt.where(status_column != "ok")
+        # Normalize "active" -> "ok" for UI compatibility
+        normalized = ["ok" if s == "active" else s for s in raw_statuses]
+        return stmt.where(status_column.in_(normalized))
+
+    def apply_sort_and_paginate(
+        self,
+        stmt: Any,
+        sort_column_map: dict[str, Any],
+        default_sort_column: Any,
+        *secondary_order_by: Any,
+    ) -> Any:
+        sort_attr = sort_column_map.get(self.sort_by, default_sort_column)
+        if self.sort_dir == "desc":
+            order_expr = sort_attr.desc().nulls_last()
+        else:
+            order_expr = sort_attr.asc().nulls_last()
+
+        order_clauses = [order_expr, *secondary_order_by]
+        return stmt.order_by(*order_clauses).offset(self.offset).limit(self.limit)
+

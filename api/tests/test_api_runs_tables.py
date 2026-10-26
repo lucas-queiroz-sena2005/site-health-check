@@ -117,7 +117,7 @@ def populated_run_fixture(session: Session) -> str:
         host_state_id=h1.id,
         port_number=8080,
         tcp_status="closed",
-        status="ok",
+        status="void",
         finding_codes=["TCP_CLOSED"],
     )
     session.add_all([p1_80, p1_443, p1_8080])
