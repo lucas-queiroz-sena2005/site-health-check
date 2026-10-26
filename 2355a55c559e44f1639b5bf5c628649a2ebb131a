@@ -1,0 +1,9 @@
+Task: Write failing component tests for IP Detail Drawer and cross-tab navigation (Red Phase)
+
+Summary:
+- Added 4 failing component tests to frontend/src/pages/__tests__/HostTablePage.test.tsx:
+  1. Opening slide-over drawer when clicking IP address in column 1 and rendering HostDetailDTO sections (lineage, services, checks, SANs)
+  2. Drilling down to Services tab when clicking 'Show in Services', closing drawer and applying IP filter
+  3. Drilling down to HTTP Checks tab when clicking 'Show in HTTP Checks', closing drawer and applying IP filter
+  4. Closing drawer removing drawer param from URL
+- Verified failing tests fail on missing host-detail-drawer test id
