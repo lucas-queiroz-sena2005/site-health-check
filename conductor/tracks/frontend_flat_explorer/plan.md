@@ -1,10 +1,10 @@
 # Implementation Plan: Dumb React Flat Explorer (`frontend_flat_explorer`)
 
 ## Phase 1: Typed DTO Contracts, TanStack Query Hooks & Legacy Tree Removal (TDD)
-- [ ] Task: Write failing unit tests for flat explorer API hooks and DTO schemas (Red Phase)
-  - [ ] Add unit tests in `frontend/src/features/scans/__tests__/useScanResults.test.ts` verifying `useRunDetail`, `useRunHosts`, `useRunServices`, `useRunChecks`, and `useRunHostDetail` construct orthogonal query URLs with `q`, `ip`, `status`, `port`, `finding`, `include_closed`, `sort_by`, `sort_dir`, `limit`, and `offset`
-  - [ ] Add tests verifying query hooks are disabled when `runId` or `ip` is absent and return typed `Page<T>` and `HostDetailDTO` payloads
-- [ ] Task: Implement flat DTO types, TanStack Query hooks, and delete legacy tree artifacts (Green & Refactor Phase)
+- [x] Task: Write failing unit tests for flat explorer API hooks and DTO schemas (Red Phase) 29b20ca
+  - [x] Add unit tests in `frontend/src/features/scans/__tests__/useScanResults.test.ts` verifying `useRunDetail`, `useRunHosts`, `useRunServices`, `useRunChecks`, and `useRunHostDetail` construct orthogonal query URLs with `q`, `ip`, `status`, `port`, `finding`, `include_closed`, `sort_by`, `sort_dir`, `limit`, and `offset`
+  - [x] Add tests verifying query hooks are disabled when `runId` or `ip` is absent and return typed `Page<T>` and `HostDetailDTO` payloads
+- [~] Task: Implement flat DTO types, TanStack Query hooks, and delete legacy tree artifacts (Green & Refactor Phase)
   - [ ] Update `frontend/src/features/scans/types/index.ts` with `Page<T>`, `HostRowDTO`, `ServiceRowDTO`, `HttpCheckRowDTO`, `HostDetailDTO`, `PortDetailDTO`, `HttpCheckDetailDTO`, `TlsCertificateDetailDTO`, `TableQueryParams`, and `ScanRunSummary` interfaces, removing `TreeNode` and `TreeNodeStatus`
   - [ ] Update `frontend/src/features/scans/api/queryKeys.ts` and `frontend/src/features/scans/api/useScanResults.ts` with `useRunDetail`, `useRunHosts`, `useRunServices`, `useRunChecks`, and `useRunHostDetail`
   - [ ] Delete `frontend/src/features/scans/components/HierarchicalTable/` directory, `frontend/src/features/scans/utils/buildTree.ts`, and `frontend/src/features/scans/utils/test-ghost.ts`, and update `frontend/src/features/scans/index.ts`
