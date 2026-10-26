@@ -1,0 +1,15 @@
+Task: Implement HostDetailDrawer component and integrate with HostTablePage.tsx (Green Phase)
+
+Summary:
+- Created frontend/src/features/scans/components/HostDetailDrawer.tsx using Sheet from @/components/ui/sheet
+- Implemented IP header with status badges, finding badges, copy-to-clipboard action, and accessible close button
+- Implemented 'Show in Services' and 'Show in HTTP Checks' cross-tab drill-down action buttons
+- Rendered Discovery Lineage section (depth with root/SAN label, root target, discovered from, resolved domains)
+- Rendered Services section with port, tcp status, latency, TLS certificate details (validity, protocol, issuer, expiry)
+- Rendered HTTP Checks section with port, domain, status code, latency, and direct redirects_to_url
+- Rendered deduplicated Certificate SAN badges
+- Exported HostDetailDrawer from features/scans/index.ts and wired into HostTablePage.tsx bound to ?drawer=<ip> URL param
+
+Verification:
+- tsc -b && vite build passed with 0 errors
+- npx vitest run passed all 20 tests across 3 suites
