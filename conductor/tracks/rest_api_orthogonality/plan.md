@@ -66,7 +66,7 @@
 
 ---
 
-## Phase 6: Review Fixes & Base Model Simplifications (TDD)
+## Phase 6: Review Fixes & Base Model Simplifications (TDD) [checkpoint: 7bce62c]
 - [x] Task: Write failing unit tests for `EntityStatus` (`void`/`ghost`), unified evaluator pruning, `status=active` normalization, and SQLite `ip_sort_key` migration (Red Phase) 3608995
   - [x] Add unit tests in `api/tests/test_evaluator.py` asserting routine closed ports receive `status == "void"`, historically open closed ports receive `status == "ghost"` (with `HOST_GHOST`), and inactive non-ghost hosts receive `status == "void"`
   - [x] Add unit tests in `api/tests/test_api_runs_tables.py` verifying that when `prune_closed_ports=False`, `evaluate_scan_run()` + `GET /api/runs/{id}/services` (default `include_closed=false`) excludes `status == "void"` ports so `total == summary["service_count"]`, and `status=active` filter normalizes to `"ok"` across `/hosts`, `/services`, and `/checks`
@@ -78,4 +78,4 @@
   - [x] Add `apply_status_filter()` (normalizing `"active"` to `"ok"`) and `apply_sort_and_paginate()` methods to `TableQueryParams` in `api/src/api/schemas/tables.py`, and refactor `get_run_hosts`, `get_run_services` (`WHERE status != 'void'`), and `get_run_checks` in `api/src/api/routers/runs.py`
   - [x] Remove redundant `POST /api/scans/{id}/alerts/mute` & `/unmute` routes and unused imports in `api/src/api/routers/scans.py`
   - [x] Verify all automated tests and live range checks pass
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 7bce62c
