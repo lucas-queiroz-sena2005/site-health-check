@@ -1,0 +1,13 @@
+Task: Implement 3-Tab Flat Explorer and URL-synchronized filter toolbar (Green Phase)
+
+Summary:
+- Built StatusBadge, FindingBadge, and formatters (latency, TLS expiry, TLS version, HTTP status) in frontend/src/features/scans/components/StatusBadge.tsx
+- Implemented full 3-tab flat relational explorer in HostTablePage.tsx (Hosts, Services, HTTP Checks) backed by TanStack Query hooks and SQL pagination
+- Implemented filter toolbar with debounced search, status multi-select toggles, active IP filter chip, and Saved Views integration
+- Bound all state to URL search parameters with history push/replace
+- Implemented strict IP leftmost column invariant across all 3 tables with clickable link to drawer
+- Implemented direct redirect URL rendering as monospace text without IP lookup maps
+
+Verification:
+- tsc -b && vite build passed with 0 errors
+- npx vitest run passed all 16 tests across 3 suites
