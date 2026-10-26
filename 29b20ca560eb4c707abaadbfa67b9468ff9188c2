@@ -1,0 +1,3 @@
+Task: Write failing unit tests for flat explorer API hooks and DTO schemas (Red Phase)
+- Added unit tests in frontend/src/features/scans/__tests__/useScanResults.test.ts for useRunDetail, useRunHosts, useRunServices, useRunChecks, and useRunHostDetail
+- Verified query hooks construct orthogonal query URLs matching Track 4 REST endpoints and handle enabled gating when runId/ip is missing
