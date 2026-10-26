@@ -1,0 +1,12 @@
+Task: Remove backend bridge routes, streamline finalization metrics, and run full-stack verification (Green Phase)
+
+Summary:
+- Removed GET /api/runs/{id}/results and POST /api/runs/launch from api/src/api/routers/runs.py
+- Removed POST /api/scans/{id}/launch from api/src/api/routers/scans.py
+- Streamlined metrics_json assignment in api/src/api/services/runner.py:_finalize_run() using existing_metrics.update(...)
+- Verified all backend and frontend suites pass completely
+
+Verification:
+- pytest api/tests/: all 108 tests passing
+- npm run build: production build completed cleanly with 0 TypeScript diagnostics
+- npx vitest run: all 20 tests across 3 suites passing
