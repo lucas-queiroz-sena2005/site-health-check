@@ -109,7 +109,11 @@ export function ScheduledScansPage() {
 
   const forceScanMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/scans/${id}/launch`, { method: 'POST' })
+      const res = await fetch('/api/runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scan_id: id }),
+      })
       if (!res.ok) throw new Error('Failed to launch scan')
       return res.json()
     },
@@ -123,8 +127,11 @@ export function ScheduledScansPage() {
 
   const toggleMuteMutation = useMutation({
     mutationFn: async ({ id, muted }: { id: string; muted: boolean }) => {
-      const endpoint = muted ? `/api/scans/${id}/alerts/unmute` : `/api/scans/${id}/alerts/mute`
-      const res = await fetch(endpoint, { method: 'POST' })
+      const res = await fetch(`/api/scans/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alerts_muted: !muted }),
+      })
       if (!res.ok) throw new Error('Failed to toggle alerts')
       return res.json()
     },

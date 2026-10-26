@@ -450,11 +450,11 @@ def test_get_results_summary_returns_persisted_summary(client: TestClient, sessi
     session.commit()
     session.refresh(run)
 
-    resp = client.get(f"/api/results/summary?run_id={run.id}")
+    resp = client.get(f"/api/runs/{run.id}")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["run_id"] == run.id
-    assert data["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
+    assert data["id"] == run.id
+    assert data["metrics_json"]["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
 
 
 def test_compute_run_summary_prefers_metrics_json_directly(session: Session):
@@ -536,6 +536,51 @@ def test_evaluate_alert_triggers_with_custom_rule_injection():
     assert should_send is True
     assert is_healthy is False
     assert triggers == ["Custom Anomaly Detected"]
+
+
+@pytest.mark.asyncio
+async def test_webhook_cards_link_to_dashboard_not_state_mutating_mute(session: Session):
+    from api.services.alerts import evaluate_and_dispatch_alert
+    from unittest.mock import patch
+
+    scan = Scan(
+        id="test-scan-webhook-links",
+        name="Security Prod",
+        cron_expression="0 0 * * *",
+        targets=["example.com"],
+        ports_json=[80],
+        flags_json={},
+        alert_config_json={
+            "webhook_url": "https://chat.googleapis.com/v1/spaces/test/messages",
+            "notify_on_warning": True,
+        },
+        alerts_muted=False,
+    )
+    run = ScanRun(
+        id="test-run-webhook-links",
+        scan_id=scan.id,
+        status=ScanRunStatus.COMPLETED,
+        metrics_json={"summary": {"active": 1, "warning": 1, "failed": 0, "ghost": 0, "void": 0}},
+    )
+    session.add(scan)
+    session.add(run)
+    session.commit()
+
+    captured_payload = None
+
+    async def fake_dispatch(url: str, payload: dict):
+        nonlocal captured_payload
+        captured_payload = payload
+        return True, None
+
+    with patch("api.services.alerts.dispatch_webhook", side_effect=fake_dispatch):
+        await evaluate_and_dispatch_alert(run.id, session)
+
+    assert captured_payload is not None
+    payload_str = str(captured_payload)
+    # Action links must point to the dashboard, NOT to state-mutating GET /alerts/mute
+    assert "/alerts/mute" not in payload_str
+    assert "/scheduled-runs" in payload_str
 
 
 

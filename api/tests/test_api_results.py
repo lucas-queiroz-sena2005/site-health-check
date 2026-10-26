@@ -68,14 +68,14 @@ def test_get_results(client: TestClient, session: Session):
     session.add(http_check)
     session.commit()
 
-    response = client.get("/api/results")
+    response = client.get(f"/api/runs/{job.id}/results")
     assert response.status_code == 200
     data = response.json()
-    
-    print("DATA: ", data)
-    assert len(data) == 1
-    assert data[0]["ip_address"] == "8.8.8.8"
-    assert data[0]["resolved_domains"] == ["google.com"]
+    assert "results" in data
+    results = data["results"]
+    assert len(results) == 1
+    assert results[0]["ip_address"] == "8.8.8.8"
+    assert results[0]["resolved_domains"] == ["google.com"]
     
     # Assert relational models maintain direct object hierarchy without dict wrappers
     session.refresh(ip_state)
@@ -133,9 +133,13 @@ def test_get_results_by_subrun(client: TestClient, session: Session):
     session.add(port_state)
     session.commit()
 
-    response = client.get(f"/api/results?run_id={job.id}&subrun_id=10.0.0.0/24")
+    response = client.get(f"/api/runs/{job.id}/results")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
-    assert data[0]["ip_address"] == "10.0.0.5"
+    assert "results" in data
+    results = data["results"]
+    assert len(results) == 2
+    ips = [r["ip_address"] for r in results]
+    assert "10.0.0.5" in ips
+    assert "10.0.1.5" in ips
 

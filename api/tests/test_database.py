@@ -97,6 +97,35 @@ def test_no_model_serializer_dict_wrappers():
     assert isinstance(host.ports, list)
 
 
+def test_host_state_ip_sort_key_calculation(db_session: Session):
+    """Verify HostState automatically populates normalized 32-character hex ip_sort_key for DB-agnostic sorting."""
+    run = models.ScanRun(execution_config_snapshot_json={})
+    db_session.add(run)
+    db_session.commit()
+
+    h1 = models.HostState(scan_run_id=run.id, ip_address="10.0.0.100")
+    h2 = models.HostState(scan_run_id=run.id, ip_address="10.0.0.2")
+    h3 = models.HostState(scan_run_id=run.id, ip_address="8.8.8.8")
+    h4 = models.HostState(scan_run_id=run.id, ip_address="2001:db8::1")
+    db_session.add_all([h1, h2, h3, h4])
+    db_session.commit()
+
+    db_session.refresh(h1)
+    db_session.refresh(h2)
+    db_session.refresh(h3)
+    db_session.refresh(h4)
+
+    assert hasattr(h1, "ip_sort_key"), "HostState must have ip_sort_key attribute"
+    assert len(h1.ip_sort_key) == 32
+    assert len(h2.ip_sort_key) == 32
+    assert len(h3.ip_sort_key) == 32
+    assert len(h4.ip_sort_key) == 32
+
+    # Standard ASCII sorting of ip_sort_key MUST match numerical IP order
+    sorted_hosts = sorted([h1, h2, h3, h4], key=lambda h: h.ip_sort_key)
+    assert [h.ip_address for h in sorted_hosts] == ["8.8.8.8", "10.0.0.2", "10.0.0.100", "2001:db8::1"]
+
+
 def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
     """Verify that init_db() automatically migrates existing SQLite databases missing new columns."""
     import sqlite3
@@ -126,6 +155,7 @@ def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
     assert "open_port_count" in host_cols
     assert "finding_codes" in host_cols
     assert "vhost_count" in host_cols
+    assert "ip_sort_key" in host_cols
 
     scan_cols = {row[1] for row in c.execute("PRAGMA table_info(scans);").fetchall()}
     assert "targets" in scan_cols
@@ -140,4 +170,29 @@ def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
     assert "finding_code" in check_cols
 
     conn2.close()
+
+
+def test_compute_ip_sort_key_and_entity_status():
+    """Verify compute_ip_sort_key and EntityStatus enum in api.models."""
+    from api.models import EntityStatus, compute_ip_sort_key
+
+    assert EntityStatus.OK == "ok"
+    assert EntityStatus.WARNING == "warning"
+    assert EntityStatus.FAILED == "failed"
+    assert EntityStatus.GHOST == "ghost"
+    assert EntityStatus.VOID == "void"
+
+    # IPv4 mapping to 32-char hex (standard ::ffff:a.b.c.d format)
+    assert compute_ip_sort_key("10.0.0.1") == "00000000000000000000ffff0a000001"
+    assert compute_ip_sort_key("192.168.1.254") == "00000000000000000000ffffc0a801fe"
+
+    # IPv6 mapping to 32-char hex
+    assert compute_ip_sort_key("2001:db8::1") == "20010db8000000000000000000000001"
+    assert compute_ip_sort_key("::1") == "00000000000000000000000000000001"
+
+    # Invalid IPs return None
+    assert compute_ip_sort_key("not-an-ip") is None
+    assert compute_ip_sort_key(None) is None
+    assert compute_ip_sort_key("") is None
+
 

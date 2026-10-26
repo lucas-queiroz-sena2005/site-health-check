@@ -1,12 +1,15 @@
 from datetime import UTC, datetime, timedelta
 import re
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, delete, select
 
 from api.models import (
+    EntityStatus,
     HostState,
+    HttpRoutingCheck,
     PortState,
     ScanRun,
     ScanRunStatus,
+    TlsCertificate,
 )
 
 # Canonical Finding Codes per ADR 0023
@@ -63,7 +66,15 @@ def evaluate_scan_run(
     Computes Level 1 (HttpRoutingCheck) -> Level 2 (PortState) -> Level 3 (HostState)
     finding codes, statuses, rollups, and ScanRun.metrics_json["summary"] in one pass.
     """
-    default_summary = {"active": 0, "warning": 0, "failed": 0, "ghost": 0, "void": void_count or 0}
+    default_summary = {
+        "active": 0,
+        "warning": 0,
+        "failed": 0,
+        "ghost": 0,
+        "void": void_count or 0,
+        "service_count": 0,
+        "http_check_count": 0,
+    }
     run = session.get(ScanRun, scan_run_id)
     if not run:
         return default_summary
@@ -166,21 +177,25 @@ def evaluate_scan_run(
             if not is_open:
                 if FINDING_TCP_CLOSED not in port_findings:
                     port_findings.append(FINDING_TCP_CLOSED)
-                port.status = "failed"
 
-                # Distinguish ghost port vs void port when rolling up to HostState
+                # Distinguish ghost port vs routine void port
                 was_port_historically_open = (
                     host.ip_address,
                     port.port_number,
                 ) in historical_active_ip_ports
                 if was_port_historically_open:
+                    port.status = EntityStatus.GHOST
                     has_ghost_port = True
+                    if FINDING_HOST_GHOST not in port_findings:
+                        port_findings.append(FINDING_HOST_GHOST)
                     if FINDING_HOST_GHOST not in host_findings:
                         host_findings.append(FINDING_HOST_GHOST)
-                elif not has_any_open_port or port.tcp_status == "error":
-                    for f in port_findings:
-                        if f not in host_findings:
-                            host_findings.append(f)
+                else:
+                    port.status = EntityStatus.VOID
+                    if port.tcp_status == "error":
+                        for f in port_findings:
+                            if f not in host_findings:
+                                host_findings.append(f)
             else:
                 open_ports.append(port)
                 # TLS Certificate evaluation
@@ -216,11 +231,11 @@ def evaluate_scan_run(
                 )
 
                 if has_port_failure:
-                    port.status = "failed"
+                    port.status = EntityStatus.FAILED
                 elif has_port_warning:
-                    port.status = "warning"
+                    port.status = EntityStatus.WARNING
                 else:
-                    port.status = "ok"
+                    port.status = EntityStatus.OK
 
                 for f in port_findings:
                     if f not in host_findings:
@@ -233,7 +248,7 @@ def evaluate_scan_run(
         filtered_disc = [d for d in host.discovered_from if d != host.ip_address]
         host.depth = len(filtered_disc)
         host.vhost_count = len(host.resolved_domains)
-        host.scanned_port_count = len(host.ports)
+        host.scanned_port_count = max(host.scanned_port_count or 0, len(host.ports))
         host.open_port_count = len(open_ports)
 
         latencies = [p.tcp_latency_ms for p in open_ports if p.tcp_latency_ms is not None]
@@ -255,25 +270,25 @@ def evaluate_scan_run(
         # Host status evaluation (rolling up open ports + ghost port detection)
         if host.open_port_count == 0:
             if host.ip_address in historical_active_ips:
-                host.status = "ghost"
+                host.status = EntityStatus.GHOST
                 if FINDING_HOST_GHOST not in host_findings:
                     host_findings.append(FINDING_HOST_GHOST)
             else:
                 calculated_void_hosts += 1
-                host.status = "failed" if any(p.status == "failed" for p in host.ports) else "ok"
+                host.status = EntityStatus.VOID
         else:
-            has_open_failure = any(p.status == "failed" for p in open_ports) or any(
+            has_open_failure = any(p.status == EntityStatus.FAILED for p in open_ports) or any(
                 p.tcp_status == "error" for p in host.ports
             )
             has_open_warning = (
-                any(p.status == "warning" for p in open_ports) or has_ghost_port
+                any(p.status == EntityStatus.WARNING for p in open_ports) or has_ghost_port
             )
             if has_open_failure:
-                host.status = "failed"
+                host.status = EntityStatus.FAILED
             elif has_open_warning:
-                host.status = "warning"
+                host.status = EntityStatus.WARNING
             else:
-                host.status = "ok"
+                host.status = EntityStatus.OK
 
         host.finding_codes = host_findings
         session.add(host)
@@ -286,18 +301,33 @@ def evaluate_scan_run(
         and "void" in run.metrics_json["summary"]
         else None
     )
+    void_hosts_count = sum(1 for h in hosts if h.status == EntityStatus.VOID)
     final_void = (
         void_count
         if void_count is not None
-        else (existing_void if existing_void is not None else calculated_void_hosts)
+        else (existing_void if existing_void is not None else void_hosts_count)
+    )
+
+    total_service_count = sum(
+        1
+        for h in hosts
+        for p in h.ports
+        if p.status != EntityStatus.VOID
+    )
+    total_http_check_count = sum(
+        len(p.http_routing_checks)
+        for h in hosts
+        for p in h.ports
     )
 
     summary = {
-        "active": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "ok"),
-        "warning": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "warning"),
-        "failed": sum(1 for h in hosts if h.open_port_count > 0 and h.status == "failed"),
-        "ghost": sum(1 for h in hosts if h.status == "ghost"),
+        "active": sum(1 for h in hosts if h.open_port_count > 0 and h.status == EntityStatus.OK),
+        "warning": sum(1 for h in hosts if h.open_port_count > 0 and h.status == EntityStatus.WARNING),
+        "failed": sum(1 for h in hosts if h.open_port_count > 0 and h.status == EntityStatus.FAILED),
+        "ghost": sum(1 for h in hosts if h.status == EntityStatus.GHOST),
         "void": final_void,
+        "service_count": total_service_count,
+        "http_check_count": total_http_check_count,
     }
 
     metrics = dict(run.metrics_json or {})
@@ -305,4 +335,37 @@ def evaluate_scan_run(
     run.metrics_json = metrics
     session.add(run)
     session.commit()
+
+    # Unified pruning pipeline
+    prune_void_hosts = bool(snapshot.get("prune_void_hosts", True))
+    prune_closed_ports = bool(snapshot.get("prune_closed_ports", True))
+
+    void_host_ids = [h.id for h in hosts if h.status == EntityStatus.VOID]
+    if prune_void_hosts and void_host_ids:
+        port_stmt = select(PortState.id).where(col(PortState.host_state_id).in_(void_host_ids))
+        port_ids = list(session.exec(port_stmt).all())
+        if port_ids:
+            session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(port_ids)))
+            session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(port_ids)))
+            session.exec(delete(PortState).where(col(PortState.id).in_(port_ids)))
+        session.exec(delete(HostState).where(col(HostState.id).in_(void_host_ids)))
+
+    if prune_closed_ports:
+        kept_host_ids = [h.id for h in hosts if h.status != EntityStatus.VOID]
+        if kept_host_ids:
+            routine_closed_port_ids = [
+                p.id
+                for h in hosts
+                if h.id in kept_host_ids
+                for p in h.ports
+                if p.status == EntityStatus.VOID
+            ]
+            if routine_closed_port_ids:
+                session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(routine_closed_port_ids)))
+                session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(routine_closed_port_ids)))
+                session.exec(delete(PortState).where(col(PortState.id).in_(routine_closed_port_ids)))
+
+    if (prune_void_hosts and void_host_ids) or prune_closed_ports:
+        session.commit()
+
     return summary

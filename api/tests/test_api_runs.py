@@ -147,3 +147,60 @@ def test_stream_run_logs_delegates_to_run_manager(client: TestClient, session: S
         content = "\n".join(response.iter_lines())
         assert "first" in content
 
+
+def test_unified_create_run_endpoint(client: TestClient):
+    # 1. Ad-hoc run launch via POST /api/runs
+    resp_adhoc = client.post(
+        "/api/runs",
+        json={
+            "targets": ["10.0.0.1"],
+            "ports": [80, 443],
+            "flags": {"check_tcp": True},
+        },
+    )
+    assert resp_adhoc.status_code == 201
+    run_adhoc = resp_adhoc.json()
+    assert run_adhoc["targets"] == ["10.0.0.1"]
+    assert run_adhoc["scan_id"] is None
+
+    # Missing targets without scan_id returns 400
+    resp_empty = client.post("/api/runs", json={"targets": []})
+    assert resp_empty.status_code == 400
+
+    # 2. Create a scheduled scan
+    scan_resp = client.post(
+        "/api/scans",
+        json={
+            "name": "Unified Production Scan",
+            "cron_expression": "0 0 * * *",
+            "targets": ["prod.example.com"],
+            "ports": [443],
+            "flags": {"check_http": True},
+        },
+    )
+    assert scan_resp.status_code == 201
+    scan_id = scan_resp.json()["id"]
+
+    # Launch scheduled scan via POST /api/runs supplying only scan_id
+    resp_sched = client.post("/api/runs", json={"scan_id": scan_id})
+    assert resp_sched.status_code == 201
+    run_sched = resp_sched.json()
+    assert run_sched["scan_id"] == scan_id
+    assert run_sched["scan_name"] == "Unified Production Scan"
+    assert run_sched["targets"] == ["prod.example.com"]
+    assert run_sched["ports"] == [443]
+
+    # Launch with runtime overrides
+    resp_override = client.post(
+        "/api/runs",
+        json={"scan_id": scan_id, "targets": ["override.example.com"], "ports": [8443]},
+    )
+    assert resp_override.status_code == 201
+    run_override = resp_override.json()
+    assert run_override["targets"] == ["override.example.com"]
+    assert run_override["ports"] == [8443]
+
+    # Non-existent scan_id returns 404
+    resp_404 = client.post("/api/runs", json={"scan_id": "nonexistent-scan-id"})
+    assert resp_404.status_code == 404
+

@@ -140,7 +140,7 @@ export function LiveScanPage() {
     setLogs([`[INFO] Scanner initialized. Targeting: ${data.targets.length > 0 ? data.targets.join(', ') : 'None'}`])
     
     try {
-      const response = await fetch('/api/runs/launch', {
+      const response = await fetch('/api/runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
