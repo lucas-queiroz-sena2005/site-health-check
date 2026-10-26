@@ -326,3 +326,147 @@ def test_evaluator_summary_service_and_check_counts(session: Session):
     # http_check_count: count of all L7 routing checks (here 3 checks c1, c2, c3)
     assert summary["http_check_count"] == 3
 
+
+def test_evaluator_assigns_entity_status_void_and_ghost(session: Session):
+    """Routine closed ports get status='void', historically open closed ports get status='ghost',
+    and inactive non-ghost hosts get status='void'."""
+    from api.models import EntityStatus
+
+    past_time = datetime.now(UTC) - timedelta(days=2)
+    past_run = ScanRun(
+        execution_config_snapshot_json={},
+        started_at=past_time,
+        status=ScanRunStatus.COMPLETED,
+    )
+    session.add(past_run)
+    session.commit()
+
+    # Past run: 10.0.0.2 had port 443 open
+    past_host = HostState(scan_run_id=past_run.id, ip_address="10.0.0.2")
+    session.add(past_host)
+    session.commit()
+    session.add(PortState(host_state_id=past_host.id, port_number=443, tcp_status="open"))
+    session.commit()
+
+    # Current run with pruning disabled to inspect evaluated statuses in DB
+    run = ScanRun(
+        execution_config_snapshot_json={
+            "ghost_window": "7d",
+            "tls_warning_days": 30,
+            "prune_void_hosts": False,
+            "prune_closed_ports": False,
+        },
+        started_at=datetime.now(UTC),
+        status=ScanRunStatus.COMPLETED,
+    )
+    session.add(run)
+    session.commit()
+
+    # Host 1: Active host with 1 open port and 1 routine closed port (never historically open)
+    h1 = HostState(scan_run_id=run.id, ip_address="10.0.0.1")
+    # Host 2: Ghost host with closed port 443 (was historically open)
+    h2 = HostState(scan_run_id=run.id, ip_address="10.0.0.2")
+    # Host 3: Inactive non-ghost host with closed port 80 (never historically open -> VOID host)
+    h3 = HostState(scan_run_id=run.id, ip_address="10.0.0.3")
+    session.add_all([h1, h2, h3])
+    session.commit()
+
+    p1_open = PortState(host_state_id=h1.id, port_number=80, tcp_status="open")
+    p1_closed = PortState(host_state_id=h1.id, port_number=8080, tcp_status="closed")
+    p2_ghost = PortState(host_state_id=h2.id, port_number=443, tcp_status="closed")
+    p3_void = PortState(host_state_id=h3.id, port_number=80, tcp_status="closed")
+    session.add_all([p1_open, p1_closed, p2_ghost, p3_void])
+    session.commit()
+
+    evaluate_scan_run(run.id, session)
+
+    session.refresh(h1)
+    session.refresh(h2)
+    session.refresh(h3)
+    session.refresh(p1_open)
+    session.refresh(p1_closed)
+    session.refresh(p2_ghost)
+    session.refresh(p3_void)
+
+    # Port statuses
+    assert p1_open.status == EntityStatus.OK
+    assert p1_closed.status == EntityStatus.VOID, "Routine closed port must have status='void'"
+    assert p2_ghost.status == EntityStatus.GHOST, "Historically open closed port must have status='ghost'"
+    assert FINDING_HOST_GHOST in p2_ghost.finding_codes
+    assert p3_void.status == EntityStatus.VOID
+
+    # Host statuses
+    assert h1.status == EntityStatus.OK
+    assert h2.status == EntityStatus.GHOST
+    assert FINDING_HOST_GHOST in h2.finding_codes
+    assert h3.status == EntityStatus.VOID, "Inactive non-ghost host must have status='void'"
+
+
+def test_evaluator_unified_pruning_pipeline(session: Session):
+    """evaluate_scan_run directly performs pruning of void hosts and routine closed ports when configured."""
+    from api.models import EntityStatus
+
+    past_time = datetime.now(UTC) - timedelta(days=2)
+    past_run = ScanRun(
+        execution_config_snapshot_json={},
+        started_at=past_time,
+        status=ScanRunStatus.COMPLETED,
+    )
+    session.add(past_run)
+    session.commit()
+
+    past_host = HostState(scan_run_id=past_run.id, ip_address="10.0.0.2")
+    session.add(past_host)
+    session.commit()
+    session.add(PortState(host_state_id=past_host.id, port_number=443, tcp_status="open"))
+    session.commit()
+
+    # Current run with prune_void_hosts=True and prune_closed_ports=True (defaults)
+    run = ScanRun(
+        execution_config_snapshot_json={
+            "ghost_window": "7d",
+            "prune_void_hosts": True,
+            "prune_closed_ports": True,
+        },
+        started_at=datetime.now(UTC),
+        status=ScanRunStatus.COMPLETED,
+    )
+    session.add(run)
+    session.commit()
+
+    h1 = HostState(scan_run_id=run.id, ip_address="10.0.0.1")
+    h2 = HostState(scan_run_id=run.id, ip_address="10.0.0.2")
+    h3 = HostState(scan_run_id=run.id, ip_address="10.0.0.3")
+    session.add_all([h1, h2, h3])
+    session.commit()
+
+    p1_open = PortState(host_state_id=h1.id, port_number=80, tcp_status="open")
+    p1_closed = PortState(host_state_id=h1.id, port_number=8080, tcp_status="closed")
+    p2_ghost = PortState(host_state_id=h2.id, port_number=443, tcp_status="closed")
+    p3_void = PortState(host_state_id=h3.id, port_number=80, tcp_status="closed")
+    session.add_all([p1_open, p1_closed, p2_ghost, p3_void])
+    session.commit()
+
+    summary = evaluate_scan_run(run.id, session)
+
+    # 1. Void host h3 should be pruned
+    remaining_hosts = session.exec(select(HostState).where(HostState.scan_run_id == run.id)).all()
+    remaining_ips = {h.ip_address for h in remaining_hosts}
+    assert "10.0.0.3" not in remaining_ips, "Void host 10.0.0.3 must be pruned"
+    assert "10.0.0.1" in remaining_ips
+    assert "10.0.0.2" in remaining_ips, "Ghost host 10.0.0.2 must NOT be pruned"
+
+    # 2. Routine closed port p1_closed should be pruned, ghost port p2_ghost preserved
+    remaining_ports = session.exec(select(PortState)).all()
+    port_numbers_by_host = {(p.host_state_id, p.port_number) for p in remaining_ports}
+    assert (h1.id, 8080) not in port_numbers_by_host, "Routine closed port 8080 must be pruned"
+    assert (h1.id, 80) in port_numbers_by_host
+    assert (h2.id, 443) in port_numbers_by_host, "Ghost port 443 must NOT be pruned"
+
+    # 3. Summary reflects correct counts
+    assert summary["active"] == 1
+    assert summary["ghost"] == 1
+    assert summary["void"] == 1
+    assert summary["service_count"] == 2  # 10.0.0.1:80 (open) + 10.0.0.2:443 (ghost)
+
+

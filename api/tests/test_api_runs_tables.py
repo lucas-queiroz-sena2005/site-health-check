@@ -459,3 +459,134 @@ def test_get_host_detail_drawer_404_cases(client: TestClient, populated_run: str
     resp_host = client.get(f"/api/runs/{populated_run}/hosts/192.168.1.99")
     assert resp_host.status_code == 404
     assert "not found" in resp_host.json()["detail"]
+
+
+def test_services_table_unpruned_run_void_exclusion(client: TestClient, session: Session):
+    """When prune_closed_ports=False, evaluate_scan_run() + GET /services (include_closed=false)
+    must exclude routine closed ports (status='void') so total matches summary['service_count']."""
+    from api.services.evaluator import evaluate_scan_run
+
+    run_id = str(uuid.uuid4())
+    run = ScanRun(
+        id=run_id,
+        status=ScanRunStatus.COMPLETED,
+        started_at=datetime.now(UTC),
+        execution_config_snapshot_json={"ghost_window": "7d", "prune_closed_ports": False},
+    )
+    session.add(run)
+
+    host = HostState(
+        id=f"{run_id}_10.0.0.1",
+        scan_run_id=run_id,
+        ip_address="10.0.0.1",
+        ip_sort_key="00000000000000000000ffff0a000001",
+        status="ok",
+    )
+    session.add(host)
+    session.flush()
+
+    p_open = PortState(
+        id=f"{host.id}_80",
+        host_state_id=host.id,
+        port_number=80,
+        tcp_status="open",
+        status="ok",
+    )
+    p_closed = PortState(
+        id=f"{host.id}_8080",
+        host_state_id=host.id,
+        port_number=8080,
+        tcp_status="closed",
+        status="void",
+    )
+    session.add_all([p_open, p_closed])
+    session.commit()
+
+    summary = evaluate_scan_run(run_id, session)
+    assert summary["service_count"] == 1
+
+    # Default include_closed=false: only open services + ghost outages (status != 'void')
+    resp = client.get(f"/api/runs/{run_id}/services")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == summary["service_count"] == 1
+    assert len(data["items"]) == 1
+    assert data["items"][0]["port"] == 80
+
+    # With include_closed=true: all probed ports returned
+    resp_all = client.get(f"/api/runs/{run_id}/services?include_closed=true")
+    assert resp_all.status_code == 200
+    data_all = resp_all.json()
+    assert data_all["total"] == 2
+    assert {i["port"] for i in data_all["items"]} == {80, 8080}
+
+
+def test_status_active_normalization_across_all_tables(client: TestClient, populated_run: str):
+    """Querying status=active normalizes to status=ok across /hosts, /services, and /checks."""
+    # 1. Hosts table
+    resp_hosts_active = client.get(f"/api/runs/{populated_run}/hosts?status=active")
+    resp_hosts_ok = client.get(f"/api/runs/{populated_run}/hosts?status=ok")
+    assert resp_hosts_active.status_code == 200
+    assert resp_hosts_ok.status_code == 200
+    assert resp_hosts_active.json()["total"] == resp_hosts_ok.json()["total"]
+    assert resp_hosts_active.json()["total"] > 0
+
+    # Multi-status: active,warning
+    resp_hosts_multi = client.get(f"/api/runs/{populated_run}/hosts?status=active,warning")
+    assert resp_hosts_multi.status_code == 200
+    for item in resp_hosts_multi.json()["items"]:
+        assert item["status"] in ("ok", "warning")
+
+    # 2. Services table
+    resp_services_active = client.get(f"/api/runs/{populated_run}/services?status=active")
+    resp_services_ok = client.get(f"/api/runs/{populated_run}/services?status=ok")
+    assert resp_services_active.status_code == 200
+    assert resp_services_ok.status_code == 200
+    assert resp_services_active.json()["total"] == resp_services_ok.json()["total"]
+    assert resp_services_active.json()["total"] > 0
+
+    # 3. Checks table
+    resp_checks_active = client.get(f"/api/runs/{populated_run}/checks?status=active")
+    resp_checks_ok = client.get(f"/api/runs/{populated_run}/checks?status=ok")
+    assert resp_checks_active.status_code == 200
+    assert resp_checks_ok.status_code == 200
+    assert resp_checks_active.json()["total"] == resp_checks_ok.json()["total"]
+    assert resp_checks_active.json()["total"] > 0
+
+
+def test_table_sorting_all_dto_columns(client: TestClient, populated_run: str):
+    """Verify sorting by all DTO columns across /services and /checks."""
+    # Services table sort columns
+    service_cols = [
+        "tls_valid",
+        "san_count",
+        "http_check_count",
+        "worst_http_status",
+        "tcp_latency_ms",
+        "tls_expires_in_days",
+        "tls_version",
+        "tls_issuer",
+    ]
+    for col in service_cols:
+        for sort_dir in ("asc", "desc"):
+            resp = client.get(f"/api/runs/{populated_run}/services?sort_by={col}&sort_dir={sort_dir}")
+            assert resp.status_code == 200, f"Failed sorting /services by {col} {sort_dir}: {resp.text}"
+            assert resp.json()["total"] > 0
+
+    # Checks table sort columns
+    check_cols = [
+        "redirects_to_url",
+        "server_header",
+        "finding_code",
+        "status_code",
+        "http_latency_ms",
+        "domain",
+        "port",
+        "status",
+    ]
+    for col in check_cols:
+        for sort_dir in ("asc", "desc"):
+            resp = client.get(f"/api/runs/{populated_run}/checks?sort_by={col}&sort_dir={sort_dir}")
+            assert resp.status_code == 200, f"Failed sorting /checks by {col} {sort_dir}: {resp.text}"
+            assert resp.json()["total"] > 0
+

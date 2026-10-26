@@ -155,6 +155,7 @@ def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
     assert "open_port_count" in host_cols
     assert "finding_codes" in host_cols
     assert "vhost_count" in host_cols
+    assert "ip_sort_key" in host_cols
 
     scan_cols = {row[1] for row in c.execute("PRAGMA table_info(scans);").fetchall()}
     assert "targets" in scan_cols
@@ -169,4 +170,29 @@ def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
     assert "finding_code" in check_cols
 
     conn2.close()
+
+
+def test_compute_ip_sort_key_and_entity_status():
+    """Verify compute_ip_sort_key and EntityStatus enum in api.models."""
+    from api.models import EntityStatus, compute_ip_sort_key
+
+    assert EntityStatus.OK == "ok"
+    assert EntityStatus.WARNING == "warning"
+    assert EntityStatus.FAILED == "failed"
+    assert EntityStatus.GHOST == "ghost"
+    assert EntityStatus.VOID == "void"
+
+    # IPv4 mapping to 32-char hex (standard ::ffff:a.b.c.d format)
+    assert compute_ip_sort_key("10.0.0.1") == "00000000000000000000ffff0a000001"
+    assert compute_ip_sort_key("192.168.1.254") == "00000000000000000000ffffc0a801fe"
+
+    # IPv6 mapping to 32-char hex
+    assert compute_ip_sort_key("2001:db8::1") == "20010db8000000000000000000000001"
+    assert compute_ip_sort_key("::1") == "00000000000000000000000000000001"
+
+    # Invalid IPs return None
+    assert compute_ip_sort_key("not-an-ip") is None
+    assert compute_ip_sort_key(None) is None
+    assert compute_ip_sort_key("") is None
+
 
