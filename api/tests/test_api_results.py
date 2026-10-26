@@ -68,14 +68,16 @@ def test_get_results(client: TestClient, session: Session):
     session.add(http_check)
     session.commit()
 
+    # Assert legacy bridge GET /api/runs/{id}/results is retired
     response = client.get(f"/api/runs/{job.id}/results")
-    assert response.status_code == 200
-    data = response.json()
-    assert "results" in data
-    results = data["results"]
-    assert len(results) == 1
-    assert results[0]["ip_address"] == "8.8.8.8"
-    assert results[0]["resolved_domains"] == ["google.com"]
+    assert response.status_code == 404
+
+    # Assert new relational hosts endpoint provides the host data
+    hosts_resp = client.get(f"/api/runs/{job.id}/hosts")
+    assert hosts_resp.status_code == 200
+    hosts_data = hosts_resp.json()
+    assert hosts_data["total"] == 1
+    assert hosts_data["items"][0]["ip_address"] == "8.8.8.8"
     
     # Assert relational models maintain direct object hierarchy without dict wrappers
     session.refresh(ip_state)
@@ -133,13 +135,16 @@ def test_get_results_by_subrun(client: TestClient, session: Session):
     session.add(port_state)
     session.commit()
 
+    # Assert legacy bridge returns 404
     response = client.get(f"/api/runs/{job.id}/results")
-    assert response.status_code == 200
-    data = response.json()
-    assert "results" in data
-    results = data["results"]
-    assert len(results) == 2
-    ips = [r["ip_address"] for r in results]
+    assert response.status_code == 404
+
+    # Assert new hosts endpoint returns the 2 hosts
+    hosts_resp = client.get(f"/api/runs/{job.id}/hosts")
+    assert hosts_resp.status_code == 200
+    hosts_data = hosts_resp.json()
+    assert hosts_data["total"] == 2
+    ips = [r["ip_address"] for r in hosts_data["items"]]
     assert "10.0.0.5" in ips
     assert "10.0.1.5" in ips
 

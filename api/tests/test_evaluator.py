@@ -470,3 +470,36 @@ def test_evaluator_unified_pruning_pipeline(session: Session):
     assert summary["service_count"] == 2  # 10.0.0.1:80 (open) + 10.0.0.2:443 (ghost)
 
 
+def test_evaluate_scan_run_preserves_existing_metrics(session: Session):
+    """Verifies evaluate_scan_run preserves existing run.metrics_json fields."""
+    run = ScanRun(
+        execution_config_snapshot_json={},
+        status=ScanRunStatus.COMPLETED,
+        metrics_json={
+            "total_targets_scanned": 10,
+            "scan_duration_seconds": 12.5,
+            "anomalies_found": 0,
+            "custom_metadata": "preserved",
+        },
+    )
+    session.add(run)
+    session.commit()
+
+    host = HostState(scan_run_id=run.id, ip_address="10.0.0.1")
+    session.add(host)
+    session.commit()
+
+    port = PortState(host_state_id=host.id, port_number=80, tcp_status="open")
+    session.add(port)
+    session.commit()
+
+    summary = evaluate_scan_run(run.id, session)
+
+    session.refresh(run)
+    assert run.metrics_json["total_targets_scanned"] == 10
+    assert run.metrics_json["scan_duration_seconds"] == 12.5
+    assert run.metrics_json["custom_metadata"] == "preserved"
+    assert run.metrics_json["summary"] == summary
+
+
+

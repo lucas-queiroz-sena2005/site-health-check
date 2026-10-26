@@ -26,9 +26,9 @@ def client_fixture(session: Session):
     app.dependency_overrides.clear()
 
 def test_launch_run_and_list_runs(client: TestClient):
-    # Launch an ad-hoc run
+    # Launch an ad-hoc run via unified POST /api/runs
     launch_resp = client.post(
-        "/api/runs/launch",
+        "/api/runs",
         json={
             "targets": ["10.0.0.1"],
             "ports": [80, 443],
@@ -66,8 +66,8 @@ def test_launch_scheduled_scan_endpoint(client: TestClient):
     assert scan_resp.status_code == 201
     scan_id = scan_resp.json()["id"]
 
-    # Force launch the scheduled scan
-    force_resp = client.post(f"/api/scans/{scan_id}/launch")
+    # Launch the scheduled scan via unified POST /api/runs
+    force_resp = client.post("/api/runs", json={"scan_id": scan_id})
     assert force_resp.status_code == 201
     forced_run = force_resp.json()
     assert forced_run["scan_id"] == scan_id
@@ -80,6 +80,17 @@ def test_launch_scheduled_scan_endpoint(client: TestClient):
     filtered_runs = filter_resp.json()
     assert len(filtered_runs) == 1
     assert filtered_runs[0]["id"] == forced_run["id"]
+
+def test_retired_launch_routes_return_404(client: TestClient):
+    # Retired launch routes must return 404
+    resp1 = client.post(
+        "/api/runs/launch",
+        json={"targets": ["10.0.0.1"], "ports": [80], "flags": {}},
+    )
+    assert resp1.status_code == 404
+
+    resp2 = client.post("/api/scans/some-scan-id/launch")
+    assert resp2.status_code == 404
 
 class FakeProcess:
     def __init__(self):
@@ -97,7 +108,7 @@ def test_abort_run_sends_sigterm(client: TestClient):
     import signal
 
     launch_resp = client.post(
-        "/api/runs/launch",
+        "/api/runs",
         json={"targets": ["10.0.0.1"], "ports": [80], "flags": {}},
     )
     assert launch_resp.status_code == 201
