@@ -1,6 +1,4 @@
 export * from './api/useScanResults'
 export * from './api/queryKeys'
 export * from './types'
-export * from './components/HierarchicalTable'
 export * from './components/RunHistorySheet'
-export * from './utils/buildTree'
