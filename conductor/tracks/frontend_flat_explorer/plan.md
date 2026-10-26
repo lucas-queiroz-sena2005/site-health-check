@@ -1,6 +1,6 @@
 # Implementation Plan: Dumb React Flat Explorer (`frontend_flat_explorer`)
 
-## Phase 1: Typed DTO Contracts, TanStack Query Hooks & Legacy Tree Removal (TDD)
+## Phase 1: Typed DTO Contracts, TanStack Query Hooks & Legacy Tree Removal (TDD) [checkpoint: 260aa5a]
 - [x] Task: Write failing unit tests for flat explorer API hooks and DTO schemas (Red Phase) 29b20ca
   - [x] Add unit tests in `frontend/src/features/scans/__tests__/useScanResults.test.ts` verifying `useRunDetail`, `useRunHosts`, `useRunServices`, `useRunChecks`, and `useRunHostDetail` construct orthogonal query URLs with `q`, `ip`, `status`, `port`, `finding`, `include_closed`, `sort_by`, `sort_dir`, `limit`, and `offset`
   - [x] Add tests verifying query hooks are disabled when `runId` or `ip` is absent and return typed `Page<T>` and `HostDetailDTO` payloads
@@ -9,12 +9,12 @@
   - [x] Update `frontend/src/features/scans/api/queryKeys.ts` and `frontend/src/features/scans/api/useScanResults.ts` with `useRunDetail`, `useRunHosts`, `useRunServices`, `useRunChecks`, and `useRunHostDetail`
   - [x] Delete `frontend/src/features/scans/components/HierarchicalTable/` directory, `frontend/src/features/scans/utils/buildTree.ts`, and `frontend/src/features/scans/utils/test-ghost.ts`, and update `frontend/src/features/scans/index.ts`
   - [x] Verify hook unit tests pass
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 260aa5a
 
 ---
 
 ## Phase 2: Three-Tab Flat Relational Explorer, Filter Toolbar & URL State Binding (TDD)
-- [ ] Task: Write failing component tests for the 3-Tab Flat Explorer, toolbar filters, and strict leftmost IP column (Red Phase)
+- [~] Task: Write failing component tests for the 3-Tab Flat Explorer, toolbar filters, and strict leftmost IP column (Red Phase)
   - [ ] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` verifying Run Summary strip badges (`Active`, `Warning`, `Failed`, `Ghost`, `Void`) and Tab badge counts (`Hosts`, `Services`, `HTTP Checks`) render from `GET /api/runs/{id}`
   - [ ] Add tests verifying `IP Address` is strictly the first column in `Hosts`, `Services`, and `HTTP Checks` tables and is rendered as a clickable link/button
   - [ ] Add tests verifying tab switching (`?tab=hosts|services|checks`), multi-status toggle bar, search input (`q`), IP filter chip (`?ip=...`), finding filter, port filter, `include_closed` toggle, sortable column headers, pagination controls, and Saved Views (`/api/views`) synchronize with URL search parameters
