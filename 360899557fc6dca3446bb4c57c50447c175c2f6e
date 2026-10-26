@@ -1,0 +1,4 @@
+Task: Write failing unit tests for EntityStatus (void/ghost), unified evaluator pruning, status=active normalization, and SQLite ip_sort_key migration (Red Phase)
+- Added tests in api/tests/test_evaluator.py for EntityStatus.VOID on routine closed ports and inactive non-ghost hosts, EntityStatus.GHOST on historically open closed ports, and unified pruning pipeline in evaluate_scan_run()
+- Added tests in api/tests/test_api_runs_tables.py for unpruned run void exclusion on /services, status=active query normalization, and sorting by all DTO columns
+- Added tests in api/tests/test_database.py for ip_sort_key migration in init_db() and compute_ip_sort_key() / EntityStatus export
