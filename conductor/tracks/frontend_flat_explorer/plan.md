@@ -28,11 +28,11 @@
 ---
 
 ## Phase 3: On-Demand Slide-Over IP Detail Drawer & Cross-Tab Drill-Down (TDD)
-- [~] Task: Write failing component tests for IP Detail Drawer and cross-tab navigation (Red Phase)
-  - [ ] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` asserting clicking an IP in column 1 of any table sets `?drawer=<ip>` and fetches `GET /api/runs/{id}/hosts/{ip}`
-  - [ ] Add tests verifying `HostDetailDrawer` renders discovery lineage (`depth`, `root_target`, `resolved_domains`, `discovered_from`), services table with TLS certificate details, HTTP checks table, and deduplicated Certificate SAN badges
-  - [ ] Add tests verifying `"Show in Services"` and `"Show in HTTP Checks"` buttons close the drawer, switch to the target tab, and apply the `?ip=<ip>` filter chip
-- [ ] Task: Implement `HostDetailDrawer` component and integrate with `HostTablePage.tsx` (Green & Refactor Phase)
+- [x] Task: Write failing component tests for IP Detail Drawer and cross-tab navigation (Red Phase) 2355a55
+  - [x] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` asserting clicking an IP in column 1 of any table sets `?drawer=<ip>` and fetches `GET /api/runs/{id}/hosts/{ip}`
+  - [x] Add tests verifying `HostDetailDrawer` renders discovery lineage (`depth`, `root_target`, `resolved_domains`, `discovered_from`), services table with TLS certificate details, HTTP checks table, and deduplicated Certificate SAN badges
+  - [x] Add tests verifying `"Show in Services"` and `"Show in HTTP Checks"` buttons close the drawer, switch to the target tab, and apply the `?ip=<ip>` filter chip
+- [~] Task: Implement `HostDetailDrawer` component and integrate with `HostTablePage.tsx` (Green & Refactor Phase)
   - [ ] Create `frontend/src/features/scans/components/HostDetailDrawer.tsx` using `shadcn/ui` `Sheet` to display `HostDetailDTO` sections, copy-to-clipboard action, and cross-tab drill-down buttons
   - [ ] Wire `HostDetailDrawer` into `frontend/src/pages/HostTablePage.tsx` bound to the `drawer` URL search parameter
   - [ ] Verify all drawer and drill-down tests pass
