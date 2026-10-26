@@ -10,3 +10,19 @@ Summary:
 Verification:
 - tsc -b && vite build passed with 0 errors
 - npx vitest run passed all 20 tests across 3 suites
+
+Phase Checkpoint: Backend Bridge Retirement, Evaluator Cleanup & Full End-to-End Verification
+
+Verification Report:
+- Unit & Component Tests: All 20 frontend Vitest tests passed across all 3 suites.
+- Full Backend Pytest Suite: All 108 backend tests across 15 test modules passed without errors.
+- TypeScript Production Build: 'tsc -b && vite build' completed cleanly with 0 diagnostics.
+- Legacy Bridges Retired:
+  1. GET /api/runs/{id}/results removed from API and verified absent from OpenAPI schema (404/405).
+  2. POST /api/runs/launch and POST /api/scans/{id}/launch removed from API and verified absent from OpenAPI schema (404/405).
+  3. All launch interactions migrated to unified POST /api/runs endpoint.
+- UI/UX Refinements:
+  1. Full unabridged error notes rendered in IP Detail Drawer for each port and HTTP check with 1-click clipboard copy.
+  2. Table cell overflow prevented with overflow-hidden and truncate container.
+  3. Global cursor: pointer discipline enforced for all buttons, tabs, sort headers, and links.
+- Checkpoint Approved: Addressed user review items.
