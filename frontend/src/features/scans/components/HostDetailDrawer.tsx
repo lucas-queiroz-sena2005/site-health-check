@@ -13,6 +13,7 @@ import {
   FormatLatency,
   FormatTlsExpiry,
   FormatHttpStatus,
+  CopyButton,
 } from './StatusBadge'
 
 export interface HostDetailDrawerProps {
@@ -232,6 +233,29 @@ export function HostDetailDrawer({
                           )}
                         </div>
                       )}
+
+                      {/* Display any notes/errors for checks on this port */}
+                      {(() => {
+                        const portNotes = data.checks?.filter((c) => c.port === svc.port_number && c.notes) || []
+                        if (portNotes.length === 0) return null
+                        return (
+                          <div className="mt-2 space-y-1.5">
+                            {portNotes.map((pn, pnIdx) => (
+                              <div key={pnIdx} className="p-2 rounded bg-destructive/10 border border-destructive/20 text-[11px] flex flex-col gap-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-destructive uppercase text-[10px] tracking-wider">
+                                    {pn.domain} Note / Error
+                                  </span>
+                                  <CopyButton text={pn.notes!} label="Copy note" />
+                                </div>
+                                <pre className="font-mono text-[11px] text-destructive dark:text-red-400 whitespace-pre-wrap break-all select-all">
+                                  {pn.notes}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -264,6 +288,19 @@ export function HostDetailDrawer({
                       {chk.redirects_to_url && (
                         <div className="text-[11px] font-mono text-muted-foreground truncate">
                           Redirects to: <span className="text-foreground">{chk.redirects_to_url}</span>
+                        </div>
+                      )}
+                      {chk.notes && (
+                        <div className="mt-2 p-2.5 rounded bg-muted/40 border border-border text-[11px] flex flex-col gap-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                              Notes / Error Details
+                            </span>
+                            <CopyButton text={chk.notes} label="Copy note" />
+                          </div>
+                          <pre className="font-mono text-xs text-destructive dark:text-red-400 whitespace-pre-wrap break-all select-all">
+                            {chk.notes}
+                          </pre>
                         </div>
                       )}
                     </div>

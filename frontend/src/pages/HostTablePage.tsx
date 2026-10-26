@@ -14,6 +14,7 @@ import {
   FormatTlsVersion,
   FormatHttpStatus,
   HostDetailDrawer,
+  CopyButton,
 } from '@/features/scans'
 import type { TableQueryParams } from '@/features/scans/types'
 import { Button } from '@/components/ui/button'
@@ -578,7 +579,7 @@ export function HostTablePage() {
             <button
               aria-label="Clear IP filter"
               onClick={handleClearIp}
-              className="text-primary hover:text-primary/70 font-bold ml-1"
+              className="text-primary hover:text-primary/70 font-bold ml-1 cursor-pointer"
             >
               ×
             </button>
@@ -666,7 +667,7 @@ export function HostTablePage() {
               <button
                 key={st}
                 onClick={() => handleStatusToggle(st)}
-                className={`px-3 py-1 rounded capitalize transition-all ${
+                className={`px-3 py-1 rounded capitalize transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-background shadow-sm font-bold text-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -685,7 +686,7 @@ export function HostTablePage() {
           role="tab"
           aria-selected={activeTab === 'hosts'}
           onClick={() => handleTabChange('hosts')}
-          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-semibold text-sm transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-semibold text-sm transition-colors cursor-pointer ${
             activeTab === 'hosts'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -701,7 +702,7 @@ export function HostTablePage() {
           role="tab"
           aria-selected={activeTab === 'services'}
           onClick={() => handleTabChange('services')}
-          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-semibold text-sm transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-semibold text-sm transition-colors cursor-pointer ${
             activeTab === 'services'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -717,7 +718,7 @@ export function HostTablePage() {
           role="tab"
           aria-selected={activeTab === 'checks'}
           onClick={() => handleTabChange('checks')}
-          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-semibold text-sm transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 border-b-2 font-semibold text-sm transition-colors cursor-pointer ${
             activeTab === 'checks'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -867,7 +868,7 @@ export function HostTablePage() {
                         <TableCell className="font-bold">
                           <button
                             onClick={() => handleOpenDrawer(h.ip_address)}
-                            className="text-primary hover:underline font-mono text-xs font-bold text-left"
+                            className="text-primary hover:underline font-mono text-xs font-bold text-left cursor-pointer"
                           >
                             {h.ip_address}
                           </button>
@@ -909,7 +910,7 @@ export function HostTablePage() {
                         <TableCell className="font-bold">
                           <button
                             onClick={() => handleOpenDrawer(s.ip_address)}
-                            className="text-primary hover:underline font-mono text-xs font-bold text-left"
+                            className="text-primary hover:underline font-mono text-xs font-bold text-left cursor-pointer"
                           >
                             {s.ip_address}
                           </button>
@@ -962,7 +963,7 @@ export function HostTablePage() {
                         <TableCell className="font-bold">
                           <button
                             onClick={() => handleOpenDrawer(c.ip_address)}
-                            className="text-primary hover:underline font-mono text-xs font-bold text-left"
+                            className="text-primary hover:underline font-mono text-xs font-bold text-left cursor-pointer"
                           >
                             {c.ip_address}
                           </button>
@@ -988,8 +989,17 @@ export function HostTablePage() {
                         <TableCell className="max-w-[120px] truncate" title={c.server_header || ''}>
                           {c.server_header || '—'}
                         </TableCell>
-                        <TableCell className="max-w-[150px] truncate" title={c.notes || ''}>
-                          {c.notes || '—'}
+                        <TableCell className="max-w-[200px] overflow-hidden" title={c.notes || ''}>
+                          {c.notes ? (
+                            <div className="flex items-center justify-between gap-1.5 min-w-0">
+                              <span className="truncate font-mono text-[11px] text-muted-foreground block" title={c.notes}>
+                                {c.notes}
+                              </span>
+                              <CopyButton text={c.notes} label="Copy note" />
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/60">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {c.finding_code ? <FindingBadge code={c.finding_code} /> : <span className="text-muted-foreground/60">—</span>}

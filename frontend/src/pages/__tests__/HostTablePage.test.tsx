@@ -87,7 +87,7 @@ const mockChecksPage = {
       http_latency_ms: 25,
       redirects_to_url: 'https://app.example.com/login',
       server_header: 'nginx',
-      notes: null,
+      notes: 'Connection reset by peer',
       finding_code: null,
     },
   ],
@@ -151,7 +151,7 @@ const mockHostDetail = {
       http_latency_ms: 25,
       redirects_to_url: 'https://app.example.com/login',
       server_header: 'nginx',
-      notes: null,
+      notes: 'Connection reset by peer',
       finding_code: null,
     },
   ],
@@ -341,6 +341,10 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
 
     // HTTP checks
     expect(within(drawer).getByText('https://app.example.com/login')).toBeTruthy()
+
+    // Notes and error details with copy button
+    expect(within(drawer).getAllByText('Connection reset by peer').length).toBeGreaterThan(0)
+    expect(within(drawer).getAllByRole('button', { name: /copy note/i }).length).toBeGreaterThan(0)
 
     // Deduplicated Certificate SAN badges
     expect(within(drawer).getByText('internal.example.com')).toBeTruthy()

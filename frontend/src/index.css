@@ -339,4 +339,13 @@ code {
   input[type='number'] {
     -moz-appearance: textfield;
   }
+
+  /* Interactive cursor pointer discipline */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
 }
