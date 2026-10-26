@@ -13,6 +13,7 @@ import {
   FormatTlsExpiry,
   FormatTlsVersion,
   FormatHttpStatus,
+  HostDetailDrawer,
 } from '@/features/scans'
 import type { TableQueryParams } from '@/features/scans/types'
 import { Button } from '@/components/ui/button'
@@ -103,6 +104,7 @@ export function HostTablePage() {
   const limitParam = Number(searchParams.get('limit') || 50)
   const pageParam = Number(searchParams.get('page') || 1)
   const offsetParam = (pageParam - 1) * limitParam
+  const drawerParam = searchParams.get('drawer') || null
 
   // Local state for debounced search
   const [searchInput, setSearchInput] = useState(qParam)
@@ -353,6 +355,30 @@ export function HostTablePage() {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev)
         next.set('drawer', ip)
+        return next
+      })
+    },
+    [setSearchParams]
+  )
+
+  // Close Drawer handler
+  const handleCloseDrawer = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('drawer')
+      return next
+    })
+  }, [setSearchParams])
+
+  // Drill down from Drawer to Services or HTTP Checks tab
+  const handleDrillDown = useCallback(
+    (tab: 'services' | 'checks', ip: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('drawer')
+        next.set('tab', tab)
+        next.set('ip', ip)
+        next.delete('page')
         return next
       })
     },
@@ -1018,6 +1044,15 @@ export function HostTablePage() {
           </div>
         </div>
       </div>
+
+      {/* On-Demand Slide-Over IP Detail Drawer */}
+      <HostDetailDrawer
+        runId={selectedRunId}
+        ipAddress={drawerParam}
+        open={Boolean(drawerParam)}
+        onClose={handleCloseDrawer}
+        onDrillDown={handleDrillDown}
+      />
     </div>
   )
 }

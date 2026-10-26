@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { HostTablePage } from '../HostTablePage'
@@ -323,6 +323,9 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
     const drawer = await screen.findByTestId('host-detail-drawer')
     expect(drawer).toBeTruthy()
 
+    // Wait for async host detail query to resolve
+    await screen.findByText(/Discovery Lineage/i)
+
     // Host status badge and IP in header
     expect(drawer.textContent).toContain('192.168.1.10')
     expect(drawer.textContent).toContain('OK')
@@ -333,14 +336,14 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
     expect(screen.getByText('192.168.1.1')).toBeTruthy()
 
     // Services list with port, protocol, TLS details
-    expect(screen.getByText("Let's Encrypt Authority X3")).toBeTruthy()
-    expect(screen.getByText('TLSv1.3')).toBeTruthy()
+    expect(within(drawer).getByText("Let's Encrypt Authority X3")).toBeTruthy()
+    expect(within(drawer).getByText('TLSv1.3')).toBeTruthy()
 
     // HTTP checks
-    expect(screen.getByText('https://app.example.com/login')).toBeTruthy()
+    expect(within(drawer).getByText('https://app.example.com/login')).toBeTruthy()
 
     // Deduplicated Certificate SAN badges
-    expect(screen.getByText('internal.example.com')).toBeTruthy()
+    expect(within(drawer).getByText('internal.example.com')).toBeTruthy()
   })
 
   it('drills down to Services tab when clicking "Show in Services", closing drawer and applying IP filter', async () => {
