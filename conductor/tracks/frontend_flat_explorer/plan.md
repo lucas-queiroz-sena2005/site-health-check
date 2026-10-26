@@ -27,7 +27,7 @@
 
 ---
 
-## Phase 3: On-Demand Slide-Over IP Detail Drawer & Cross-Tab Drill-Down (TDD)
+## Phase 3: On-Demand Slide-Over IP Detail Drawer & Cross-Tab Drill-Down (TDD) [checkpoint: 3625daa]
 - [x] Task: Write failing component tests for IP Detail Drawer and cross-tab navigation (Red Phase) 2355a55
   - [x] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` asserting clicking an IP in column 1 of any table sets `?drawer=<ip>` and fetches `GET /api/runs/{id}/hosts/{ip}`
   - [x] Add tests verifying `HostDetailDrawer` renders discovery lineage (`depth`, `root_target`, `resolved_domains`, `discovered_from`), services table with TLS certificate details, HTTP checks table, and deduplicated Certificate SAN badges
@@ -36,12 +36,12 @@
   - [x] Create `frontend/src/features/scans/components/HostDetailDrawer.tsx` using `shadcn/ui` `Sheet` to display `HostDetailDTO` sections, copy-to-clipboard action, and cross-tab drill-down buttons
   - [x] Wire `HostDetailDrawer` into `frontend/src/pages/HostTablePage.tsx` bound to the `drawer` URL search parameter
   - [x] Verify all drawer and drill-down tests pass
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 3625daa
 
 ---
 
 ## Phase 4: Backend Bridge Retirement, Evaluator Cleanup & Full End-to-End Verification (TDD)
-- [ ] Task: Write failing backend tests asserting removal of legacy bridge and launch alias routes (Red Phase)
+- [~] Task: Write failing backend tests asserting removal of legacy bridge and launch alias routes (Red Phase)
   - [ ] Update tests in `api/tests/test_api_main.py`, `api/tests/test_api_runs.py`, and `api/tests/test_api_results.py` verifying `GET /api/runs/{id}/results`, `POST /api/runs/launch`, and `POST /api/scans/{id}/launch` are retired from the OpenAPI schema
   - [ ] Add/update unit test in `api/tests/test_evaluator.py` verifying `evaluate_scan_run()` and `_finalize_run()` persist `metrics_json` cleanly without redundant overwrite commits
 - [ ] Task: Remove backend bridge routes, streamline finalization metrics, and run full-stack verification (Green & Refactor Phase)
