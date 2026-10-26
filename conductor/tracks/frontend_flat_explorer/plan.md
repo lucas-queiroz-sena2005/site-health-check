@@ -14,12 +14,12 @@
 ---
 
 ## Phase 2: Three-Tab Flat Relational Explorer, Filter Toolbar & URL State Binding (TDD)
-- [~] Task: Write failing component tests for the 3-Tab Flat Explorer, toolbar filters, and strict leftmost IP column (Red Phase)
-  - [ ] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` verifying Run Summary strip badges (`Active`, `Warning`, `Failed`, `Ghost`, `Void`) and Tab badge counts (`Hosts`, `Services`, `HTTP Checks`) render from `GET /api/runs/{id}`
-  - [ ] Add tests verifying `IP Address` is strictly the first column in `Hosts`, `Services`, and `HTTP Checks` tables and is rendered as a clickable link/button
-  - [ ] Add tests verifying tab switching (`?tab=hosts|services|checks`), multi-status toggle bar, search input (`q`), IP filter chip (`?ip=...`), finding filter, port filter, `include_closed` toggle, sortable column headers, pagination controls, and Saved Views (`/api/views`) synchronize with URL search parameters
-  - [ ] Add tests verifying `redirects_to_url` in the HTTP Checks table renders directly without client-side IP lookup maps
-- [ ] Task: Implement 3-Tab Flat Explorer and URL-synchronized filter toolbar in `HostTablePage.tsx` (Green & Refactor Phase)
+- [x] Task: Write failing component tests for the 3-Tab Flat Explorer, toolbar filters, and strict leftmost IP column (Red Phase) 139fc99
+  - [x] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` verifying Run Summary strip badges (`Active`, `Warning`, `Failed`, `Ghost`, `Void`) and Tab badge counts (`Hosts`, `Services`, `HTTP Checks`) render from `GET /api/runs/{id}`
+  - [x] Add tests verifying `IP Address` is strictly the first column in `Hosts`, `Services`, and `HTTP Checks` tables and is rendered as a clickable link/button
+  - [x] Add tests verifying tab switching (`?tab=hosts|services|checks`), multi-status toggle bar, search input (`q`), IP filter chip (`?ip=...`), finding filter, port filter, `include_closed` toggle, sortable column headers, pagination controls, and Saved Views (`/api/views`) synchronize with URL search parameters
+  - [x] Add tests verifying `redirects_to_url` in the HTTP Checks table renders directly without client-side IP lookup maps
+- [~] Task: Implement 3-Tab Flat Explorer and URL-synchronized filter toolbar in `HostTablePage.tsx` (Green & Refactor Phase)
   - [ ] Create status/finding badge and cell formatting helpers (status badges for `ok`/`active`, `warning`, `failed`, `ghost`, `void`, latency, TLS expiry/version, HTTP status code)
   - [ ] Refactor `frontend/src/pages/HostTablePage.tsx` to replace tree state and `HierarchicalTable` with URL-bound query state (`useSearchParams`), Saved Views integration, orthogonal filter toolbar, and paginated `Hosts`, `Services`, and `HTTP Checks` tables
   - [ ] Verify all `HostTablePage` component tests pass
