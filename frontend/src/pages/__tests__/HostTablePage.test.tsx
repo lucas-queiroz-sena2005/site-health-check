@@ -96,6 +96,67 @@ const mockChecksPage = {
   offset: 0,
 }
 
+const mockHostDetail = {
+  ip_address: '192.168.1.10',
+  status: 'ok',
+  depth: 1,
+  root_target: 'example.com',
+  resolved_domains: ['app.example.com', 'api.example.com'],
+  discovered_from: ['192.168.1.1'],
+  open_port_count: 2,
+  scanned_port_count: 2,
+  vhost_count: 2,
+  min_tcp_latency_ms: 15,
+  min_tls_expires_days: 45,
+  worst_tls_version: 'TLSv1.3',
+  worst_http_status: 200,
+  finding_codes: ['HOST_OK'],
+  tls_sans: ['app.example.com', 'api.example.com', 'internal.example.com'],
+  services: [
+    {
+      port_number: 443,
+      tcp_status: 'open',
+      tcp_latency_ms: 15,
+      status: 'ok',
+      san_count: 3,
+      http_check_count: 1,
+      worst_http_status: 200,
+      finding_codes: [],
+      tls_certificate: {
+        valid: true,
+        expires_in_days: 45,
+        issuer: "Let's Encrypt Authority X3",
+        protocol_version: 'TLSv1.3',
+        domains_discovered_sans_json: ['app.example.com', 'api.example.com'],
+      },
+    },
+    {
+      port_number: 80,
+      tcp_status: 'open',
+      tcp_latency_ms: 12,
+      status: 'ok',
+      san_count: 0,
+      http_check_count: 0,
+      worst_http_status: null,
+      finding_codes: [],
+      tls_certificate: null,
+    },
+  ],
+  checks: [
+    {
+      port: 443,
+      domain: 'app.example.com',
+      status: 'ok',
+      status_code: 200,
+      http_latency_ms: 25,
+      redirects_to_url: 'https://app.example.com/login',
+      server_header: 'nginx',
+      notes: null,
+      finding_code: null,
+    },
+  ],
+}
+
 function renderComponent(initialRoute = '/?run=run-abc-123') {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -123,6 +184,9 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
       const u = String(url)
       if (u.includes('/api/runs?limit=1') || u.includes('/api/runs?limit=50')) {
         return Promise.resolve({ ok: true, json: async () => [mockRun] })
+      }
+      if (u.match(/\/api\/runs\/[^/]+\/hosts\/[0-9.]+/)) {
+        return Promise.resolve({ ok: true, json: async () => mockHostDetail })
       }
       if (u.includes('/api/runs/run-abc-123/hosts')) {
         return Promise.resolve({ ok: true, json: async () => mockHostsPage })
@@ -246,6 +310,87 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
 
     await waitFor(() => {
       expect(screen.queryByTestId('ip-filter-chip')).toBeNull()
+    })
+  })
+
+  it('opens slide-over drawer when clicking IP address and renders host detail sections', async () => {
+    renderComponent()
+
+    const ipButton = await screen.findByRole('button', { name: '192.168.1.10' })
+    fireEvent.click(ipButton)
+
+    // Drawer should open and fetch GET /api/runs/:id/hosts/192.168.1.10
+    const drawer = await screen.findByTestId('host-detail-drawer')
+    expect(drawer).toBeTruthy()
+
+    // Host status badge and IP in header
+    expect(drawer.textContent).toContain('192.168.1.10')
+    expect(drawer.textContent).toContain('OK')
+    expect(drawer.textContent).toContain('HOST_OK')
+
+    // Discovery Lineage
+    expect(screen.getByText('example.com')).toBeTruthy()
+    expect(screen.getByText('192.168.1.1')).toBeTruthy()
+
+    // Services list with port, protocol, TLS details
+    expect(screen.getByText("Let's Encrypt Authority X3")).toBeTruthy()
+    expect(screen.getByText('TLSv1.3')).toBeTruthy()
+
+    // HTTP checks
+    expect(screen.getByText('https://app.example.com/login')).toBeTruthy()
+
+    // Deduplicated Certificate SAN badges
+    expect(screen.getByText('internal.example.com')).toBeTruthy()
+  })
+
+  it('drills down to Services tab when clicking "Show in Services", closing drawer and applying IP filter', async () => {
+    renderComponent('/?run=run-abc-123&drawer=192.168.1.10')
+
+    const drawer = await screen.findByTestId('host-detail-drawer')
+    expect(drawer).toBeTruthy()
+
+    const showInServicesBtn = screen.getByRole('button', { name: /show in services/i })
+    fireEvent.click(showInServicesBtn)
+
+    await waitFor(() => {
+      // Drawer is closed
+      expect(screen.queryByTestId('host-detail-drawer')).toBeNull()
+      // Tab switched to services
+      const servicesTab = screen.getByRole('tab', { name: /services/i })
+      expect(servicesTab.getAttribute('data-state') === 'active' || servicesTab.getAttribute('aria-selected') === 'true').toBe(true)
+      // IP filter chip is visible
+      expect(screen.getByTestId('ip-filter-chip').textContent).toContain('192.168.1.10')
+    })
+  })
+
+  it('drills down to HTTP Checks tab when clicking "Show in HTTP Checks", closing drawer and applying IP filter', async () => {
+    renderComponent('/?run=run-abc-123&drawer=192.168.1.10')
+
+    const drawer = await screen.findByTestId('host-detail-drawer')
+    expect(drawer).toBeTruthy()
+
+    const showInChecksBtn = screen.getByRole('button', { name: /show in http checks/i })
+    fireEvent.click(showInChecksBtn)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('host-detail-drawer')).toBeNull()
+      const checksTab = screen.getByRole('tab', { name: /checks/i })
+      expect(checksTab.getAttribute('data-state') === 'active' || checksTab.getAttribute('aria-selected') === 'true').toBe(true)
+      expect(screen.getByTestId('ip-filter-chip').textContent).toContain('192.168.1.10')
+    })
+  })
+
+  it('closes the drawer when clicking the close drawer button', async () => {
+    renderComponent('/?run=run-abc-123&drawer=192.168.1.10')
+
+    const drawer = await screen.findByTestId('host-detail-drawer')
+    expect(drawer).toBeTruthy()
+
+    const closeBtn = screen.getByRole('button', { name: /close drawer/i })
+    fireEvent.click(closeBtn)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('host-detail-drawer')).toBeNull()
     })
   })
 })
