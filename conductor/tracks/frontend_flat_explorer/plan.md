@@ -13,7 +13,7 @@
 
 ---
 
-## Phase 2: Three-Tab Flat Relational Explorer, Filter Toolbar & URL State Binding (TDD)
+## Phase 2: Three-Tab Flat Relational Explorer, Filter Toolbar & URL State Binding (TDD) [checkpoint: 3e2ebc1]
 - [x] Task: Write failing component tests for the 3-Tab Flat Explorer, toolbar filters, and strict leftmost IP column (Red Phase) 139fc99
   - [x] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` verifying Run Summary strip badges (`Active`, `Warning`, `Failed`, `Ghost`, `Void`) and Tab badge counts (`Hosts`, `Services`, `HTTP Checks`) render from `GET /api/runs/{id}`
   - [x] Add tests verifying `IP Address` is strictly the first column in `Hosts`, `Services`, and `HTTP Checks` tables and is rendered as a clickable link/button
@@ -23,12 +23,12 @@
   - [x] Create status/finding badge and cell formatting helpers (status badges for `ok`/`active`, `warning`, `failed`, `ghost`, `void`, latency, TLS expiry/version, HTTP status code)
   - [x] Refactor `frontend/src/pages/HostTablePage.tsx` to replace tree state and `HierarchicalTable` with URL-bound query state (`useSearchParams`), Saved Views integration, orthogonal filter toolbar, and paginated `Hosts`, `Services`, and `HTTP Checks` tables
   - [x] Verify all `HostTablePage` component tests pass
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 3e2ebc1
 
 ---
 
 ## Phase 3: On-Demand Slide-Over IP Detail Drawer & Cross-Tab Drill-Down (TDD)
-- [ ] Task: Write failing component tests for IP Detail Drawer and cross-tab navigation (Red Phase)
+- [~] Task: Write failing component tests for IP Detail Drawer and cross-tab navigation (Red Phase)
   - [ ] Add tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` asserting clicking an IP in column 1 of any table sets `?drawer=<ip>` and fetches `GET /api/runs/{id}/hosts/{ip}`
   - [ ] Add tests verifying `HostDetailDrawer` renders discovery lineage (`depth`, `root_target`, `resolved_domains`, `discovered_from`), services table with TLS certificate details, HTTP checks table, and deduplicated Certificate SAN badges
   - [ ] Add tests verifying `"Show in Services"` and `"Show in HTTP Checks"` buttons close the drawer, switch to the target tab, and apply the `?ip=<ip>` filter chip
