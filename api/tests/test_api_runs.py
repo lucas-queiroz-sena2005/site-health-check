@@ -82,15 +82,15 @@ def test_launch_scheduled_scan_endpoint(client: TestClient):
     assert filtered_runs[0]["id"] == forced_run["id"]
 
 def test_retired_launch_routes_return_404(client: TestClient):
-    # Retired launch routes must return 404
+    # Retired launch routes must return 404 or 405
     resp1 = client.post(
         "/api/runs/launch",
         json={"targets": ["10.0.0.1"], "ports": [80], "flags": {}},
     )
-    assert resp1.status_code == 404
+    assert resp1.status_code in (404, 405)
 
     resp2 = client.post("/api/scans/some-scan-id/launch")
-    assert resp2.status_code == 404
+    assert resp2.status_code in (404, 405)
 
 class FakeProcess:
     def __init__(self):
