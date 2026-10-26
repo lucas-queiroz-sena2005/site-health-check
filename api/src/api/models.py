@@ -52,8 +52,16 @@ class AlertConfig(BaseModel):
     notify_on_healthy: bool = PydanticField(default=False, title="Notify on Healthy Runs")
 
 class ExecutionConfig(BaseModel):
-    targets: list[str] = PydanticField(default_factory=list, title="Targets")
-    ports: list[str | int] = PydanticField(default_factory=list, title="Ports")
+    targets: list[str] = PydanticField(
+        default_factory=list,
+        title="Targets",
+        examples=[["example.com", "192.168.1.0/24"]],
+    )
+    ports: list[str | int] = PydanticField(
+        default_factory=list,
+        title="Ports",
+        examples=[[80, 443]],
+    )
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
     ghost_window: str = PydanticField(default="7d", title="Ghost Window")
     tls_warning_days: int = PydanticField(default=30, title="TLS Expiry Warning Threshold (days)")
