@@ -44,8 +44,8 @@
 - [x] Task: Write failing backend tests asserting removal of legacy bridge and launch alias routes (Red Phase) 1833517
   - [x] Update tests in `api/tests/test_api_main.py`, `api/tests/test_api_runs.py`, and `api/tests/test_api_results.py` verifying `GET /api/runs/{id}/results`, `POST /api/runs/launch`, and `POST /api/scans/{id}/launch` are retired from the OpenAPI schema
   - [x] Add/update unit test in `api/tests/test_evaluator.py` verifying `evaluate_scan_run()` and `_finalize_run()` persist `metrics_json` cleanly without redundant overwrite commits
-- [~] Task: Remove backend bridge routes, streamline finalization metrics, and run full-stack verification (Green & Refactor Phase)
-  - [ ] Remove `GET /api/runs/{id}/results` and `@router.post("/launch")` from `api/src/api/routers/runs.py`, and remove `@router.post("/{id}/launch")` from `api/src/api/routers/scans.py`
-  - [ ] Streamline `metrics_json` assignment between `runner.py:_finalize_run()` and `evaluator.py:evaluate_scan_run()`
-  - [ ] Execute full backend `pytest` suite, frontend `vitest` suite, and production frontend build (`npm run build`)
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Remove backend bridge routes, streamline finalization metrics, and run full-stack verification (Green & Refactor Phase) f833248
+  - [x] Remove `GET /api/runs/{id}/results` and `@router.post("/launch")` from `api/src/api/routers/runs.py`, and remove `@router.post("/{id}/launch")` from `api/src/api/routers/scans.py`
+  - [x] Streamline `metrics_json` assignment between `runner.py:_finalize_run()` and `evaluator.py:evaluate_scan_run()`
+  - [x] Execute full backend `pytest` suite, frontend `vitest` suite, and production frontend build (`npm run build`)
+- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
