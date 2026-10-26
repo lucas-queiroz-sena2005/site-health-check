@@ -1,0 +1,12 @@
+Task: Render full error notes with copy button and restore interactive mouse pointer
+
+Summary:
+- Built and exported CopyButton in StatusBadge.tsx with 2s copied state and accessible label
+- Rendered full unabridged notes/error blocks in HostDetailDrawer.tsx under each HTTP check and under each service port with a 1-click CopyButton
+- Prevented notes from overlapping adjacent cells in the HTTP Checks table with overflow-hidden and truncate container
+- Added inline CopyButton to the HTTP Checks table notes cell
+- Enforced cursor: pointer across all buttons, tabs, table sort headers, selects, and leftmost IP buttons in frontend/src/index.css and buttonVariants
+
+Verification:
+- tsc -b && vite build passed with 0 errors
+- npx vitest run passed all 20 tests across 3 suites
