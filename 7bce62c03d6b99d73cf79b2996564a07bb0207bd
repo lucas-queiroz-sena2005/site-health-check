@@ -1,8 +1,7 @@
-Task: Implement EntityStatus, unified evaluator pruning, compute_ip_sort_key, and TableQueryParams helpers (Green & Refactor Phase)
-- Defined canonical EntityStatus(str, Enum) with ok, warning, failed, ghost, void in api/src/api/models.py
-- Centralized compute_ip_sort_key() in api/src/api/models.py and integrated in HostState.model_post_init and runner._upsert_delta_sync
-- Added ip_sort_key column to SQLite migrations in init_db() in api/src/api/database.py
-- Consolidated historical ghost resolution, EntityStatus assignment, and conditional pruning directly into evaluate_scan_run() in api/src/api/services/evaluator.py, removing duplicated classification loops from runner._finalize_run()
-- Added apply_status_filter() (normalizing active -> ok) and apply_sort_and_paginate() to TableQueryParams in api/src/api/schemas/tables.py, refactoring /hosts, /services, and /checks in api/src/api/routers/runs.py
-- Removed redundant POST /api/scans/{id}/alerts/mute and /unmute routes and dead imports in api/src/api/routers/scans.py
-- Verified with full pytest test suite (126 passed) and live scans on production ranges
+Phase 6 Checkpoint: Review Fixes & Base Model Simplifications (TDD)
+- Automated Test Suite: CI=true pytest (126 passed, 0 failures)
+- Verification on production ranges 143.106.16.128/26 (nimbus.lab.ic.unicamp.br) and 143.106.7.0/25 with 500 workers / 250 bucket passed in ~6.14s
+- EntityStatus.VOID on routine closed ports and inactive non-ghost hosts verified
+- Services table excludes routine void closed ports (total == summary.service_count)
+- DB-agnostic IP sorting ASC/DESC verified via 32-char hex ip_sort_key
+- Status=active normalization verified across /hosts, /services, and /checks
