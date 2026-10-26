@@ -13,3 +13,21 @@ Summary:
 Verification:
 - tsc -b && vite build passed with 0 errors
 - npx vitest run passed all 20 tests across 3 suites
+
+Phase Checkpoint: On-Demand Slide-Over IP Detail Drawer & Cross-Tab Drill-Down
+
+Verification Report:
+- Unit & Component Tests: All 20 frontend Vitest tests passed across all 3 suites (HostTablePage.test.tsx, useScanResults.test.ts, ScheduledScansPage.test.tsx).
+- Production TypeScript Build: 'tsc -b && vite build' compiled and bundled cleanly with 0 diagnostics.
+- Backend Suite Regression: All 106 backend tests across 15 test modules passed without errors.
+- Drawer Capabilities Verified:
+  1. Slide-over Sheet opens upon clicking leftmost IP link or when ?drawer=<ip> is present.
+  2. Fetches and renders GET /api/runs/{id}/hosts/{ip} HostDetailDTO data:
+     - Header: IP address in bold monospace, Status badge, finding codes, copy-to-clipboard action.
+     - Lineage: Depth (root/SAN expansion), root target, discovered-from, resolved domains.
+     - Services: Port, status, latency, and full TLS certificate details (protocol version, validity, issuer, expiry days).
+     - HTTP Checks: Port, domain, status code, latency, direct redirect URL.
+     - Certificate SANs: Deduplicated domain badges.
+  3. Action buttons: 'Show in Services' and 'Show in HTTP Checks' close the drawer, switch to the respective tab, and apply ?ip=<ip> filter chip.
+  4. Closing the drawer removes ?drawer from the URL.
+- Checkpoint Approved: Confirmed by user.
