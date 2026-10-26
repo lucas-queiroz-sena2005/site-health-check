@@ -1,0 +1,8 @@
+Task: Write failing backend tests asserting removal of legacy bridge and launch alias routes (Red Phase)
+
+Summary:
+- Updated api/tests/test_api_main.py asserting /api/runs/{id}/results, /api/runs/launch, and /api/scans/{id}/launch are absent from OpenAPI schema
+- Updated api/tests/test_api_results.py asserting GET /api/runs/{id}/results returns 404 and results are fetched via /api/runs/{id}/hosts
+- Updated api/tests/test_api_runs.py asserting POST /api/runs/launch and POST /api/scans/{id}/launch return 404, migrating test launches to unified POST /api/runs
+- Added unit test in api/tests/test_evaluator.py asserting evaluate_scan_run preserves existing metrics_json fields
+- Verified 4 tests fail on existing routes
