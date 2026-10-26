@@ -1,0 +1,6 @@
+Task: Write failing component tests for the 3-Tab Flat Explorer, toolbar filters, and strict leftmost IP column (Red Phase)
+- Added component tests in frontend/src/pages/__tests__/HostTablePage.test.tsx
+- Asserted Run Summary strip and 3 Tab count badges populated from GET /api/runs/:id
+- Asserted leftmost column is strictly clickable IP Address
+- Asserted Services and HTTP Checks tables render orthogonal DTO columns and redirect URLs directly
+- Asserted search input, status toggles, and IP filter chips query with proper URL parameters
