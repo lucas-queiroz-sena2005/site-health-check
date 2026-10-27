@@ -1,706 +1,516 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { 
-  useScanResults, 
-  HierarchicalTable, 
-  buildTreeData,
-  RenderTreeNode,
-  RunHistorySheet
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
+import {
+  useRunDetail,
+  useRunHosts,
+  useRunServices,
+  useRunChecks,
+  RunSummaryHeader,
+  ScanFilterToolbar,
+  ScanTabsNav,
+  TablePaginationBar,
+  HostsTable,
+  ServicesTable,
+  ChecksTable,
+  HostDetailDrawer,
+  ScanRunStatus,
 } from '@/features/scans'
-import type { TreeNode } from '@/features/scans/types'
-
-function filterTree(
-  nodes: TreeNode[], 
-  explicitFilters: Record<string, string[]>, 
-  parentFilter: string[] = ['all'],
-  globalSearch: string = '',
-  parentMatchesSearch: boolean = false,
-  parentMatchesStatus: boolean = false
-): TreeNode[] {
-  return nodes.map(node => {
-    // A child doesn't merge with parent. If explicit exists, it overrides completely.
-    const filterForChildren = explicitFilters[node.id] || parentFilter
-    let matchesStatus = false
-    
-    if (filterForChildren.includes('all')) {
-      matchesStatus = true
-    } else {
-      if (node.type === 'HTTP') {
-        matchesStatus = parentMatchesStatus
-      } else {
-        for (const f of filterForChildren) {
-          if (f === 'active' && node.status === 'success') matchesStatus = true
-          if (f === 'warning' && node.status === 'warning') matchesStatus = true
-          if (f === 'failed' && node.status === 'error') matchesStatus = true
-          if (f === 'ghost' && node.status === 'ghost') matchesStatus = true
-          if (matchesStatus) break
-        }
-      }
-    }
-
-    let matchesSearch = parentMatchesSearch
-    if (!matchesSearch && globalSearch) {
-      const searchLower = globalSearch.toLowerCase()
-      const searchStr = `${node.label} ${node.tlsInfo || ''} ${node.rawPayload ? JSON.stringify(node.rawPayload) : ''}`.toLowerCase()
-      matchesSearch = searchStr.includes(searchLower)
-    } else if (!globalSearch) {
-      matchesSearch = true
-    }
-
-    const filteredChildren = filterTree(node.children, explicitFilters, filterForChildren, globalSearch, matchesSearch, matchesStatus)
-    
-    if ((matchesStatus && matchesSearch) || filteredChildren.length > 0) {
-      const hasExplicit = explicitFilters[node.id] !== undefined
-      // check if redundant by comparing arrays
-      const isRedundant = hasExplicit && JSON.stringify(explicitFilters[node.id].sort()) === JSON.stringify(parentFilter.sort())
-      return { ...node, children: filteredChildren, appliedFilter: filterForChildren, isExplicitFilter: hasExplicit && !isRedundant } as TreeNode
-    }
-    return null
-  }).filter((n) => n !== null) as TreeNode[]
-}
-
-function getSortValue(node: TreeNode, sortBy: string, sortDir: 'asc' | 'desc'): number | null {
-  if (sortBy === 'latency') {
-    let bestVal: number | null = node.latencyMs !== undefined && node.latencyMs !== null ? node.latencyMs : null
-    if (node.children && node.children.length > 0) {
-      const vals = node.children.map(c => getSortValue(c, sortBy, sortDir)).filter((v): v is number => v !== null)
-      if (vals.length > 0) {
-        const childBest = sortDir === 'asc' ? Math.min(...vals) : Math.max(...vals)
-        bestVal = bestVal !== null ? (sortDir === 'asc' ? Math.min(bestVal, childBest) : Math.max(bestVal, childBest)) : childBest
-      }
-    }
-    return bestVal
-  }
-  if (sortBy === 'tls') {
-    let bestVal: number | null = node.rawPayload?.tls_certificate?.expires_in_days ?? null
-    
-    if (node.rawPayload?.tls_certificate && node.rawPayload.tls_certificate.valid === false) {
-       bestVal = -1
-    }
-
-    if (node.children && node.children.length > 0) {
-      const vals = node.children.map(c => getSortValue(c, sortBy, sortDir)).filter((v): v is number => v !== null)
-      if (vals.length > 0) {
-        const childBest = sortDir === 'asc' ? Math.min(...vals) : Math.max(...vals)
-        bestVal = bestVal !== null ? (sortDir === 'asc' ? Math.min(bestVal, childBest) : Math.max(bestVal, childBest)) : childBest
-      }
-    }
-    return bestVal
-  }
-  return null
-}
-
-function sortTree(nodes: TreeNode[], sortBy: string | null, sortDir: 'asc' | 'desc'): TreeNode[] {
-  if (!sortBy) return nodes
-  
-  return [...nodes].sort((a, b) => {
-    const valA = getSortValue(a, sortBy, sortDir)
-    const valB = getSortValue(b, sortBy, sortDir)
-
-    if (valA === null && valB !== null) return 1
-    if (valA !== null && valB === null) return -1
-    if (valA === null && valB === null) return 0
-
-    if (valA! < valB!) return sortDir === 'asc' ? -1 : 1
-    if (valA! > valB!) return sortDir === 'asc' ? 1 : -1
-    return 0
-  }).map(node => ({
-    ...node,
-    children: sortTree(node.children, sortBy, sortDir)
-  }))
-}
+import type { ScanRunResponse, TableQueryParams, SavedView } from '@/features/scans'
 
 export function HostTablePage() {
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    return urlParams.get('run') || urlParams.get('run_id') || null
-  })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryClient = useQueryClient()
 
-  const { data: latestRuns } = useQuery({
+  // 1. Run ID & URL Sync
+  const runParam = searchParams.get('run') || searchParams.get('run_id')
+
+  const { data: latestRuns } = useQuery<ScanRunResponse[]>({
     queryKey: ['runs', 'latest'],
     queryFn: async () => {
       const res = await fetch('/api/runs?limit=1')
       if (!res.ok) throw new Error('Network error')
       return res.json()
     },
-    enabled: !selectedRunId
+    enabled: !runParam,
   })
+
+  const selectedRunId = runParam || (latestRuns && latestRuns.length > 0 ? latestRuns[0].id : null)
 
   useEffect(() => {
-    if (!selectedRunId && latestRuns && latestRuns.length > 0) {
+    if (!runParam && latestRuns && latestRuns.length > 0) {
       const latestRunId = latestRuns[0].id
-      setSelectedRunId(latestRunId)
-      const newUrl = new URL(window.location.href)
-      newUrl.searchParams.set('run', latestRunId)
-      window.history.replaceState({}, '', newUrl)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('run', latestRunId)
+          return next
+        },
+        { replace: true }
+      )
     }
-  }, [selectedRunId, latestRuns])
+  }, [runParam, latestRuns, setSearchParams])
 
-  const { data, isLoading, error } = useScanResults(selectedRunId || undefined)
-  const [explicitFilters, setExplicitFilters] = useState<Record<string, string[]>>({
-    'global-root-id': ['all']
-  })
-  const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set())
-  const [globalSearch, setGlobalSearch] = useState<string>('')
-  const [sortBy, setSortBy] = useState<'latency' | 'tls' | null>(null)
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  // 2. Active Tab & Navigation
+  const activeTab = (searchParams.get('tab') as 'hosts' | 'services' | 'checks') || 'hosts'
+  const handleTabChange = useCallback(
+    (tab: 'hosts' | 'services' | 'checks') => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('tab', tab)
+        next.delete('page')
+        return next
+      })
+    },
+    [setSearchParams]
+  )
 
-  type SavedViewType = { id: string, name: string, search: string, statuses: string[], tableSortBy: 'latency' | 'tls' | null, tableSortDir: 'asc' | 'desc' }
-  const [savedViews, setSavedViews] = useState<SavedViewType[]>([
-    { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
-  ])
+  // 3. Table Query Parameters from URL
+  const qParam = searchParams.get('q') || ''
+  const ipParam = searchParams.get('ip') || ''
+  const statusParam = searchParams.get('status') || 'all'
+  const portParam = searchParams.get('port') ? Number(searchParams.get('port')) : undefined
+  const findingParam = searchParams.get('finding') || ''
+  const includeClosedParam = searchParams.get('include_closed') === 'true'
+  const sortByParam = searchParams.get('sort_by') || 'ip_address'
+  const sortDirParam = (searchParams.get('sort_dir') as 'asc' | 'desc') || 'asc'
+  const limitParam = Number(searchParams.get('limit') || 50)
+  const pageParam = Number(searchParams.get('page') || 1)
+  const offsetParam = (pageParam - 1) * limitParam
+  const drawerParam = searchParams.get('drawer') || null
+
+  // Debounced search input
+  const [searchInput, setSearchInput] = useState(qParam)
+  const [prevQParam, setPrevQParam] = useState(qParam)
+  if (prevQParam !== qParam) {
+    setPrevQParam(qParam)
+    setSearchInput(qParam)
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== qParam) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev)
+          if (searchInput.trim()) {
+            next.set('q', searchInput.trim())
+          } else {
+            next.delete('q')
+          }
+          next.delete('page')
+          return next
+        })
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput, qParam, setSearchParams])
+
+  // 4. Data Fetching
+  const { data: run, isLoading: isRunLoading, error: runError } = useRunDetail(selectedRunId || undefined)
+  const summary = run?.metrics_json?.summary
+  const isRunActive = run?.status === ScanRunStatus.RUNNING || run?.status === ScanRunStatus.PENDING
+  const pollInterval = isRunActive ? 3000 : false
+
+  const queryParams: TableQueryParams = useMemo(
+    () => ({
+      q: qParam || undefined,
+      ip: ipParam || undefined,
+      status: statusParam === 'all' ? undefined : statusParam,
+      port: portParam,
+      finding: findingParam || undefined,
+      include_closed: activeTab === 'services' ? includeClosedParam : undefined,
+      sort_by: sortByParam,
+      sort_dir: sortDirParam,
+      limit: limitParam,
+      offset: offsetParam,
+    }),
+    [
+      qParam,
+      ipParam,
+      statusParam,
+      portParam,
+      findingParam,
+      activeTab,
+      includeClosedParam,
+      sortByParam,
+      sortDirParam,
+      limitParam,
+      offsetParam,
+    ]
+  )
+
+  const hostsQuery = useRunHosts(activeTab === 'hosts' ? selectedRunId || undefined : undefined, queryParams, { refetchInterval: pollInterval })
+  const servicesQuery = useRunServices(activeTab === 'services' ? selectedRunId || undefined : undefined, queryParams, { refetchInterval: pollInterval })
+  const checksQuery = useRunChecks(activeTab === 'checks' ? selectedRunId || undefined : undefined, queryParams, { refetchInterval: pollInterval })
+
+  const activeTableQuery = activeTab === 'hosts' ? hostsQuery : activeTab === 'services' ? servicesQuery : checksQuery
+  const currentTotal = activeTableQuery.data?.total || 0
+
+  // 5. Saved Views Integration
   const [activeViewId, setActiveViewId] = useState('view-default')
-  const [isSavingView, setIsSavingView] = useState(false)
-  const [newViewName, setNewViewName] = useState('')
 
-  const { data: fetchedViews } = useQuery({
+  const { data: fetchedViews } = useQuery<SavedView[]>({
     queryKey: ['views'],
     queryFn: async () => {
       const res = await fetch('/api/views')
       if (!res.ok) throw new Error('Network error')
       return res.json()
-    }
+    },
   })
 
-  useEffect(() => {
-    if (fetchedViews) {
-        const defaultView = { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], tableSortBy: null, tableSortDir: 'asc' }
-        const mappedViews = fetchedViews.map((v: any) => ({
-          id: v.id,
-          name: v.name,
-          search: v.search || '',
-          statuses: v.statuses || ['all'],
-          tableSortBy: v.table_sort_by || null,
-          tableSortDir: v.table_sort_dir || 'asc'
-        }))
-        setSavedViews([defaultView, ...mappedViews])
+  const savedViews = useMemo<SavedView[]>(() => {
+    const defaultView: SavedView = {
+      id: 'view-default',
+      name: 'Default View (All Targets)',
+      search: '',
+      statuses: ['all'],
+      table_sort_by: null,
+      table_sort_dir: 'asc',
     }
+    return [defaultView, ...(fetchedViews || [])]
   }, [fetchedViews])
 
-  const initialViewId = new URLSearchParams(window.location.search).get('view')
-  const { data: initialView } = useQuery({
-    queryKey: ['views', initialViewId],
-    queryFn: async () => {
-      const res = await fetch(`/api/views/${initialViewId}`)
-      if (!res.ok) throw new Error('View not found')
-      return res.json()
-    },
-    enabled: !!initialViewId
-  })
+  const handleSelectSavedView = useCallback(
+    (viewId: string) => {
+      setActiveViewId(viewId)
+      if (viewId === 'custom-new') return
+      const view = savedViews.find((v) => v.id === viewId)
+      if (view) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev)
+          if (view.search) next.set('q', view.search)
+          else next.delete('q')
 
-  useEffect(() => {
-    if (initialView) {
-          const id = initialView.id
-          const data = initialView
-          setSavedViews(prev => {
-             if (!prev.find(v => v.id === id)) {
-                return [...prev, { id, name: data.name, search: data.search || '', statuses: data.statuses || ['all'], tableSortBy: data.table_sort_by || null, tableSortDir: data.table_sort_dir || 'asc' }]
-             }
-             return prev
-          })
-          setActiveViewId(id)
-          setGlobalSearch(data.search || '')
-          setExplicitFilters({ 'global-root-id': data.statuses || ['all'] })
-          setSortBy((data.table_sort_by as any) || null)
-          setSortDir((data.table_sort_dir as any) || 'asc')
-    }
-  }, [initialView])
-
-  const handleSelectSavedView = useCallback((viewId: string) => {
-    setActiveViewId(viewId)
-    if (viewId === 'custom-new') {
-      setIsSavingView(true)
-      return
-    }
-    const view = savedViews.find((v) => v.id === viewId)
-    if (view) {
-      setGlobalSearch(view.search)
-      setExplicitFilters({ 'global-root-id': view.statuses || ['all'] })
-      setSortBy((view.tableSortBy as any) || null)
-      setSortDir((view.tableSortDir as any) || 'asc')
-
-      const newUrl = new URL(window.location.href)
-      if (!viewId.startsWith('view-') && viewId !== 'custom' && viewId !== 'custom-new') {
-         newUrl.searchParams.set('view', viewId)
-      } else {
-         newUrl.searchParams.delete('view')
-      }
-      window.history.pushState({}, '', newUrl)
-    }
-  }, [savedViews])
-
-  const handleDeleteView = useCallback(async () => {
-     if (activeViewId && activeViewId !== 'view-default' && activeViewId !== 'custom' && activeViewId !== 'custom-new') {
-        try {
-          const res = await fetch(`/api/views/${activeViewId}`, { method: 'DELETE' })
-          if (res.ok) {
-            setSavedViews(prev => prev.filter(v => v.id !== activeViewId))
-            handleSelectSavedView('view-default')
+          if (view.statuses && view.statuses.length > 0 && !view.statuses.includes('all')) {
+            next.set('status', view.statuses.join(','))
+          } else {
+            next.delete('status')
           }
-        } catch (err) {
-          console.error("Failed to delete view:", err)
-        }
-     }
-  }, [activeViewId, handleSelectSavedView])
 
-  const handleSaveViewSubmit = useCallback(async () => {
-    if (newViewName.trim()) {
+          if (view.table_sort_by) next.set('sort_by', view.table_sort_by)
+          else next.delete('sort_by')
+
+          if (view.table_sort_dir) next.set('sort_dir', view.table_sort_dir)
+          else next.delete('sort_dir')
+
+          if (!viewId.startsWith('view-default')) next.set('view', viewId)
+          else next.delete('view')
+
+          next.delete('page')
+          return next
+        })
+      }
+    },
+    [savedViews, setSearchParams]
+  )
+
+  const handleSaveViewSubmit = useCallback(
+    async (name: string) => {
       try {
         const payload = {
-          name: newViewName.trim(),
-          search: globalSearch,
-          statuses: explicitFilters['global-root-id'] || ['all'],
-          table_sort_by: sortBy,
-          table_sort_dir: sortDir
+          name,
+          search: qParam || null,
+          statuses: statusParam ? statusParam.split(',') : ['all'],
+          table_sort_by: sortByParam || null,
+          table_sort_dir: sortDirParam || 'asc',
         }
         const response = await fetch('/api/views', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         })
-        
         if (response.ok) {
           const data = await response.json()
-          const id = data.id
-          setSavedViews((prev) => [...prev, { id, name: data.name, search: data.search, statuses: data.statuses, tableSortBy: data.table_sort_by, tableSortDir: data.table_sort_dir }])
-          setActiveViewId(id)
-          
-          const newUrl = new URL(window.location.href)
-          newUrl.searchParams.set('view', id)
-          window.history.pushState({}, '', newUrl)
-        } else {
-          console.error("Failed to save view via API, falling back to local storage")
-          const id = `view-${Date.now()}`
-          setSavedViews((prev) => [...prev, { id, name: newViewName.trim(), search: globalSearch, statuses: explicitFilters['global-root-id'] || ['all'], tableSortBy: sortBy, tableSortDir: sortDir }])
-          setActiveViewId(id)
-        }
-      } catch (err) {
-        console.error(err)
-        const id = `view-${Date.now()}`
-        setSavedViews((prev) => [...prev, { id, name: newViewName.trim(), search: globalSearch, statuses: explicitFilters['global-root-id'] || ['all'], tableSortBy: sortBy, tableSortDir: sortDir }])
-        setActiveViewId(id)
-      }
-    }
-    setIsSavingView(false)
-    setNewViewName('')
-  }, [newViewName, globalSearch, explicitFilters, sortBy, sortDir])
-
-  // Build tree
-  const rawTree = useMemo(() => {
-    if (!data?.hosts) return []
-    return buildTreeData(data.hosts, data.metadata?.summary)
-  }, [data])
-
-  const filteredTreeData = useMemo(() => {
-    const filtered = filterTree(rawTree, explicitFilters, ['all'], globalSearch)
-    let visibleNodes = filtered[0]?.children || []
-    if (sortBy) {
-      visibleNodes = sortTree(visibleNodes, sortBy, sortDir)
-    }
-    return visibleNodes
-  }, [rawTree, explicitFilters, globalSearch, sortBy, sortDir])
-
-  const handleToggleRow = useCallback((id: string) => {
-    const isCollapsing = expandedRowIds.has(id)
-    
-    let descendantsToClear: string[] = []
-    const findDescendants = (nodes: TreeNode[], isUnder: boolean) => {
-      for (const node of nodes) {
-        const under = isUnder || node.id === id
-        if (under && node.id !== id) {
-          descendantsToClear.push(node.id)
-        }
-        if (node.children.length > 0) {
-          findDescendants(node.children, under)
-        }
-      }
-    }
-    findDescendants(rawTree, false)
-
-    setExpandedRowIds(prev => {
-      const next = new Set(prev)
-      
-      if (isCollapsing) {
-        next.delete(id)
-        descendantsToClear.forEach(dId => next.delete(dId))
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-
-    if (isCollapsing && descendantsToClear.length > 0) {
-      setExplicitFilters(filtersPrev => {
-        let changed = false
-        const nextFilters = { ...filtersPrev }
-        descendantsToClear.forEach(dId => {
-          if (nextFilters[dId]) {
-            delete nextFilters[dId]
-            changed = true
-          }
-        })
-        return changed ? nextFilters : filtersPrev
-      })
-    }
-  }, [rawTree, expandedRowIds])
-
-  const handleGlobalFilterClick = useCallback((f: string) => {
-    setExplicitFilters(prev => {
-      const currentGlobal = prev['global-root-id'] || ['all']
-      let newGlobal = [...currentGlobal]
-
-      if (f === 'all') {
-        newGlobal = ['all']
-      } else {
-        if (newGlobal.includes('all')) {
-          newGlobal = [f]
-        } else {
-          if (newGlobal.includes(f)) {
-            newGlobal = newGlobal.filter(item => item !== f)
-            if (newGlobal.length === 0) newGlobal = ['all']
-          } else {
-            newGlobal.push(f)
-            const allPossible = ['active', 'warning', 'failed', 'ghost']
-            if (allPossible.every(p => newGlobal.includes(p))) {
-              newGlobal = ['all']
-            }
-          }
-        }
-      }
-
-      const newFilters = { 'global-root-id': newGlobal }
-      
-      if (!newGlobal.includes('all')) {
-        setTimeout(() => {
-          setExpandedRowIds(prevIds => {
-            const tempFiltered = filterTree(rawTree, newFilters, ['all'], globalSearch)
-            const visibleNodes = tempFiltered[0]?.children || []
-            const next = new Set<string>(prevIds)
-            const collectIds = (nodes: TreeNode[]) => {
-              for (const n of nodes) {
-                next.add(n.id)
-                collectIds(n.children)
-              }
-            }
-            collectIds(visibleNodes)
+          queryClient.invalidateQueries({ queryKey: ['views'] })
+          setActiveViewId(data.id)
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev)
+            next.set('view', data.id)
             return next
           })
-        }, 0)
-      } else {
-        setTimeout(() => setExpandedRowIds(new Set()), 0)
+        }
+      } catch (err) {
+        console.error('Failed to save view:', err)
       }
-      return newFilters
-    })
-  }, [rawTree])
+    },
+    [qParam, statusParam, sortByParam, sortDirParam, queryClient, setSearchParams]
+  )
 
-  const handleStatusClick = useCallback((nodeId: string, st: string) => {
-    let descendantsToClear: string[] = []
-    const findDescendants = (nodes: TreeNode[], isUnder: boolean) => {
-      for (const node of nodes) {
-        const under = isUnder || node.id === nodeId
-        if (under && node.id !== nodeId) {
-          descendantsToClear.push(node.id)
+  const handleDeleteView = useCallback(async () => {
+    if (activeViewId && activeViewId !== 'view-default') {
+      try {
+        const res = await fetch(`/api/views/${activeViewId}`, { method: 'DELETE' })
+        if (res.ok) {
+          queryClient.invalidateQueries({ queryKey: ['views'] })
+          handleSelectSavedView('view-default')
         }
-        if (node.children.length > 0) {
-          findDescendants(node.children, under)
-        }
+      } catch (err) {
+        console.error('Failed to delete view:', err)
       }
     }
-    findDescendants(rawTree, false)
+  }, [activeViewId, queryClient, handleSelectSavedView])
 
-    setExplicitFilters(prev => {
-      const next = { ...prev }
-      const current = next[nodeId] || []
-      let updated = [...current]
-
-      if (updated.includes(st)) {
-        updated = updated.filter(i => i !== st)
-      } else {
-        if (updated.includes('all')) {
-          updated = [st]
+  // 6. Table Event Handlers
+  const handleSort = useCallback(
+    (colName: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (sortByParam === colName) {
+          next.set('sort_dir', sortDirParam === 'asc' ? 'desc' : 'asc')
         } else {
-          updated.push(st)
+          next.set('sort_by', colName)
+          next.set('sort_dir', 'asc')
         }
-      }
+        next.delete('page')
+        return next
+      })
+    },
+    [sortByParam, sortDirParam, setSearchParams]
+  )
 
-      if (updated.length === 0) {
-        delete next[nodeId]
-      } else {
-        next[nodeId] = updated
-      }
+  const handleStatusToggle = useCallback(
+    (st: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        const currentStatuses = statusParam === 'all' ? [] : statusParam.split(',').filter(Boolean)
 
-      descendantsToClear.forEach(dId => delete next[dId])
-      return next
-    })
-
-    setExpandedRowIds(prev => {
-      const next = new Set(prev)
-      descendantsToClear.forEach(dId => next.delete(dId))
-      next.add(nodeId)
-      
-      const traverseAndCollect = (nodes: TreeNode[], parentMatches: boolean) => {
-        let anyMatch = false
-        for (const node of nodes) {
-          const isTargetNode = node.id === nodeId
-          const isUnderTarget = parentMatches || isTargetNode
-          
-          let childMatched = false
-          if (node.children && node.children.length > 0) {
-            childMatched = traverseAndCollect(node.children, isUnderTarget)
+        if (st === 'all') {
+          next.delete('status')
+        } else {
+          let updated: string[]
+          if (currentStatuses.includes(st)) {
+            updated = currentStatuses.filter((s) => s !== st)
+          } else {
+            updated = [...currentStatuses, st]
           }
-
-          if (isUnderTarget) {
-            let matchesStatus = false
-            if (st === 'active' && (node.status === 'success' || (node.type === 'HTTP' && node.status === 'neutral'))) matchesStatus = true
-            if (st === 'warning' && node.status === 'warning') matchesStatus = true
-            if (st === 'failed' && node.status === 'error') matchesStatus = true
-            if (st === 'ghost' && (node.nodeStats?.ghost || 0) > 0) matchesStatus = true
-
-            if (matchesStatus || childMatched) {
-              if (node.children && node.children.length > 0) {
-                next.add(node.id)
-              }
-              anyMatch = true
-            }
+          if (updated.length === 0 || updated.length === 4) {
+            next.delete('status')
+          } else {
+            next.set('status', updated.join(','))
           }
         }
-        return anyMatch
-      }
-      
-      traverseAndCollect(rawTree, false)
+        next.delete('page')
+        return next
+      })
+    },
+    [statusParam, setSearchParams]
+  )
+
+  const handleClearIp = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('ip')
+      next.delete('page')
       return next
     })
-  }, [rawTree])
+  }, [setSearchParams])
 
-  const handleExpandAll = useCallback(() => {
-    const allIds = new Set<string>()
-    const traverse = (nodes: TreeNode[]) => {
-      for (const node of nodes) {
-        if (node.children && node.children.length > 0) {
-          allIds.add(node.id)
-          traverse(node.children)
-        }
-      }
-    }
-    traverse(filteredTreeData)
-    setExpandedRowIds(allIds)
-  }, [filteredTreeData])
+  const handlePortChange = useCallback(
+    (port?: number) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (port !== undefined) next.set('port', String(port))
+        else next.delete('port')
+        next.delete('page')
+        return next
+      })
+    },
+    [setSearchParams]
+  )
 
-  const handleCollapseAll = useCallback(() => {
-    setExpandedRowIds(new Set())
-  }, [])
+  const handleFindingChange = useCallback(
+    (finding?: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (finding) next.set('finding', finding)
+        else next.delete('finding')
+        next.delete('page')
+        return next
+      })
+    },
+    [setSearchParams]
+  )
 
-  const handleClearFilter = useCallback((nodeId: string) => {
-    setExplicitFilters(prev => {
-      const next = { ...prev }
-      if (next[nodeId] !== undefined) {
-        delete next[nodeId]
-      }
+  const handleIncludeClosedChange = useCallback(
+    (includeClosed: boolean) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (includeClosed) next.set('include_closed', 'true')
+        else next.delete('include_closed')
+        next.delete('page')
+        return next
+      })
+    },
+    [setSearchParams]
+  )
+
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (newPage <= 1) next.delete('page')
+        else next.set('page', String(newPage))
+        return next
+      })
+    },
+    [setSearchParams]
+  )
+
+  const handleLimitChange = useCallback(
+    (newLimit: number) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('limit', String(newLimit))
+        next.delete('page')
+        return next
+      })
+    },
+    [setSearchParams]
+  )
+
+  const handleOpenDrawer = useCallback(
+    (ip: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('drawer', ip)
+        return next
+      })
+    },
+    [setSearchParams]
+  )
+
+  const handleCloseDrawer = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('drawer')
       return next
     })
-  }, [])
+  }, [setSearchParams])
 
+  const handleDrillDown = useCallback(
+    (tab: 'services' | 'checks', ip: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('drawer')
+        next.set('tab', tab)
+        next.set('ip', ip)
+        next.delete('page')
+        return next
+      })
+    },
+    [setSearchParams]
+  )
 
+  if (isRunLoading) return <div className="p-8 text-muted-foreground">Loading scans...</div>
+  if (runError) return <div className="p-8 text-destructive">Error loading scans.</div>
 
-  if (isLoading) return <div className="p-8 text-muted-foreground">Loading scans...</div>
-  if (error) return <div className="p-8 text-destructive">Error loading scans.</div>
-
-  const isAnyFilterActive = Object.keys(explicitFilters).some(key => key !== 'global-root-id' && !explicitFilters[key].includes('all')) || !explicitFilters['global-root-id']?.includes('all')
+  const hostsCount = summary ? summary.active + summary.warning + summary.failed + summary.ghost : 0
 
   return (
     <div className="w-full flex-1 flex flex-col bg-background">
-      <div className="px-6 py-4 shrink-0 border-b border-border bg-muted/30 flex justify-between items-center">
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Run ID</span>
-              <span className="text-sm font-mono font-bold bg-background border px-2 py-0.5 rounded">{selectedRunId || 'Latest'}</span>
-            </div>
-            <p className="text-muted-foreground text-sm font-mono font-semibold">
-              {/* @ts-ignore */}
-              <span className="text-foreground">{data?.metadata?.total_targets_scanned || 0}</span> IPs scanned • <span className="text-foreground">{data?.metadata?.scan_duration_seconds || 0}s</span> duration
-            </p>
-          </div>
-          
-          <div className="h-8 w-px bg-border mx-2"></div>
-          
-          {(data?.metadata?.summary || rawTree[0]?.nodeStats) && (() => {
-            const summary = data?.metadata?.summary || rawTree[0]?.nodeStats
-            return (
-              <div className="flex items-center gap-3 text-xs font-mono font-bold">
-                <div className="flex items-center gap-1.5 bg-green-500/10 text-green-600 dark:text-green-400 px-2 py-1 rounded border border-green-500/20">
-                  <span className="uppercase tracking-wider opacity-70">Active</span>
-                  <span>{summary.active ?? 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded border border-yellow-500/20">
-                  <span className="uppercase tracking-wider opacity-70">Warning</span>
-                  <span>{summary.warning ?? 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-red-500/10 text-red-600 dark:text-red-400 px-2 py-1 rounded border border-red-500/20">
-                  <span className="uppercase tracking-wider opacity-70">Failed</span>
-                  <span>{summary.failed ?? 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-1 rounded border border-purple-500/20">
-                  <span className="uppercase tracking-wider opacity-70">Ghost</span>
-                  <span>{summary.ghost ?? 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-slate-500/10 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-500/20">
-                  <span className="uppercase tracking-wider opacity-70">Void</span>
-                  <span>{summary?.void ?? data?.metadata?.summary?.void ?? 0}</span>
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-        <div className="flex items-center gap-3">
-          <RunHistorySheet 
-            selectedRunId={selectedRunId} 
-            onSelectRun={(id) => {
-              setSelectedRunId(id)
-              const newUrl = new URL(window.location.href)
-              if (id) {
-                newUrl.searchParams.set('run', id)
-              } else {
-                newUrl.searchParams.delete('run')
-              }
-              window.history.pushState({}, '', newUrl)
-            }} 
-          />
-        </div>
-      </div>
-      
-      <div className="px-6 py-4 shrink-0 bg-muted/20 flex items-center gap-4 flex-wrap border-b border-border shadow-md">
-        <div className="flex items-center gap-4 shrink-0">
-          {isSavingView ? (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm font-semibold">Save View:</span>
-              <input
-                type="text"
-                placeholder="View name..."
-                autoFocus
-                value={newViewName}
-                onChange={(e) => setNewViewName(e.target.value)}
-                className="bg-background text-foreground border-2 border-primary/20 shadow-sm rounded px-3 py-1.5 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-primary w-48"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSaveViewSubmit()
-                  if (e.key === 'Escape') setIsSavingView(false)
-                }}
+      {/* 1. Header & Run Summary Strip */}
+      <RunSummaryHeader
+        selectedRunId={selectedRunId}
+        run={run}
+        isRunActive={isRunActive}
+        onSelectRun={(id) => {
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev)
+            if (id) next.set('run', id)
+            else next.delete('run')
+            return next
+          })
+        }}
+      />
+
+      {/* 2. Filter Toolbar & Saved Views */}
+      <ScanFilterToolbar
+        activeTab={activeTab}
+        savedViews={savedViews}
+        activeViewId={activeViewId}
+        onSelectView={handleSelectSavedView}
+        onSaveView={handleSaveViewSubmit}
+        onDeleteView={handleDeleteView}
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        ipParam={ipParam}
+        onClearIp={handleClearIp}
+        portParam={portParam}
+        onPortChange={handlePortChange}
+        findingParam={findingParam}
+        onFindingChange={handleFindingChange}
+        includeClosed={includeClosedParam}
+        onIncludeClosedChange={handleIncludeClosedChange}
+        statusParam={statusParam}
+        onStatusToggle={handleStatusToggle}
+      />
+
+      {/* 3. Three Tabs Navigation */}
+      <ScanTabsNav
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        hostsCount={hostsCount}
+        servicesCount={summary?.service_count ?? 0}
+        checksCount={summary?.http_check_count ?? 0}
+      />
+
+      {/* 4. Table Views */}
+      <div className="flex-1 overflow-auto p-6">
+        {activeTableQuery.isLoading ? (
+          <div className="text-center py-12 text-sm text-muted-foreground">Loading table data...</div>
+        ) : activeTableQuery.isError ? (
+          <div className="text-center py-12 text-sm text-destructive">Failed to load table items.</div>
+        ) : (
+          <>
+            {activeTab === 'hosts' && (
+              <HostsTable
+                items={hostsQuery.data?.items}
+                sortBy={sortByParam}
+                sortDir={sortDirParam}
+                onSort={handleSort}
+                onSelectIp={handleOpenDrawer}
               />
-              <button onClick={handleSaveViewSubmit} className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs hover:bg-primary/90 font-semibold">✓ Save</button>
-              <button onClick={() => {setIsSavingView(false); setActiveViewId('view-default');}} className="bg-background text-foreground px-2 py-1 rounded text-xs border border-border hover:bg-muted font-semibold">✕ Cancel</button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm font-semibold">Global View:</span>
-              <select
-                value={activeViewId}
-                onChange={(e) => handleSelectSavedView(e.target.value)}
-                className="bg-background text-foreground border-2 border-primary/20 shadow-sm rounded px-3 py-1.5 text-xs font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer max-w-[220px]"
-              >
-                {savedViews.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => setIsSavingView(true)}
-                className="bg-background text-foreground px-2 py-1 rounded text-xs border border-border hover:bg-muted font-semibold"
-                title="Save Current View"
-              >
-                + Create
-              </button>
-              <button
-                onClick={handleDeleteView}
-                disabled={!activeViewId || activeViewId === 'view-default' || activeViewId === 'custom' || activeViewId === 'custom-new'}
-                className="bg-background text-destructive px-2 py-1 rounded text-xs border border-border hover:bg-muted font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Delete this view locally"
-              >
-                ✕ Delete
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 min-w-[200px] max-w-sm ml-auto">
-          <input 
-            type="text"
-            placeholder="Search IP, Domain, Headers..."
-            value={globalSearch}
-            onChange={(e) => setGlobalSearch(e.target.value)}
-            className="w-full bg-background border-2 border-primary/20 px-3 py-1.5 rounded-md text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 mr-2">
-          <button 
-            onClick={handleExpandAll}
-            className="text-xs font-semibold px-2 py-1.5 rounded-md bg-background border border-border hover:bg-muted text-muted-foreground transition-colors shadow-sm"
-          >
-            Expand All
-          </button>
-          <button 
-            onClick={handleCollapseAll}
-            className="text-xs font-semibold px-2 py-1.5 rounded-md bg-background border border-border hover:bg-muted text-muted-foreground transition-colors shadow-sm"
-          >
-            Collapse All
-          </button>
-        </div>
-
-        <button 
-          title="Clear All Filters"
-          disabled={!isAnyFilterActive}
-          onClick={() => {
-            setExplicitFilters({ 'global-root-id': ['all'] })
-          }}
-          className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
-            isAnyFilterActive
-              ? 'bg-muted border border-border text-foreground hover:bg-background shadow-sm cursor-pointer'
-              : 'bg-transparent border border-transparent text-muted-foreground/40 cursor-not-allowed'
-          }`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-
-        <span className="text-sm font-semibold text-muted-foreground pl-1">Filters:</span>
-        <div className="flex bg-muted/30 border border-border p-1 rounded-lg shadow-sm font-mono text-sm">
-          {(['all', 'active', 'warning', 'failed', 'ghost']).map((f) => (
-            <button
-              key={f}
-              onClick={() => handleGlobalFilterClick(f)}
-              className={`px-4 py-1.5 rounded-md capitalize transition-all ${
-                (explicitFilters['global-root-id'] || ['all']).includes(f)
-                  ? 'bg-background shadow-sm font-bold text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+            )}
+            {activeTab === 'services' && (
+              <ServicesTable
+                items={servicesQuery.data?.items}
+                sortBy={sortByParam}
+                sortDir={sortDirParam}
+                onSort={handleSort}
+                onSelectIp={handleOpenDrawer}
+              />
+            )}
+            {activeTab === 'checks' && (
+              <ChecksTable
+                items={checksQuery.data?.items}
+                sortBy={sortByParam}
+                sortDir={sortDirParam}
+                onSort={handleSort}
+                onSelectIp={handleOpenDrawer}
+              />
+            )}
+          </>
+        )}
       </div>
-      
-      <div className="flex-1 overflow-hidden">
-        <HierarchicalTable 
-          expandedRowIds={expandedRowIds} 
-          onToggleRow={handleToggleRow}
-          sortBy={sortBy}
-          sortDir={sortDir}
-          onSortChange={(by, dir) => {
-            setSortBy(by)
-            setSortDir(dir)
-          }}
-        >
-          {filteredTreeData.map(node => (
-            <RenderTreeNode 
-              key={node.id} 
-              node={node} 
-              onStatusClick={handleStatusClick}
-              onClearFilter={handleClearFilter}
-            />
-          ))}
-        </HierarchicalTable>
-      </div>
+
+      {/* 5. Pagination Footer */}
+      <TablePaginationBar
+        page={pageParam}
+        limit={limitParam}
+        total={currentTotal}
+        onPageChange={handlePageChange}
+        onLimitChange={handleLimitChange}
+      />
+
+      {/* On-Demand Slide-Over IP Detail Drawer */}
+      <HostDetailDrawer
+        runId={selectedRunId}
+        ipAddress={drawerParam}
+        open={Boolean(drawerParam)}
+        onClose={handleCloseDrawer}
+        onDrillDown={handleDrillDown}
+        refetchInterval={pollInterval}
+      />
     </div>
   )
 }

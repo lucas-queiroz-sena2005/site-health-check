@@ -275,12 +275,14 @@ def _finalize_run(run_id: str, returncode: int):
             + summary.get("ghost", 0)
         )
 
-        run.metrics_json = {
+        existing_metrics = dict(run.metrics_json or {})
+        existing_metrics.update({
             "total_targets_scanned": initial_targets_count,
             "scan_duration_seconds": duration,
             "anomalies_found": anomalies,
             "summary": summary,
-        }
-
+        })
+        run.metrics_json = existing_metrics
+        session.add(run)
         session.commit()
 

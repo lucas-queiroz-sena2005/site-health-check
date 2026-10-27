@@ -207,13 +207,3 @@ def delete_scan(id: Annotated[str, Path()], session: SessionDep):
     session.add(scan)
     session.commit()
 
-@router.post("/{id}/launch", status_code=status.HTTP_201_CREATED)
-async def launch_scheduled_scan(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-    request: Request,
-) -> ScanRunResponse:
-    from api.routers.runs import LaunchRunRequest, create_run
-
-    return await create_run(LaunchRunRequest(scan_id=id), session, request)
-

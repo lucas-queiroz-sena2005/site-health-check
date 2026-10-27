@@ -77,7 +77,6 @@ async def abort_run(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-@router.post("/launch", status_code=status.HTTP_201_CREATED)
 async def create_run(
     config: LaunchRunRequest,
     session: SessionDep,
@@ -255,27 +254,6 @@ async def stream_run_logs(
     )
     async for event in run_manager.subscribe_logs(id, is_finished=is_finished):
         yield event
-
-
-@router.get("/{id}/results")
-def get_run_results(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-) -> dict[str, Any]:
-    from api.models import HostState
-
-    run = session.get(ScanRun, id)
-    if not run:
-        raise HTTPException(status_code=404, detail="Run not found")
-
-    stmt = select(HostState).where(HostState.scan_run_id == id)
-    hosts = session.exec(stmt).all()
-    metadata = dict(run.metrics_json or {})
-
-    return {
-        "results": hosts,
-        "metadata": metadata,
-    }
 
 
 @router.get("/{id}/hosts", response_model=Page[HostRowDTO])

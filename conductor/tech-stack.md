@@ -8,8 +8,9 @@
 
 ## Frontend
 - **Environment:** Node.js
-- **Library:** React
-- **UI Components:** `shadcn/ui`
+- **Library:** React (Dumb UI pattern displaying backend DTOs)
+- **State & Data Fetching:** TanStack Query, React Router (`useSearchParams` binding)
+- **UI Components:** `shadcn/ui` (Base UI Dialog/Sheet primitives, Tailwind CSS)
 
 ## Execution Engine
 - **Language:** Python (Asyncio)

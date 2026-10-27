@@ -70,6 +70,9 @@ def test_openapi_schema_contains_table_and_drawer_endpoints():
 
     # Legacy routes absent
     assert "/api/results" not in paths
+    assert "/api/runs/{id}/results" not in paths
+    assert "/api/runs/launch" not in paths
+    assert "/api/scans/{id}/launch" not in paths
     if "/api/scans/{id}/alerts/mute" in paths:
         assert "get" not in paths["/api/scans/{id}/alerts/mute"]
     if "/api/scans/{id}/alerts/unmute" in paths:
