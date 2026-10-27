@@ -176,7 +176,7 @@ function renderComponent(initialRoute = '/?run=run-abc-123') {
 }
 
 describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
-  let fetchMock: any
+  let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -293,7 +293,7 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
     fireEvent.click(warningBtn)
 
     await waitFor(() => {
-      const calls = fetchMock.mock.calls.map((c: any) => String(c[0]))
+      const calls = fetchMock.mock.calls.map((c: unknown[]) => String(c[0]))
       const matched = calls.some((c: string) => c.includes('q=staging') && c.includes('status=warning'))
       expect(matched).toBe(true)
     })

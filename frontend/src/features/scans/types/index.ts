@@ -21,7 +21,7 @@ export interface ScanRunMetrics {
   scan_duration_seconds?: number
   anomalies_found?: number
   summary: ScanRunSummary
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface ScanRunResponse {
@@ -34,7 +34,7 @@ export interface ScanRunResponse {
   metrics_json?: ScanRunMetrics | null
   targets: string[]
   ports: (string | number)[]
-  flags: Record<string, any>
+  flags: Record<string, unknown>
   ghost_window: string
   tls_warning_days: number
 }

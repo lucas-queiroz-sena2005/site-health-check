@@ -6,10 +6,13 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
   const [copied, setCopied] = useState(false)
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }).catch(() => {
+        // Silently handle clipboard write error
+      })
     }
   }
 

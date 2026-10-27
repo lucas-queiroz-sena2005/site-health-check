@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import {
   useRunDetail,
@@ -18,7 +18,7 @@ import {
   CopyButton,
   ScanRunStatus,
 } from '@/features/scans'
-import type { TableQueryParams } from '@/features/scans/types'
+import type { ScanRunResponse, TableQueryParams } from '@/features/scans/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -29,6 +29,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+
+interface SavedView {
+  id: string
+  name: string
+  search?: string | null
+  statuses?: string[]
+  table_sort_by?: string | null
+  table_sort_dir?: string | null
+}
 
 const CANONICAL_FINDINGS = [
   'TCP_CLOSED',
@@ -46,23 +55,23 @@ export function HostTablePage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const runParam = searchParams.get('run') || searchParams.get('run_id')
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(runParam)
 
   // Fetch latest run if runId is not in URL
-  const { data: latestRuns } = useQuery({
+  const { data: latestRuns } = useQuery<ScanRunResponse[]>({
     queryKey: ['runs', 'latest'],
     queryFn: async () => {
       const res = await fetch('/api/runs?limit=1')
       if (!res.ok) throw new Error('Network error')
       return res.json()
     },
-    enabled: !selectedRunId,
+    enabled: !runParam,
   })
 
+  const selectedRunId = runParam || (latestRuns && latestRuns.length > 0 ? latestRuns[0].id : null)
+
   useEffect(() => {
-    if (!selectedRunId && latestRuns && latestRuns.length > 0) {
+    if (!runParam && latestRuns && latestRuns.length > 0) {
       const latestRunId = latestRuns[0].id
-      setSelectedRunId(latestRunId)
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
@@ -72,14 +81,7 @@ export function HostTablePage() {
         { replace: true }
       )
     }
-  }, [selectedRunId, latestRuns, setSearchParams])
-
-  // Sync selectedRunId from URL
-  useEffect(() => {
-    if (runParam && runParam !== selectedRunId) {
-      setSelectedRunId(runParam)
-    }
-  }, [runParam, selectedRunId])
+  }, [runParam, latestRuns, setSearchParams])
 
   // Active Tab
   const activeTab = (searchParams.get('tab') as 'hosts' | 'services' | 'checks') || 'hosts'
@@ -111,9 +113,11 @@ export function HostTablePage() {
 
   // Local state for debounced search
   const [searchInput, setSearchInput] = useState(qParam)
-  useEffect(() => {
+  const [prevQParam, setPrevQParam] = useState(qParam)
+  if (prevQParam !== qParam) {
+    setPrevQParam(qParam)
     setSearchInput(qParam)
-  }, [qParam])
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -189,14 +193,12 @@ export function HostTablePage() {
   const currentTotal = activeTableQuery.data?.total || 0
 
   // Saved Views Integration
-  const [savedViews, setSavedViews] = useState<any[]>([
-    { id: 'view-default', name: 'Default View (All Targets)', search: '', statuses: ['all'], table_sort_by: null, table_sort_dir: 'asc' },
-  ])
+  const queryClient = useQueryClient()
   const [activeViewId, setActiveViewId] = useState('view-default')
   const [isSavingView, setIsSavingView] = useState(false)
   const [newViewName, setNewViewName] = useState('')
 
-  const { data: fetchedViews } = useQuery({
+  const { data: fetchedViews } = useQuery<SavedView[]>({
     queryKey: ['views'],
     queryFn: async () => {
       const res = await fetch('/api/views')
@@ -205,18 +207,16 @@ export function HostTablePage() {
     },
   })
 
-  useEffect(() => {
-    if (fetchedViews) {
-      const defaultView = {
-        id: 'view-default',
-        name: 'Default View (All Targets)',
-        search: '',
-        statuses: ['all'],
-        table_sort_by: null,
-        table_sort_dir: 'asc',
-      }
-      setSavedViews([defaultView, ...fetchedViews])
+  const savedViews = useMemo<SavedView[]>(() => {
+    const defaultView: SavedView = {
+      id: 'view-default',
+      name: 'Default View (All Targets)',
+      search: '',
+      statuses: ['all'],
+      table_sort_by: null,
+      table_sort_dir: 'asc',
     }
+    return [defaultView, ...(fetchedViews || [])]
   }, [fetchedViews])
 
   const handleSelectSavedView = useCallback(
@@ -273,7 +273,7 @@ export function HostTablePage() {
         })
         if (response.ok) {
           const data = await response.json()
-          setSavedViews((prev) => [...prev, data])
+          queryClient.invalidateQueries({ queryKey: ['views'] })
           setActiveViewId(data.id)
           setSearchParams((prev) => {
             const next = new URLSearchParams(prev)
@@ -287,21 +287,21 @@ export function HostTablePage() {
     }
     setIsSavingView(false)
     setNewViewName('')
-  }, [newViewName, qParam, statusParam, sortByParam, sortDirParam, setSearchParams])
+  }, [newViewName, qParam, statusParam, sortByParam, sortDirParam, queryClient, setSearchParams])
 
   const handleDeleteView = useCallback(async () => {
     if (activeViewId && activeViewId !== 'view-default') {
       try {
         const res = await fetch(`/api/views/${activeViewId}`, { method: 'DELETE' })
         if (res.ok) {
-          setSavedViews((prev) => prev.filter((v) => v.id !== activeViewId))
+          queryClient.invalidateQueries({ queryKey: ['views'] })
           handleSelectSavedView('view-default')
         }
       } catch (err) {
         console.error('Failed to delete view:', err)
       }
     }
-  }, [activeViewId, handleSelectSavedView])
+  }, [activeViewId, queryClient, handleSelectSavedView])
 
   // Sort toggle handler
   const handleSort = useCallback(
@@ -488,7 +488,6 @@ export function HostTablePage() {
           <RunHistorySheet
             selectedRunId={selectedRunId}
             onSelectRun={(id) => {
-              setSelectedRunId(id)
               setSearchParams((prev) => {
                 const next = new URLSearchParams(prev)
                 if (id) {
@@ -878,7 +877,7 @@ export function HostTablePage() {
               ) : (
                 <>
                   {activeTab === 'hosts' &&
-                    (activeTableQuery.data?.items as any[])?.map((h) => (
+                    hostsQuery.data?.items.map((h) => (
                       <TableRow key={h.ip_address} className="hover:bg-muted/30 font-mono text-xs">
                         {/* Strict IP Leftmost Column */}
                         <TableCell className="font-bold">
@@ -911,7 +910,7 @@ export function HostTablePage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {h.finding_codes?.map((code: string) => (
+                            {h.finding_codes?.map((code) => (
                               <FindingBadge key={code} code={code} />
                             ))}
                           </div>
@@ -920,7 +919,7 @@ export function HostTablePage() {
                     ))}
 
                   {activeTab === 'services' &&
-                    (activeTableQuery.data?.items as any[])?.map((s) => (
+                    servicesQuery.data?.items.map((s) => (
                       <TableRow key={`${s.ip_address}-${s.port}`} className="hover:bg-muted/30 font-mono text-xs">
                         {/* Strict IP Leftmost Column */}
                         <TableCell className="font-bold">
@@ -964,7 +963,7 @@ export function HostTablePage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
-                            {s.finding_codes?.map((code: string) => (
+                            {s.finding_codes?.map((code) => (
                               <FindingBadge key={code} code={code} />
                             ))}
                           </div>
@@ -973,7 +972,7 @@ export function HostTablePage() {
                     ))}
 
                   {activeTab === 'checks' &&
-                    (activeTableQuery.data?.items as any[])?.map((c, idx) => (
+                    checksQuery.data?.items.map((c, idx) => (
                       <TableRow key={`${c.ip_address}-${c.port}-${c.domain}-${idx}`} className="hover:bg-muted/30 font-mono text-xs">
                         {/* Strict IP Leftmost Column */}
                         <TableCell className="font-bold">

@@ -1,4 +1,3 @@
-import { useState, useCallback } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -33,21 +32,11 @@ export function HostDetailDrawer({
   onDrillDown,
   refetchInterval,
 }: HostDetailDrawerProps) {
-  const [copied, setCopied] = useState(false)
-
   const { data, isLoading, error } = useRunHostDetail(
     open ? (runId ?? undefined) : undefined,
     open ? (ipAddress ?? undefined) : undefined,
     { refetchInterval }
   )
-
-  const handleCopyIp = useCallback(() => {
-    if (ipAddress && navigator.clipboard) {
-      navigator.clipboard.writeText(ipAddress)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }, [ipAddress])
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
@@ -63,24 +52,7 @@ export function HostDetailDrawer({
               <span className="text-xl font-mono font-bold text-foreground">
                 {ipAddress || '—'}
               </span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleCopyIp}
-                title="Copy IP to clipboard"
-                aria-label="Copy IP"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-              >
-                {copied ? (
-                  <svg className="size-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                )}
-              </Button>
+              {ipAddress && <CopyButton text={ipAddress} label="Copy IP to clipboard" />}
               {data?.status && <EntityStatusBadge status={data.status} />}
             </div>
 
@@ -249,7 +221,7 @@ export function HostDetailDrawer({
                                   <span className="font-semibold text-destructive uppercase text-[10px] tracking-wider">
                                     {pn.domain} Note / Error
                                   </span>
-                                  <CopyButton text={pn.notes!} label="Copy note" />
+                                  <CopyButton text={pn.notes || ''} label="Copy note" />
                                 </div>
                                 <pre className="font-mono text-[11px] text-destructive dark:text-red-400 whitespace-pre-wrap break-all select-all">
                                   {pn.notes}

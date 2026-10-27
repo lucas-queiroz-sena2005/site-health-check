@@ -22,7 +22,7 @@ function createWrapper() {
 }
 
 describe('Orthogonal Flat Explorer Query Hooks', () => {
-  let fetchMock: any
+  let fetchMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.restoreAllMocks()
