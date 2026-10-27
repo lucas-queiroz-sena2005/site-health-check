@@ -57,15 +57,15 @@
 
 ---
 
-## Phase 5: Component Decomposition & Reusable Primitives (TDD)
+## Phase 5: Component Decomposition & Reusable Primitives (TDD) [checkpoint: a118565]
 - [x] Task: Write failing tests for reusable table primitives and decoupled table views (Red Phase) 0f83c81
   - [x] Add unit tests in `frontend/src/features/scans/__tests__/TablePrimitives.test.tsx` asserting `<SortableHead>`, `<IpAddressCell>`, `<FindingBadgeList>`, and `<EmptyTableState>` render proper accessibility roles, indicators, and handle clicks
   - [x] Add component tests in `frontend/src/features/scans/__tests__/Tables.test.tsx` asserting `<HostsTable>`, `<ServicesTable>`, and `<ChecksTable>` correctly render column items and propagate sort and IP drawer events
-- [~] Task: Implement reusable table primitives, dedicated table components, and refactor HostTablePage (Green & Refactor Phase)
-  - [ ] Create `frontend/src/features/scans/components/table/TablePrimitives.tsx` with `<SortableHead>`, `<IpAddressCell>`, `<FindingBadgeList>`, and `<EmptyTableState>`
-  - [ ] Create `HostsTable.tsx`, `ServicesTable.tsx`, and `ChecksTable.tsx` in `frontend/src/features/scans/components/table/` using the reusable primitives
-  - [ ] Extract `<RunSummaryHeader>`, `<ScanFilterToolbar>`, and `<TablePaginationBar>` into `frontend/src/features/scans/components/`
-  - [ ] Refactor `frontend/src/pages/HostTablePage.tsx` into a lightweight layout orchestrator (~80-120 LOC)
-  - [ ] Run full frontend `vitest` suite, production build (`npm run build`), and backend `pytest` suite
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Implement reusable table primitives, dedicated table components, and refactor HostTablePage (Green & Refactor Phase) a118565
+  - [x] Create `frontend/src/features/scans/components/table/TablePrimitives.tsx` with `<SortableHead>`, `<IpAddressCell>`, `<FindingBadgeList>`, and `<EmptyTableState>`
+  - [x] Create `HostsTable.tsx`, `ServicesTable.tsx`, and `ChecksTable.tsx` in `frontend/src/features/scans/components/table/` using the reusable primitives
+  - [x] Extract `<RunSummaryHeader>`, `<ScanFilterToolbar>`, and `<TablePaginationBar>` into `frontend/src/features/scans/components/`
+  - [x] Refactor `frontend/src/pages/HostTablePage.tsx` into a lightweight layout orchestrator (~80-120 LOC)
+  - [x] Run full frontend `vitest` suite, production build (`npm run build`), and backend `pytest` suite
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) a118565
 
