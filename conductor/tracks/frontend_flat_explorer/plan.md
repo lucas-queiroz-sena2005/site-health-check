@@ -49,3 +49,9 @@
   - [x] Streamline `metrics_json` assignment between `runner.py:_finalize_run()` and `evaluator.py:evaluate_scan_run()`
   - [x] Execute full backend `pytest` suite, frontend `vitest` suite, and production frontend build (`npm run build`)
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 33467ce
+
+---
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions 260168e
+
