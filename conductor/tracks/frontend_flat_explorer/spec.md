@@ -75,6 +75,27 @@ Three tabs with badge counts derived from `metrics_json.summary` (Hosts: `active
   - Remove `GET /api/runs/{id}/results` from `api/src/api/routers/runs.py`.
   - Remove legacy `@router.post("/launch")` alias from `api/src/api/routers/runs.py` and `@router.post("/{id}/launch")` from `api/src/api/routers/scans.py`, updating `api/tests/test_api_runs.py` and `api/tests/test_api_results.py` accordingly.
 
+### 2.6 Component Decomposition & Table Primitives (Composition & Reuse)
+- **Goal:** Refactor the monolithic `HostTablePage.tsx` into modular, reusable components adhering to React composition standards, eliminating duplication across the 3 relational tables.
+- **Requirements:**
+  1. **Reusable Table Primitives (`frontend/src/features/scans/components/table/`):**
+     - `<SortableHead>`: Reusable table column header with sort indicators (`▲`/`▼`) and accessible click handling.
+     - `<IpAddressCell>`: Strict leftmost IP column cell with button and drawer opening callback.
+     - `<FindingBadgeList>`: Shared component for rendering canonical finding badge lists.
+     - `<EmptyTableState>`: Standardized table empty state row with parameterized colSpan.
+  2. **Dedicated Table Views (`frontend/src/features/scans/components/table/`):**
+     - `<HostsTable>`: Renders the Hosts tab table using shared primitives.
+     - `<ServicesTable>`: Renders the Services tab table using shared primitives.
+     - `<ChecksTable>`: Renders the HTTP Checks tab table using shared primitives.
+  3. **Modular Page Sections (`frontend/src/features/scans/components/`):**
+     - `<RunSummaryHeader>`: Header strip with Run ID, status badge, live polling text, summary counters, and history sheet.
+     - `<ScanFilterToolbar>`: Global toolbar with Saved Views, debounced search, status toggle pills, IP chip, and port/finding filters.
+     - `<TablePaginationBar>`: Standardized pagination footer with rows-per-page selection and page navigation.
+  4. **Custom URL State Hook (`frontend/src/features/scans/hooks/useTableUrlState.ts`):**
+     - Extracts URL parameter synchronization, query object construction, and tab switching outside of UI rendering.
+  5. **HostTablePage Orchestrator (`frontend/src/pages/HostTablePage.tsx`):**
+     - Reduced to a concise orchestrator component (~80-120 LOC) composing the layout sections and managing drawer integration.
+
 ---
 
 ## 3. Non-Functional Requirements
@@ -89,4 +110,7 @@ Three tabs with badge counts derived from `metrics_json.summary` (Hosts: `active
 - [ ] Drawer fetches `GET /api/runs/{id}/hosts/{ip}` on demand and supports `"Show in Services"` and `"Show in HTTP Checks"` drill-down actions.
 - [ ] Sorting, multi-status filtering, search (`q`), IP chip filtering (`ip`), port filtering (`port`), finding code filtering (`finding`), and pagination execute via the backend endpoints and sync with URL query params.
 - [ ] `HierarchicalTable/`, `buildTree.ts`, `test-ghost.ts`, `GET /api/runs/{id}/results`, `POST /api/runs/launch`, and `POST /api/scans/{id}/launch` are completely removed.
+- [ ] Table headers, leftmost IP cells, finding badge lists, and empty states are extracted into reusable primitives (`frontend/src/features/scans/components/table/`).
+- [ ] Tab tables (`HostsTable`, `ServicesTable`, `ChecksTable`), filter toolbar, summary header, and pagination are decomposed into dedicated components.
+- [ ] `HostTablePage.tsx` is reduced from a ~1,085 LOC monolith to a concise orchestrator (~80-120 LOC).
 - [ ] All frontend (`vitest`, `tsc -b`) and backend (`pytest`) test suites pass.
