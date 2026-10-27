@@ -43,7 +43,7 @@ export function RunHistorySheet({
     if (id === 'mock-run-id-2') return "Scheduled (2 hrs ago)"
     
     // Find in loaded runs
-    const run = runs.find((r: any) => r.id === id)
+    const run = Array.isArray(runs) ? runs.find((r: any) => r.id === id) : undefined
     if (run) {
       return run.scan_name || 'Ad-hoc Scan'
     }

@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { ScanRunStatus } from '../types'
 
 export function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false)
@@ -35,6 +36,61 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
         </svg>
       )}
     </button>
+  )
+}
+
+export function RunStatusBadge({ status }: { status: ScanRunStatus | string }) {
+  const s = (status || '').toUpperCase()
+  if (s === 'RUNNING') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+        <span className="relative flex h-2 w-2 mr-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+        </span>
+        Running
+      </span>
+    )
+  }
+  if (s === 'PENDING') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+        <span className="relative flex h-2 w-2 mr-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+        </span>
+        Pending
+      </span>
+    )
+  }
+  if (s === 'COMPLETED') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5" />
+        Completed
+      </span>
+    )
+  }
+  if (s === 'FAILED') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 mr-1.5" />
+        Failed
+      </span>
+    )
+  }
+  if (s === 'ABORTED') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-500 mr-1.5" />
+        Aborted
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-muted text-muted-foreground border border-border">
+      {status}
+    </span>
   )
 }
 

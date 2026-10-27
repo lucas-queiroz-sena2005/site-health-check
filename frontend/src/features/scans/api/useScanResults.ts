@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { scanQueryKeys } from './queryKeys'
-import type {
-  HostDetailDTO,
-  HostRowDTO,
-  HttpCheckRowDTO,
-  Page,
-  ScanRunResponse,
-  ServiceRowDTO,
-  TableQueryParams,
+import {
+  ScanRunStatus,
+  type HostDetailDTO,
+  type HostRowDTO,
+  type HttpCheckRowDTO,
+  type Page,
+  type ScanRunResponse,
+  type ServiceRowDTO,
+  type TableQueryParams,
 } from '../types'
 
 function buildQueryString(params?: TableQueryParams): string {
@@ -28,7 +29,7 @@ function buildQueryString(params?: TableQueryParams): string {
   return qs ? `?${qs}` : ''
 }
 
-export function useRunDetail(runId?: string) {
+export function useRunDetail(runId?: string, options?: { refetchInterval?: number | false }) {
   return useQuery<ScanRunResponse>({
     queryKey: scanQueryKeys.detail(runId),
     queryFn: async () => {
@@ -39,10 +40,20 @@ export function useRunDetail(runId?: string) {
       return res.json()
     },
     enabled: Boolean(runId),
+    refetchInterval:
+      options?.refetchInterval !== undefined
+        ? options.refetchInterval
+        : (query) => {
+            const data = query.state.data as ScanRunResponse | undefined
+            if (data?.status === ScanRunStatus.RUNNING || data?.status === ScanRunStatus.PENDING) {
+              return 3000
+            }
+            return false
+          },
   })
 }
 
-export function useRunHosts(runId?: string, params?: TableQueryParams) {
+export function useRunHosts(runId?: string, params?: TableQueryParams, options?: { refetchInterval?: number | false }) {
   return useQuery<Page<HostRowDTO>>({
     queryKey: scanQueryKeys.hosts(runId, params),
     queryFn: async () => {
@@ -54,10 +65,15 @@ export function useRunHosts(runId?: string, params?: TableQueryParams) {
       return res.json()
     },
     enabled: Boolean(runId),
+    refetchInterval: options?.refetchInterval ?? false,
   })
 }
 
-export function useRunServices(runId?: string, params?: TableQueryParams) {
+export function useRunServices(
+  runId?: string,
+  params?: TableQueryParams,
+  options?: { refetchInterval?: number | false }
+) {
   return useQuery<Page<ServiceRowDTO>>({
     queryKey: scanQueryKeys.services(runId, params),
     queryFn: async () => {
@@ -69,10 +85,15 @@ export function useRunServices(runId?: string, params?: TableQueryParams) {
       return res.json()
     },
     enabled: Boolean(runId),
+    refetchInterval: options?.refetchInterval ?? false,
   })
 }
 
-export function useRunChecks(runId?: string, params?: TableQueryParams) {
+export function useRunChecks(
+  runId?: string,
+  params?: TableQueryParams,
+  options?: { refetchInterval?: number | false }
+) {
   return useQuery<Page<HttpCheckRowDTO>>({
     queryKey: scanQueryKeys.checks(runId, params),
     queryFn: async () => {
@@ -84,10 +105,11 @@ export function useRunChecks(runId?: string, params?: TableQueryParams) {
       return res.json()
     },
     enabled: Boolean(runId),
+    refetchInterval: options?.refetchInterval ?? false,
   })
 }
 
-export function useRunHostDetail(runId?: string, ip?: string | null) {
+export function useRunHostDetail(runId?: string, ip?: string | null, options?: { refetchInterval?: number | false }) {
   return useQuery<HostDetailDTO>({
     queryKey: scanQueryKeys.hostDetail(runId, ip),
     queryFn: async () => {
@@ -98,5 +120,6 @@ export function useRunHostDetail(runId?: string, ip?: string | null) {
       return res.json()
     },
     enabled: Boolean(runId && ip),
+    refetchInterval: options?.refetchInterval ?? false,
   })
 }

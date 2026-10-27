@@ -7,6 +7,7 @@ import {
   useRunServices,
   useRunChecks,
   RunHistorySheet,
+  RunStatusBadge,
   EntityStatusBadge,
   FindingBadge,
   FormatLatency,
@@ -15,6 +16,7 @@ import {
   FormatHttpStatus,
   HostDetailDrawer,
   CopyButton,
+  ScanRunStatus,
 } from '@/features/scans'
 import type { TableQueryParams } from '@/features/scans/types'
 import { Button } from '@/components/ui/button'
@@ -134,6 +136,8 @@ export function HostTablePage() {
   // Fetch Run Detail for Metadata and Summary
   const { data: run, isLoading: isRunLoading, error: runError } = useRunDetail(selectedRunId || undefined)
   const summary = run?.metrics_json?.summary
+  const isRunActive = run?.status === ScanRunStatus.RUNNING || run?.status === ScanRunStatus.PENDING
+  const pollInterval = isRunActive ? 3000 : false
 
   // Table Query Params object
   const queryParams: TableQueryParams = useMemo(
@@ -165,14 +169,20 @@ export function HostTablePage() {
   )
 
   // Fetch Table Data
-  const hostsQuery = useRunHosts(activeTab === 'hosts' ? selectedRunId || undefined : undefined, queryParams)
+  const hostsQuery = useRunHosts(
+    activeTab === 'hosts' ? selectedRunId || undefined : undefined,
+    queryParams,
+    { refetchInterval: pollInterval }
+  )
   const servicesQuery = useRunServices(
     activeTab === 'services' ? selectedRunId || undefined : undefined,
-    queryParams
+    queryParams,
+    { refetchInterval: pollInterval }
   )
   const checksQuery = useRunChecks(
     activeTab === 'checks' ? selectedRunId || undefined : undefined,
-    queryParams
+    queryParams,
+    { refetchInterval: pollInterval }
   )
 
   const activeTableQuery = activeTab === 'hosts' ? hostsQuery : activeTab === 'services' ? servicesQuery : checksQuery
@@ -428,6 +438,12 @@ export function HostTablePage() {
               <span className="text-sm font-mono font-bold bg-background border px-2 py-0.5 rounded">
                 {selectedRunId || 'Latest'}
               </span>
+              {run?.status && <RunStatusBadge status={run.status} />}
+              {isRunActive && (
+                <span className="text-xs font-mono text-muted-foreground flex items-center gap-1">
+                  <span>(Live • refreshing every 3s)</span>
+                </span>
+              )}
               {run?.scan_name && (
                 <span className="text-sm font-semibold text-foreground ml-1">
                   ({run.scan_name})
@@ -1062,6 +1078,7 @@ export function HostTablePage() {
         open={Boolean(drawerParam)}
         onClose={handleCloseDrawer}
         onDrillDown={handleDrillDown}
+        refetchInterval={pollInterval}
       />
     </div>
   )

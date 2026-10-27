@@ -22,6 +22,7 @@ export interface HostDetailDrawerProps {
   open: boolean
   onClose: () => void
   onDrillDown: (tab: 'services' | 'checks', ip: string) => void
+  refetchInterval?: number | false
 }
 
 export function HostDetailDrawer({
@@ -30,12 +31,14 @@ export function HostDetailDrawer({
   open,
   onClose,
   onDrillDown,
+  refetchInterval,
 }: HostDetailDrawerProps) {
   const [copied, setCopied] = useState(false)
 
   const { data, isLoading, error } = useRunHostDetail(
     open ? (runId ?? undefined) : undefined,
-    open ? (ipAddress ?? undefined) : undefined
+    open ? (ipAddress ?? undefined) : undefined,
+    { refetchInterval }
   )
 
   const handleCopyIp = useCallback(() => {

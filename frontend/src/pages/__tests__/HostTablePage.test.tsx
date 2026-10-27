@@ -214,6 +214,7 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
     // Run metadata in header
     expect(await screen.findByText('Core Perimeter')).toBeTruthy()
     expect(screen.getByText('256')).toBeTruthy() // targets scanned
+    expect(screen.getByText('Completed')).toBeTruthy() // Run status badge
 
     // Status summary strip pills
     expect(screen.getByText('Active').parentElement?.textContent).toContain('5')
@@ -399,5 +400,41 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('host-detail-drawer')).toBeNull()
     })
+  })
+
+  it('displays live pulsing status and refresh indicator when run is RUNNING', async () => {
+    const runningRun = { ...mockRun, status: 'RUNNING' }
+    fetchMock.mockImplementation((url: string) => {
+      const u = String(url)
+      if (u.includes('/api/runs?limit=1') || u.includes('/api/runs?limit=50')) return Promise.resolve({ ok: true, json: async () => [runningRun] })
+      if (u.includes('/api/runs/run-abc-123/hosts')) return Promise.resolve({ ok: true, json: async () => mockHostsPage })
+      if (u.includes('/api/runs/run-abc-123')) return Promise.resolve({ ok: true, json: async () => runningRun })
+      if (u.includes('/api/views')) return Promise.resolve({ ok: true, json: async () => [] })
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+
+    const { container } = renderComponent()
+
+    expect(await screen.findByText('Running')).toBeTruthy()
+    expect(screen.getByText(/\(Live • refreshing every 3s\)/i)).toBeTruthy()
+    expect(container.querySelector('.animate-ping')).toBeTruthy()
+  })
+
+  it('displays live pulsing status and refresh indicator when run is PENDING', async () => {
+    const pendingRun = { ...mockRun, status: 'PENDING' }
+    fetchMock.mockImplementation((url: string) => {
+      const u = String(url)
+      if (u.includes('/api/runs?limit=1') || u.includes('/api/runs?limit=50')) return Promise.resolve({ ok: true, json: async () => [pendingRun] })
+      if (u.includes('/api/runs/run-abc-123/hosts')) return Promise.resolve({ ok: true, json: async () => mockHostsPage })
+      if (u.includes('/api/runs/run-abc-123')) return Promise.resolve({ ok: true, json: async () => pendingRun })
+      if (u.includes('/api/views')) return Promise.resolve({ ok: true, json: async () => [] })
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+
+    const { container } = renderComponent()
+
+    expect(await screen.findByText('Pending')).toBeTruthy()
+    expect(screen.getByText(/\(Live • refreshing every 3s\)/i)).toBeTruthy()
+    expect(container.querySelector('.animate-ping')).toBeTruthy()
   })
 })
