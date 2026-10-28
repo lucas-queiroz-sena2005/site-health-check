@@ -1,6 +1,6 @@
 # Implementation Plan: evaluator_refactor_and_sql_optimization
 
-## Phase 1: ORM Lazy-Load Hygiene, SQLite Pragmas & Micro-Batched Ingestion (TDD)
+## Phase 1: ORM Lazy-Load Hygiene, SQLite Pragmas & Micro-Batched Ingestion (TDD) [checkpoint: fb1f30f]
 Eliminate unconditional `lazy="selectin"` cascades on `ScanRun`/`HostState`, configure `PRAGMA synchronous=NORMAL`, and replace per-line synchronous commits with in-batch coalescing and bulk SQLite upserts.
 
 - [x] Task: Write failing TDD tests in `api/tests/test_database.py` and `api/tests/test_api_runner.py` [aec2f54]
@@ -10,7 +10,7 @@ Eliminate unconditional `lazy="selectin"` cascades on `ScanRun`/`HostState`, con
   - [x] `_ingest_stdout` flushing batches on size threshold (500) and on EOF.
 - [x] Task: Update `api/src/api/database.py` to set `PRAGMA synchronous=NORMAL;` and `api/src/api/models.py` to remove unconditional `"lazy": "selectin"` (adding explicit `selectinload` in `get_run_host_detail` in `runs.py`). [f31b566]
 - [x] Task: Implement `_bulk_upsert_deltas_sync` and micro-batched `_ingest_stdout` in `api/src/api/services/runner.py`, keeping `_upsert_delta_sync` as a wrapper and using `select(func.count())` in `_finalize_run`. [fb1f30f]
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md). [fb1f30f]
 
 ---
 
