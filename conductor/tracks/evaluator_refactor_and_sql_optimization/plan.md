@@ -9,7 +9,7 @@ Eliminate unconditional `lazy="selectin"` cascades on `ScanRun`/`HostState`, con
   - [x] `_bulk_upsert_deltas_sync` coalescing multiple deltas for the same IP within a single batch (set-union of `resolved_domains` and `discovered_from`, sticky `"open"` TCP status, preserved `subrun_id`).
   - [x] `_ingest_stdout` flushing batches on size threshold (500) and on EOF.
 - [x] Task: Update `api/src/api/database.py` to set `PRAGMA synchronous=NORMAL;` and `api/src/api/models.py` to remove unconditional `"lazy": "selectin"` (adding explicit `selectinload` in `get_run_host_detail` in `runs.py`). [f31b566]
-- [ ] Task: Implement `_bulk_upsert_deltas_sync` and micro-batched `_ingest_stdout` in `api/src/api/services/runner.py`, keeping `_upsert_delta_sync` as a wrapper and using `select(func.count())` in `_finalize_run`.
+- [x] Task: Implement `_bulk_upsert_deltas_sync` and micro-batched `_ingest_stdout` in `api/src/api/services/runner.py`, keeping `_upsert_delta_sync` as a wrapper and using `select(func.count())` in `_finalize_run`. [fb1f30f]
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
 
 ---
