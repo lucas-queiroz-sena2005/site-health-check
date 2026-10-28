@@ -20,7 +20,7 @@
 
 ---
 
-## Phase 2: Frontend "Wait-Before-Leaving" Interaction Pattern, Bottom Alert Banner & UI Polish (TDD)
+## Phase 2: Frontend "Wait-Before-Leaving" Interaction Pattern, Bottom Alert Banner & UI Polish (TDD) [checkpoint: 602da74]
 - [x] Task: Write failing frontend tests for API error extraction, bottom alert banners, and wait-before-leaving behavior (Red Phase) 54a7004
   - [x] Add unit tests in `frontend/src/lib/__tests__/utils.test.ts` for `extractApiErrorMessage` verifying FastAPI string details and Pydantic 422 validation error arrays are converted into clean human-readable messages (stripping `"Value error, "` prefixes)
   - [x] Add component tests in `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx` verifying:
@@ -42,12 +42,12 @@
   - [x] Update `ScheduledScansPage.tsx` to use `extractApiErrorMessage`, await mutations, keep modals/edit views open on error, pass `errorMessage` and `isSubmitting` to `ScanConfigForm`, reset mutation errors on modal toggle/row change, and show errors inside the `"Force Scheduled Scan"` dialog if `"Scan Now"` fails
   - [x] Update `LiveScanPage.tsx` to use `extractApiErrorMessage`, surface launch errors in `ScanConfigForm`'s bottom alert banner without entering the finished/redirect terminal state, and check `res.ok` on `handleStop`
   - [x] Run `cd frontend && env -u LD_LIBRARY_PATH npx vitest run` and verify all existing + new frontend tests pass
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 602da74
 
 ---
 
 ## Phase 3: Full End-to-End Verification & Regression Safety
-- [ ] Task: Full stack test suite and build verification
+- [~] Task: Full stack test suite and build verification
   - [ ] Run full backend `pytest` suite (`.venv/bin/pytest api/ engine/`)
   - [ ] Run full frontend `vitest` suite (`cd frontend && env -u LD_LIBRARY_PATH npx vitest run`)
   - [ ] Run production frontend build (`cd frontend && env -u LD_LIBRARY_PATH npm run build`)
