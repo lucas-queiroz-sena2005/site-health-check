@@ -16,5 +16,5 @@
 - [x] **Track: Orthogonal REST API for the 3 Tables & IP Drawer (`rest_api_orthogonality`)** *Link: [./tracks/rest_api_orthogonality/index.md](./tracks/rest_api_orthogonality/index.md)*
 - [x] **Track: Dumb React Flat Explorer (`frontend_flat_explorer`)** *Link: [./tracks/frontend_flat_explorer/index.md](./tracks/frontend_flat_explorer/index.md)*
 - [x] **Track: Input Sanitization & Error Handling Workflow (`input_sanitization_and_error_handling`)** *Link: [./tracks/input_sanitization_and_error_handling/index.md](./tracks/input_sanitization_and_error_handling/index.md)*
-- [ ] **Track: Evaluator Refactor & SQL Optimization (`evaluator_refactor_and_sql_optimization`)** *Link: [./tracks/evaluator_refactor_and_sql_optimization/index.md](./tracks/evaluator_refactor_and_sql_optimization/index.md)*
+- [~] **Track: Evaluator Refactor & SQL Optimization (`evaluator_refactor_and_sql_optimization`)** *Link: [./tracks/evaluator_refactor_and_sql_optimization/index.md](./tracks/evaluator_refactor_and_sql_optimization/index.md)*
 

@@ -1,49 +1,51 @@
 # Implementation Plan: evaluator_refactor_and_sql_optimization
 
-## Phase 1: Database Pragmas & Micro-Batched Ingestion Buffer
-Refactor SQLite connection pragmas and convert `runner.py` from synchronous single-line commits to an asynchronous micro-batched ingestion buffer with zero-cost void streaming.
+## Phase 1: ORM Lazy-Load Hygiene, SQLite Pragmas & Micro-Batched Ingestion (TDD)
+Eliminate unconditional `lazy="selectin"` cascades on `ScanRun`/`HostState`, configure `PRAGMA synchronous=NORMAL`, and replace per-line synchronous commits with in-batch coalescing and bulk SQLite upserts.
 
-- [ ] Task: Configure `PRAGMA synchronous=NORMAL;` in `api/src/api/database.py` alongside WAL mode.
-- [ ] Task: Implement `_bulk_upsert_deltas_sync` in `runner.py` executing batch upserts in a single SQLite transaction.
-- [ ] Task: Implement async batch buffering in `_ingest_stdout` with dynamic flush triggers (500 items or 100ms timeout) and guaranteed EOF flush.
-- [ ] Task: Implement Stream Void Bypass when `prune_void_hosts` is True:
-  - [ ] Query historical active IPs at run initialization.
-  - [ ] Filter unassigned inactive IPs into in-memory `void_count` without disk write.
-  - [ ] Batch-upsert responsive hosts and ghost candidates.
-- [ ] Task: Unit & integration tests for batched ingestion and EOF flush.
+- [ ] Task: Write failing TDD tests in `api/tests/test_database.py` and `api/tests/test_api_runner.py` for:
+  - [ ] `PRAGMA synchronous=NORMAL` verification.
+  - [ ] `session.get(ScanRun, id)` not triggering `SELECT` queries on `host_states` or `port_states`.
+  - [ ] `_bulk_upsert_deltas_sync` coalescing multiple deltas for the same IP within a single batch (set-union of `resolved_domains` and `discovered_from`, sticky `"open"` TCP status, preserved `subrun_id`).
+  - [ ] `_ingest_stdout` flushing batches on size threshold (500) and on EOF.
+- [ ] Task: Update `api/src/api/database.py` to set `PRAGMA synchronous=NORMAL;` and `api/src/api/models.py` to remove unconditional `"lazy": "selectin"` (adding explicit `selectinload` in `get_run_host_detail` in `runs.py`).
+- [ ] Task: Implement `_bulk_upsert_deltas_sync` and micro-batched `_ingest_stdout` in `api/src/api/services/runner.py`, keeping `_upsert_delta_sync` as a wrapper and using `select(func.count())` in `_finalize_run`.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
 
 ---
 
-## Phase 2: Functional Core Rule Engine Decomposition
-Decompose the domain logic from `evaluator.py` into pure functions in `evaluator_rules.py` following the Functional Core, Imperative Shell pattern.
+## Phase 2: Functional Core Rule Engine Extraction (TDD)
+Extract pure, deterministic evaluation rules into `api/src/api/services/evaluator_rules.py` with zero database dependencies.
 
-- [ ] Task: Create `api/src/api/services/evaluator_rules.py` with pure functions:
-  - [ ] `evaluate_http_check(status_code: int | None) -> tuple[str, str | None]`
-  - [ ] `evaluate_tls_cert(valid: bool, expires_in_days: int, protocol_version: str | None, tls_warning_days: int) -> list[str]`
-  - [ ] `evaluate_port_status(tcp_status: str, check_statuses: list[str], tls_findings: list[str], is_ghost: bool) -> tuple[str, list[str]]`
-  - [ ] `evaluate_host_status(...) -> tuple[str, list[str]]`
-- [ ] Task: Write comprehensive unit tests in `api/tests/test_evaluator_rules.py` covering all branch combinations and finding codes.
+- [ ] Task: Write failing TDD unit tests in `api/tests/test_evaluator_rules.py` covering all branch combinations for:
+  - [ ] `evaluate_http_check` (2xx/3xx OK, 4xx WARNING, 5xx FAILED, None ERROR).
+  - [ ] `evaluate_tls_cert` (invalid, expired, expiring soon within threshold, healthy, deprecated TLS versions SSLv2/SSLv3/TLSv1.0/TLSv1.1 vs TLSv1.2/TLSv1.3).
+  - [ ] `evaluate_port` (closed routine void, closed historical ghost, error TCP, open healthy/warning/failed).
+  - [ ] `evaluate_host_status` (open ports rollup, ghost port warning rollup, error TCP failure rollup, 0 open ports ghost vs void).
+- [ ] Task: Implement `api/src/api/services/evaluator_rules.py` to pass all unit tests.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
 
 ---
 
-## Phase 3: Relational Pushdown & Set-Based SQL Evaluator
-Refactor the imperative shell in `evaluator.py` to push set-based queries down to SQLite, eliminate N+1 relationship loads, and eliminate parameter-overflow in `IN (...)` queries.
+## Phase 3: Relational Pushdown & Set-Based Evaluator Refactor (TDD)
+Refactor `api/src/api/services/evaluator.py` to delegate set operations to SQLite, use `evaluator_rules.py` for non-void candidate hosts, and eliminate SQLite variable-limit overflows.
 
-- [ ] Task: Add eager loading (`selectinload(HostState.ports).selectinload(PortState.http_routing_checks)`) to avoid lazy relationship SELECT queries.
-- [ ] Task: Replace Python 65k-item `.in_(host_ips)` with set-based SQL subquery for historical ghost marking.
-- [ ] Task: Replace Python in-memory list aggregations with SQL `GROUP BY` and `COUNT()` queries for summary metrics.
-- [ ] Task: Replace Python `.in_(void_host_ids)` pruning with set-based SQL `DELETE` queries leveraging foreign key cascades.
-- [ ] Task: Verify all existing tests in `api/tests/test_evaluator.py` pass without regression.
+- [ ] Task: Write failing TDD tests in `api/tests/test_evaluator.py` for:
+  - [ ] Evaluating and pruning $> 35,000$ hosts in a single run (exceeding SQLite's 32,766 bind-parameter limit) without `OperationalError: too many SQL variables`.
+  - [ ] Preserving `scanned_port_count` on active hosts after `prune_closed_ports=True` and preserving idempotency when `evaluate_scan_run` is called a second time after pruning.
+  - [ ] Preserving open ports for future runs' historical ghost detection and preserving ghost hosts/ports for alerts and UI.
+- [ ] Task: Refactor `api/src/api/services/evaluator.py`:
+  - [ ] Use SQL subquery for historical active `(ip_address, port_number)` lookup (1 bind variable).
+  - [ ] Implement set-based SQL fast-path for pure routine void hosts (count + direct subquery delete when `prune_void_hosts=True`, or bulk SQL `UPDATE` when `prune_void_hosts=False`).
+  - [ ] Evaluate non-void / ghost-candidate hosts in chunks of 500 with `selectinload` and `evaluator_rules.py`.
+  - [ ] Perform explicit bottom-up SQL subquery deletes (`HttpRoutingCheck` -> `TlsCertificate` -> `PortState` -> `HostState`) and SQL `GROUP BY` / `COUNT` summary aggregation.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
 
 ---
 
-## Phase 4: /16 Scale Verification & Benchmark
-Verify the complete pipeline against a full synthetic `/16` network (65,536 IPs) to ensure sub-5-second completion and rock-solid memory bounds.
+## Phase 4: End-to-End /16 Scale Benchmark & Full Suite Regression Check
+Verify end-to-end `/16` performance and concurrency safety across the entire test suite.
 
-- [ ] Task: Create synthetic `/16` scale integration benchmark test in `api/tests/test_scale_slash16.py`.
-- [ ] Task: Benchmark API runner completion time with 65,536 targets and verify no SQLite locks, pipe stalls, or parameter errors.
-- [ ] Task: Run full backend test suite (`pytest`) and frontend test suite (`npm test`).
+- [ ] Task: Create `api/tests/test_scale_slash16.py` testing full `/16` (65,536 IPs) batched ingestion + evaluation + pruning + historical ghost diffing on a subsequent run, asserting completion in $< 5$ seconds.
+- [ ] Task: Run full backend test suite (`.venv/bin/pytest`) and frontend test suite (`npm test`) and verify 100% pass rate.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
