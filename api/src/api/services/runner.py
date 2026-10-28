@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi.sse import ServerSentEvent
-from sqlalchemy import column, func
+from sqlalchemy import case, column, func
 from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session, col, delete, select
 
@@ -105,29 +105,54 @@ def _bulk_upsert_deltas_sync(run_id: str, batch: list[tuple[str, dict[str, Any]]
                         existing_routing = ep.setdefault("http_routing_checks", {})
                         existing_routing.update(pdata["http_routing_checks"])
 
-    # 2. Write coalesced batch to SQLite in a single transaction
+    # 2. Write coalesced batch to SQLite using bulk multi-row Core executemany
     with Session(db_engine) as session:
+        conn = session.connection()
+        batch_host_ids = [f"{run_id}_{ip}" for ip in coalesced.keys()]
+        existing_host_rows = conn.execute(
+            select(
+                HostState.id,
+                HostState.resolved_domains,
+                HostState.discovered_from,
+                HostState.subrun_id,
+            ).where(col(HostState.id).in_(batch_host_ids))
+        ).fetchall()
+        existing_hosts_map = {
+            r[0]: {
+                "resolved_domains": r[1] or [],
+                "discovered_from": r[2] or [],
+                "subrun_id": r[3],
+            }
+            for r in existing_host_rows
+        }
+
+        host_rows = []
+        port_rows = []
+        tls_certs = []
+        routing_rows = []
+        ports_with_tls = []
+
         for ip, data in coalesced.items():
             metadata = data.get("metadata", {})
             host_id = f"{run_id}_{ip}"
-            existing_host = session.get(HostState, host_id)
+            existing_host = existing_hosts_map.get(host_id)
 
             incoming_resolved = metadata.get("resolved_domains", [])
-            if existing_host and existing_host.resolved_domains:
+            if existing_host and existing_host["resolved_domains"]:
                 merged_resolved = list(
-                    dict.fromkeys(existing_host.resolved_domains + incoming_resolved)
+                    dict.fromkeys(existing_host["resolved_domains"] + incoming_resolved)
                 )
             else:
                 merged_resolved = list(dict.fromkeys(incoming_resolved))
 
             subrun_id = metadata.get("subrun_id")
             if not subrun_id and existing_host:
-                subrun_id = existing_host.subrun_id
+                subrun_id = existing_host["subrun_id"]
 
             incoming_discovered = metadata.get("discovered_from", [])
-            if existing_host and existing_host.discovered_from:
+            if existing_host and existing_host["discovered_from"]:
                 merged_discovered = list(
-                    dict.fromkeys(existing_host.discovered_from + incoming_discovered)
+                    dict.fromkeys(existing_host["discovered_from"] + incoming_discovered)
                 )
             else:
                 merged_discovered = list(dict.fromkeys(incoming_discovered))
@@ -136,124 +161,119 @@ def _bulk_upsert_deltas_sync(run_id: str, batch: list[tuple[str, dict[str, Any]]
             depth = len(filtered_lineage)
             sort_key = compute_ip_sort_key(ip)
 
-            stmt_host = (
-                insert(HostState)
-                .values(
-                    id=host_id,
-                    scan_run_id=run_id,
-                    ip_address=ip,
-                    ip_sort_key=sort_key,
-                    resolved_domains=merged_resolved,
-                    discovered_from=merged_discovered,
-                    depth=depth,
-                    subrun_id=subrun_id,
-                )
-                .on_conflict_do_update(
-                    index_elements=["scan_run_id", "ip_address"],
-                    set_={
-                        "ip_sort_key": sort_key,
-                        "resolved_domains": merged_resolved,
-                        "discovered_from": merged_discovered,
-                        "depth": depth,
-                        "subrun_id": subrun_id,
-                    },
-                )
-                .returning(column("id"))
+            host_rows.append(
+                {
+                    "id": host_id,
+                    "scan_run_id": run_id,
+                    "ip_address": ip,
+                    "ip_sort_key": sort_key,
+                    "resolved_domains": merged_resolved,
+                    "discovered_from": merged_discovered,
+                    "depth": depth,
+                    "subrun_id": subrun_id,
+                }
             )
 
-            result_host = session.exec(stmt_host).first()
-            host_id = f"{run_id}_{ip}" if result_host is None else str(result_host[0])
-
-            # Upsert PortState
             ports = data.get("ports", {})
             for port_str, port_data in ports.items():
                 port_num = int(port_str)
                 port_id = f"{host_id}_{port_num}"
-                existing_port = session.get(PortState, port_id)
 
-                incoming_tcp = port_data.get("tcp_status", "closed")
-                if existing_port and existing_port.tcp_status == "open":
-                    final_tcp_status = "open"
-                else:
-                    final_tcp_status = incoming_tcp
-
-                incoming_latency = port_data.get("tcp_latency_ms")
-                if incoming_latency is None and existing_port:
-                    final_latency = existing_port.tcp_latency_ms
-                else:
-                    final_latency = incoming_latency
-
-                stmt_port = (
-                    insert(PortState)
-                    .values(
-                        id=port_id,
-                        host_state_id=host_id,
-                        port_number=port_num,
-                        tcp_status=final_tcp_status,
-                        tcp_latency_ms=final_latency,
-                    )
-                    .on_conflict_do_update(
-                        index_elements=["host_state_id", "port_number"],
-                        set_={
-                            "tcp_status": final_tcp_status,
-                            "tcp_latency_ms": final_latency,
-                        },
-                    )
-                    .returning(column("id"))
+                port_rows.append(
+                    {
+                        "id": port_id,
+                        "host_state_id": host_id,
+                        "port_number": port_num,
+                        "tcp_status": port_data.get("tcp_status", "closed"),
+                        "tcp_latency_ms": port_data.get("tcp_latency_ms"),
+                    }
                 )
 
-                result_port = session.exec(stmt_port).first()
-                port_id = (
-                    f"{host_id}_{port_num}" if result_port is None else str(result_port[0])
-                )
-
-                # Handle TLS Certificates
                 tls = port_data.get("tls_certificate")
                 if tls:
-                    session.exec(
-                        delete(TlsCertificate).where(column("port_state_id") == port_id)
+                    ports_with_tls.append(port_id)
+                    tls_certs.append(
+                        TlsCertificate(
+                            id=str(uuid.uuid4()),
+                            port_state_id=port_id,
+                            valid=tls.get("valid", False),
+                            expires_in_days=tls.get("expires_in_days", 0),
+                            issuer=tls.get("issuer"),
+                            protocol_version=tls.get("protocol_version"),
+                            domains_discovered_sans_json=tls.get(
+                                "domains_discovered_sans", []
+                            ),
+                        )
                     )
-                    tls_cert = TlsCertificate(
-                        port_state_id=port_id,
-                        valid=tls.get("valid", False),
-                        expires_in_days=tls.get("expires_in_days", 0),
-                        issuer=tls.get("issuer"),
-                        protocol_version=tls.get("protocol_version"),
-                        domains_discovered_sans_json=tls.get(
-                            "domains_discovered_sans", []
-                        ),
-                    )
-                    session.add(tls_cert)
 
-                # Handle Routing
                 routing = port_data.get("http_routing_checks", {})
                 for domain, r_data in routing.items():
-                    stmt_route = (
-                        insert(HttpRoutingCheck)
-                        .values(
-                            id=f"{port_id}_{domain}",
-                            port_state_id=port_id,
-                            domain=domain,
-                            status_code=r_data.get("status_code"),
-                            http_latency_ms=r_data.get("http_latency_ms"),
-                            path_checked=r_data.get("path_checked", "/"),
-                            redirects_to_url=r_data.get("redirects_to_url"),
-                            server_header=r_data.get("server_header"),
-                            notes=r_data.get("notes"),
-                        )
-                        .on_conflict_do_update(
-                            index_elements=["port_state_id", "domain"],
-                            set_={
-                                "status_code": r_data.get("status_code"),
-                                "http_latency_ms": r_data.get("http_latency_ms"),
-                                "path_checked": r_data.get("path_checked", "/"),
-                                "redirects_to_url": r_data.get("redirects_to_url"),
-                                "server_header": r_data.get("server_header"),
-                                "notes": r_data.get("notes"),
-                            },
-                        )
+                    routing_rows.append(
+                        {
+                            "id": f"{port_id}_{domain}",
+                            "port_state_id": port_id,
+                            "domain": domain,
+                            "status_code": r_data.get("status_code"),
+                            "http_latency_ms": r_data.get("http_latency_ms"),
+                            "path_checked": r_data.get("path_checked", "/"),
+                            "redirects_to_url": r_data.get("redirects_to_url"),
+                            "server_header": r_data.get("server_header"),
+                            "notes": r_data.get("notes"),
+                        }
                     )
-                    session.exec(stmt_route)
+
+        if host_rows:
+            stmt_host = insert(HostState)
+            stmt_host = stmt_host.on_conflict_do_update(
+                index_elements=["scan_run_id", "ip_address"],
+                set_={
+                    "ip_sort_key": stmt_host.excluded.ip_sort_key,
+                    "resolved_domains": stmt_host.excluded.resolved_domains,
+                    "discovered_from": stmt_host.excluded.discovered_from,
+                    "depth": stmt_host.excluded.depth,
+                    "subrun_id": stmt_host.excluded.subrun_id,
+                },
+            )
+            conn.execute(stmt_host, host_rows)
+
+        if port_rows:
+            stmt_port = insert(PortState)
+            stmt_port = stmt_port.on_conflict_do_update(
+                index_elements=["host_state_id", "port_number"],
+                set_={
+                    "tcp_status": case(
+                        (PortState.tcp_status == "open", "open"),
+                        else_=stmt_port.excluded.tcp_status,
+                    ),
+                    "tcp_latency_ms": func.coalesce(
+                        stmt_port.excluded.tcp_latency_ms, PortState.tcp_latency_ms
+                    ),
+                },
+            )
+            conn.execute(stmt_port, port_rows)
+
+        if ports_with_tls:
+            session.exec(
+                delete(TlsCertificate).where(
+                    col(TlsCertificate.port_state_id).in_(ports_with_tls)
+                )
+            )
+            session.add_all(tls_certs)
+
+        if routing_rows:
+            stmt_route = insert(HttpRoutingCheck)
+            stmt_route = stmt_route.on_conflict_do_update(
+                index_elements=["port_state_id", "domain"],
+                set_={
+                    "status_code": stmt_route.excluded.status_code,
+                    "http_latency_ms": stmt_route.excluded.http_latency_ms,
+                    "path_checked": stmt_route.excluded.path_checked,
+                    "redirects_to_url": stmt_route.excluded.redirects_to_url,
+                    "server_header": stmt_route.excluded.server_header,
+                    "notes": stmt_route.excluded.notes,
+                },
+            )
+            conn.execute(stmt_route, routing_rows)
 
         session.commit()
 
