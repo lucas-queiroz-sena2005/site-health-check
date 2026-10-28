@@ -8,15 +8,15 @@
   - [x] Add unit tests asserting valid integer ports (`80`, `443`) and port range strings (`"8080-8090"`) succeed on both create (`POST`), replace (`PUT`), and partial update (`PATCH`), while invalid ports (`0`, `70000`, `"abc"`, `"9000-8000"`) return HTTP 422 without triggering `SystemExit`
   - [x] Add unit tests asserting `ghost_window` must match `^\d+[smhd]$`, `tls_warning_days >= 0`, and `alert_config.webhook_url` coerces `""` to `None` while rejecting invalid non-HTTP strings
   - [x] Add unit tests in `api/tests/test_api_scheduler.py` verifying `check_and_run_scheduled_scans` catches `CroniterBadCronError` and logs a concise warning without unhandled tracebacks
-- [~] Task: Implement backend validators, sanitizers, and scheduler resilience (Green & Refactor Phase)
-  - [ ] Keep `ExecutionConfig` default `targets=[]` and `ports=[]` permissive so `ExecutionConfig()`, `ScanResponse`, `ScanRunResponse`, and `POST /api/runs` (`{"scan_id": "..."}` and `{"targets": []}` returning 400) remain 100% backward-compatible
-  - [ ] Implement pure target & port sanitization/validation helpers in `api/src/api/models.py` (reusing `engine.parsing.validate_and_clean_target` and validating port integers/ranges without `@exit_on_error`)
-  - [ ] Add `ghost_window`, `tls_warning_days`, and `AlertConfig.webhook_url` validators in `api/src/api/models.py`
-  - [ ] Add `name`, `cron_expression`, and non-empty `targets`/`ports` validators on `ScanCreateRequest` and `ScanUpdateRequest` (updating `ScanUpdateRequest.ports` to `list[str | int] | None`) in `api/src/api/routers/scans.py`
-  - [ ] Add `name` and `table_sort_dir` validators on `SavedViewCreate` in `api/src/api/routers/views.py`
-  - [ ] Update `api/src/api/services/scheduler.py` to catch `croniter.CroniterBadCronError` with `logger.warning`
-  - [ ] Run `.venv/bin/pytest api/` and verify all 108 existing tests + new tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Implement backend validators, sanitizers, and scheduler resilience (Green & Refactor Phase) 4b791cb
+  - [x] Keep `ExecutionConfig` default `targets=[]` and `ports=[]` permissive so `ExecutionConfig()`, `ScanResponse`, `ScanRunResponse`, and `POST /api/runs` (`{"scan_id": "..."}` and `{"targets": []}` returning 400) remain 100% backward-compatible
+  - [x] Implement pure target & port sanitization/validation helpers in `api/src/api/models.py` (reusing `engine.parsing.validate_and_clean_target` and validating port integers/ranges without `@exit_on_error`)
+  - [x] Add `ghost_window`, `tls_warning_days`, and `AlertConfig.webhook_url` validators in `api/src/api/models.py`
+  - [x] Add `name`, `cron_expression`, and non-empty `targets`/`ports` validators on `ScanCreateRequest` and `ScanUpdateRequest` (updating `ScanUpdateRequest.ports` to `list[str | int] | None`) in `api/src/api/routers/scans.py`
+  - [x] Add `name` and `table_sort_dir` validators on `SavedViewCreate` in `api/src/api/routers/views.py`
+  - [x] Update `api/src/api/services/scheduler.py` to catch `croniter.CroniterBadCronError` with `logger.warning`
+  - [x] Run `.venv/bin/pytest api/` and verify all 108 existing tests + new tests pass
+- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
 
