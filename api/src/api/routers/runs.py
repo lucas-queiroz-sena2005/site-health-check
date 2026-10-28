@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, sta
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import Field as PydanticField
 from sqlalchemy import String, func, or_
+from sqlalchemy.orm import selectinload
 from sqlmodel import col, desc, select
 
 from api.database import SessionDep
@@ -362,6 +363,10 @@ def get_run_host_detail(
     ports = session.exec(
         select(PortState)
         .where(PortState.host_state_id == host.id)
+        .options(
+            selectinload(PortState.tls_certificate),
+            selectinload(PortState.http_routing_checks),
+        )
         .order_by(PortState.port_number.asc())
     ).all()
 

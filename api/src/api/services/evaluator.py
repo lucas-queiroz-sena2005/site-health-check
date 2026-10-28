@@ -1,5 +1,7 @@
 from datetime import UTC, datetime, timedelta
 import re
+from sqlalchemy import column, func, or_, update
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, delete, select
 
 from api.models import (
@@ -11,19 +13,24 @@ from api.models import (
     ScanRunStatus,
     TlsCertificate,
 )
-
-# Canonical Finding Codes per ADR 0023
-FINDING_TCP_CLOSED = "TCP_CLOSED"
-FINDING_TLS_INVALID = "TLS_INVALID"
-FINDING_TLS_EXPIRED = "TLS_EXPIRED"
-FINDING_TLS_EXPIRING_SOON = "TLS_EXPIRING_SOON"
-FINDING_TLS_DEPRECATED_VERSION = "TLS_DEPRECATED_VERSION"
-FINDING_HTTP_5XX = "HTTP_5XX"
-FINDING_HTTP_4XX = "HTTP_4XX"
-FINDING_HTTP_ERROR = "HTTP_ERROR"
-FINDING_HOST_GHOST = "HOST_GHOST"
-FINDING_HOST_VOID = "HOST_VOID"
-FINDING_RUN_ABORTED = "RUN_ABORTED"
+from api.services.evaluator_rules import (
+    FINDING_HOST_GHOST,
+    FINDING_HOST_VOID,
+    FINDING_HTTP_4XX,
+    FINDING_HTTP_5XX,
+    FINDING_HTTP_ERROR,
+    FINDING_RUN_ABORTED,
+    FINDING_TCP_CLOSED,
+    FINDING_TLS_DEPRECATED_VERSION,
+    FINDING_TLS_EXPIRED,
+    FINDING_TLS_EXPIRING_SOON,
+    FINDING_TLS_INVALID,
+    evaluate_host_status,
+    evaluate_http_check,
+    evaluate_port,
+    evaluate_tls_cert,
+    is_deprecated_tls,
+)
 
 _TLS_VERSION_RANK = {
     "SSLv2": 1,
@@ -34,13 +41,6 @@ _TLS_VERSION_RANK = {
     "TLSv1.2": 5,
     "TLSv1.3": 6,
 }
-
-
-def _is_deprecated_tls(version: str | None) -> bool:
-    if not version:
-        return False
-    v = version.strip()
-    return _TLS_VERSION_RANK.get(v, 5) < 5
 
 
 def _parse_ghost_window(window_str: str | None) -> timedelta | None:
@@ -61,10 +61,11 @@ def evaluate_scan_run(
     ghost_window_override: str | None = None,
     tls_warning_days_override: int | None = None,
 ) -> dict[str, int]:
-    """Bottom-up deterministic evaluation pipeline per ADR 0023 Track 2 & Track 3.
+    """Bottom-up deterministic evaluation pipeline per ADR 0023 and ADR 0024.
 
     Computes Level 1 (HttpRoutingCheck) -> Level 2 (PortState) -> Level 3 (HostState)
     finding codes, statuses, rollups, and ScanRun.metrics_json["summary"] in one pass.
+    Utilizes SQL subqueries and set-based operations to avoid SQLite variable limits at /16 scale.
     """
     default_summary = {
         "active": 0,
@@ -90,21 +91,24 @@ def evaluate_scan_run(
         if tls_warning_days_override is not None
         else (snapshot.get("tls_warning_days") or 30)
     )
+    prune_void_hosts = bool(snapshot.get("prune_void_hosts", True))
+    prune_closed_ports = bool(snapshot.get("prune_closed_ports", True))
 
-    stmt_hosts = select(HostState).where(HostState.scan_run_id == scan_run_id)
-    hosts = list(session.exec(stmt_hosts).all())
-
-    # Determine historical active (ip, port) pairs and IPs within ghost window
+    # 1. Determine historical active (ip, port) pairs via SQL subquery (avoiding Python IP lists)
     historical_active_ip_ports: set[tuple[str, int]] = set()
     historical_active_ips: set[str] = set()
     ghost_window_td = _parse_ghost_window(ghost_window_str)
 
-    if hosts and ghost_window_td is not None:
+    current_run_ips_subq = (
+        select(HostState.ip_address)
+        .where(HostState.scan_run_id == scan_run_id)
+    )
+
+    if ghost_window_td is not None:
         now_dt = run.started_at or datetime.now(UTC)
         if now_dt.tzinfo is None:
             now_dt = now_dt.replace(tzinfo=UTC)
         cutoff = now_dt - ghost_window_td
-        host_ips = [h.ip_address for h in hosts]
 
         hist_stmt = (
             select(HostState.ip_address, PortState.port_number)
@@ -114,15 +118,103 @@ def evaluate_scan_run(
             .where(col(ScanRun.started_at) >= cutoff)
             .where(ScanRun.status == ScanRunStatus.COMPLETED)
             .where(col(ScanRun.id) != scan_run_id)
-            .where(col(HostState.ip_address).in_(host_ips))
+            .where(col(HostState.ip_address).in_(current_run_ips_subq))
             .distinct()
         )
         historical_active_ip_ports = set(session.exec(hist_stmt).all())
         historical_active_ips = {ip for ip, _ in historical_active_ip_ports}
 
-    calculated_void_hosts = 0
+    # 2. Relational pushdown: Identify candidate hosts vs pure routine void hosts
+    candidate_or_conditions = [
+        HostState.id.in_(
+            select(PortState.host_state_id).where(PortState.tcp_status != "closed")
+        ),
+        HostState.id.in_(
+            select(PortState.host_state_id).join(
+                TlsCertificate, col(PortState.id) == col(TlsCertificate.port_state_id)
+            )
+        ),
+        HostState.id.in_(
+            select(PortState.host_state_id).join(
+                HttpRoutingCheck,
+                col(PortState.id) == col(HttpRoutingCheck.port_state_id),
+            )
+        ),
+    ]
+    if historical_active_ips:
+        candidate_or_conditions.append(HostState.ip_address.in_(historical_active_ips))
 
-    for host in hosts:
+    candidate_host_subq = (
+        select(HostState.id)
+        .where(HostState.scan_run_id == scan_run_id)
+        .where(or_(*candidate_or_conditions))
+    )
+
+    pure_void_subq = (
+        select(HostState.id)
+        .where(HostState.scan_run_id == scan_run_id)
+        .where(~HostState.id.in_(candidate_host_subq))
+    )
+
+    pure_void_count = (
+        session.exec(
+            select(func.count())
+            .select_from(HostState)
+            .where(HostState.scan_run_id == scan_run_id)
+            .where(~HostState.id.in_(candidate_host_subq))
+        ).one()
+        or 0
+    )
+
+    # 3. Handle pure routine void hosts fast-path (SQL set-based)
+    if prune_void_hosts:
+        if pure_void_count > 0:
+            pure_void_ports_subq = (
+                select(PortState.id).where(PortState.host_state_id.in_(pure_void_subq))
+            )
+            session.exec(delete(PortState).where(PortState.id.in_(pure_void_ports_subq)))
+            session.exec(delete(HostState).where(HostState.id.in_(pure_void_subq)))
+    else:
+        if pure_void_count > 0:
+            session.exec(
+                update(HostState)
+                .where(HostState.scan_run_id == scan_run_id)
+                .where(~HostState.id.in_(candidate_host_subq))
+                .values(
+                    status=EntityStatus.VOID,
+                    finding_codes=[],
+                    open_port_count=0,
+                    vhost_count=0,
+                    depth=0,
+                )
+            )
+            pure_void_ports_subq = (
+                select(PortState.id).where(PortState.host_state_id.in_(pure_void_subq))
+            )
+            session.exec(
+                update(PortState)
+                .where(PortState.id.in_(pure_void_ports_subq))
+                .values(
+                    status=EntityStatus.VOID,
+                    finding_codes=[FINDING_TCP_CLOSED],
+                )
+            )
+
+    # 4. Load remaining candidate hosts with eager loading for detailed rule evaluation
+    candidate_hosts_stmt = (
+        select(HostState)
+        .where(HostState.scan_run_id == scan_run_id)
+        .where(HostState.id.in_(candidate_host_subq))
+        .options(
+            selectinload(HostState.ports).selectinload(PortState.tls_certificate),
+            selectinload(HostState.ports).selectinload(PortState.http_routing_checks),
+        )
+    )
+    candidate_hosts = list(session.exec(candidate_hosts_stmt).all())
+
+    candidate_void_count = 0
+
+    for host in candidate_hosts:
         open_ports: list[PortState] = []
         host_findings: list[str] = []
         worst_http_statuses_on_host: list[int] = []
@@ -130,33 +222,17 @@ def evaluate_scan_run(
         min_tls_days_list: list[int] = []
         has_ghost_port = False
 
-        # First check if the host has any open ports
-        has_any_open_port = any(p.tcp_status == "open" for p in host.ports)
-
-        # Process each port (Level 2) and its checks (Level 1)
         for port in host.ports:
-            port_findings: list[str] = []
-            check_statuses: list[str] = []
+            port_check_statuses: list[str] = []
+            port_check_findings: list[str] = []
             worst_http_status_on_port: int | None = None
 
-            # Level 1: HTTP checks
+            # Level 1: HTTP routing checks
             for check in port.http_routing_checks:
-                if check.status_code is None:
-                    check.status = "failed"
-                    check.finding_code = FINDING_HTTP_ERROR
-                elif check.status_code >= 500:
-                    check.status = "failed"
-                    check.finding_code = FINDING_HTTP_5XX
-                elif check.status_code >= 400:
-                    check.status = "warning"
-                    check.finding_code = FINDING_HTTP_4XX
-                else:
-                    check.status = "ok"
-                    check.finding_code = None
-
-                check_statuses.append(check.status)
-                if check.finding_code and check.finding_code not in port_findings:
-                    port_findings.append(check.finding_code)
+                check.status, check.finding_code = evaluate_http_check(check.status_code)
+                port_check_statuses.append(check.status)
+                if check.finding_code and check.finding_code not in port_check_findings:
+                    port_check_findings.append(check.finding_code)
 
                 if check.status_code is not None:
                     if worst_http_status_on_port is None or check.status_code > worst_http_status_on_port:
@@ -164,7 +240,7 @@ def evaluate_scan_run(
                     worst_http_statuses_on_host.append(check.status_code)
                 session.add(check)
 
-            # Level 2: Port rollups
+            # Level 2: Port rollups & TLS cert evaluation
             port.san_count = (
                 len(port.tls_certificate.domains_discovered_sans_json)
                 if port.tls_certificate and port.tls_certificate.domains_discovered_sans_json
@@ -173,81 +249,53 @@ def evaluate_scan_run(
             port.http_check_count = len(port.http_routing_checks)
             port.worst_http_status = worst_http_status_on_port
 
-            is_open = port.tcp_status == "open"
-            if not is_open:
-                if FINDING_TCP_CLOSED not in port_findings:
-                    port_findings.append(FINDING_TCP_CLOSED)
-
-                # Distinguish ghost port vs routine void port
-                was_port_historically_open = (
-                    host.ip_address,
-                    port.port_number,
-                ) in historical_active_ip_ports
-                if was_port_historically_open:
-                    port.status = EntityStatus.GHOST
-                    has_ghost_port = True
-                    if FINDING_HOST_GHOST not in port_findings:
-                        port_findings.append(FINDING_HOST_GHOST)
-                    if FINDING_HOST_GHOST not in host_findings:
-                        host_findings.append(FINDING_HOST_GHOST)
-                else:
-                    port.status = EntityStatus.VOID
-                    if port.tcp_status == "error":
-                        for f in port_findings:
-                            if f not in host_findings:
-                                host_findings.append(f)
-            else:
-                open_ports.append(port)
-                # TLS Certificate evaluation
+            tls_findings: list[str] = []
+            if port.tls_certificate:
                 cert = port.tls_certificate
-                if cert:
-                    if cert.protocol_version:
-                        tls_versions_on_host.append(cert.protocol_version)
+                if cert.protocol_version:
+                    tls_versions_on_host.append(cert.protocol_version)
 
-                    if not cert.valid:
-                        port_findings.append(FINDING_TLS_INVALID)
-                    elif cert.expires_in_days <= 0:
-                        port_findings.append(FINDING_TLS_EXPIRED)
-                    elif cert.expires_in_days <= tls_warning_days:
-                        port_findings.append(FINDING_TLS_EXPIRING_SOON)
-                        min_tls_days_list.append(cert.expires_in_days)
-                    else:
-                        min_tls_days_list.append(cert.expires_in_days)
-
-                    if _is_deprecated_tls(cert.protocol_version):
-                        port_findings.append(FINDING_TLS_DEPRECATED_VERSION)
-
-                # Assign Port status: HTTP 5xx / timeout errors and invalid/expired TLS fail the service;
-                # expiring-soon / deprecated TLS and HTTP 4xx are warnings.
-                has_port_failure = (
-                    any(s == "failed" for s in check_statuses)
-                    or FINDING_TLS_INVALID in port_findings
-                    or FINDING_TLS_EXPIRED in port_findings
+                tls_findings, cert_min_days = evaluate_tls_cert(
+                    valid=cert.valid,
+                    expires_in_days=cert.expires_in_days,
+                    protocol_version=cert.protocol_version,
+                    tls_warning_days=tls_warning_days,
                 )
-                has_port_warning = (
-                    any(s == "warning" for s in check_statuses)
-                    or FINDING_TLS_EXPIRING_SOON in port_findings
-                    or FINDING_TLS_DEPRECATED_VERSION in port_findings
-                )
+                if cert_min_days is not None:
+                    min_tls_days_list.append(cert_min_days)
 
-                if has_port_failure:
-                    port.status = EntityStatus.FAILED
-                elif has_port_warning:
-                    port.status = EntityStatus.WARNING
-                else:
-                    port.status = EntityStatus.OK
+            was_port_hist_open = (
+                host.ip_address,
+                port.port_number,
+            ) in historical_active_ip_ports
 
-                for f in port_findings:
-                    if f not in host_findings:
-                        host_findings.append(f)
-
+            port_status, port_findings, is_ghost = evaluate_port(
+                tcp_status=port.tcp_status,
+                check_statuses=port_check_statuses,
+                check_findings=port_check_findings,
+                tls_findings=tls_findings,
+                was_historically_open=was_port_hist_open,
+            )
+            port.status = port_status
             port.finding_codes = port_findings
+
+            if port.tcp_status == "open":
+                open_ports.append(port)
+            if is_ghost:
+                has_ghost_port = True
+                if FINDING_HOST_GHOST not in host_findings:
+                    host_findings.append(FINDING_HOST_GHOST)
+
+            for f in port_findings:
+                if f != FINDING_TCP_CLOSED and f not in host_findings:
+                    host_findings.append(f)
+
             session.add(port)
 
-        # Level 3: HostState rollups
-        filtered_disc = [d for d in host.discovered_from if d != host.ip_address]
+        # Level 3: Host rollups
+        filtered_disc = [d for d in (host.discovered_from or []) if d != host.ip_address]
         host.depth = len(filtered_disc)
-        host.vhost_count = len(host.resolved_domains)
+        host.vhost_count = len(host.resolved_domains or [])
         host.scanned_port_count = max(host.scanned_port_count or 0, len(host.ports))
         host.open_port_count = len(open_ports)
 
@@ -267,31 +315,108 @@ def evaluate_scan_run(
             max(worst_http_statuses_on_host) if worst_http_statuses_on_host else None
         )
 
-        # Host status evaluation (rolling up open ports + ghost port detection)
-        if host.open_port_count == 0:
-            if host.ip_address in historical_active_ips:
-                host.status = EntityStatus.GHOST
-                if FINDING_HOST_GHOST not in host_findings:
-                    host_findings.append(FINDING_HOST_GHOST)
-            else:
-                calculated_void_hosts += 1
-                host.status = EntityStatus.VOID
-        else:
-            has_open_failure = any(p.status == EntityStatus.FAILED for p in open_ports) or any(
-                p.tcp_status == "error" for p in host.ports
-            )
-            has_open_warning = (
-                any(p.status == EntityStatus.WARNING for p in open_ports) or has_ghost_port
-            )
-            if has_open_failure:
-                host.status = EntityStatus.FAILED
-            elif has_open_warning:
-                host.status = EntityStatus.WARNING
-            else:
-                host.status = EntityStatus.OK
+        has_error_port = any(p.tcp_status == "error" for p in host.ports)
+        open_port_statuses = [p.status for p in open_ports]
 
+        was_ip_hist_active = host.ip_address in historical_active_ips
+
+        host_status, host_findings = evaluate_host_status(
+            open_port_count=host.open_port_count,
+            open_port_statuses=open_port_statuses,
+            has_error_port=has_error_port,
+            has_ghost_port=has_ghost_port,
+            was_ip_historically_active=was_ip_hist_active,
+            initial_findings=host_findings,
+        )
+        host.status = host_status
         host.finding_codes = host_findings
+
+        if host.status == EntityStatus.VOID:
+            candidate_void_count += 1
+
         session.add(host)
+
+    # Flush changes to candidate hosts so subsequent queries and pruning reflect new statuses
+    session.flush()
+
+    # 5. Pruning for candidate hosts
+    if prune_void_hosts:
+        void_cand_host_subq = (
+            select(HostState.id)
+            .where(HostState.scan_run_id == scan_run_id)
+            .where(HostState.status == EntityStatus.VOID)
+        )
+        void_cand_ports_subq = (
+            select(PortState.id).where(PortState.host_state_id.in_(void_cand_host_subq))
+        )
+        session.exec(delete(HttpRoutingCheck).where(HttpRoutingCheck.port_state_id.in_(void_cand_ports_subq)))
+        session.exec(delete(TlsCertificate).where(TlsCertificate.port_state_id.in_(void_cand_ports_subq)))
+        session.exec(delete(PortState).where(PortState.id.in_(void_cand_ports_subq)))
+        session.exec(delete(HostState).where(HostState.id.in_(void_cand_host_subq)))
+
+    if prune_closed_ports:
+        routine_closed_port_subq = (
+            select(PortState.id)
+            .join(HostState, col(PortState.host_state_id) == col(HostState.id))
+            .where(HostState.scan_run_id == scan_run_id)
+            .where(HostState.status != EntityStatus.VOID)
+            .where(PortState.status == EntityStatus.VOID)
+        )
+        session.exec(delete(HttpRoutingCheck).where(HttpRoutingCheck.port_state_id.in_(routine_closed_port_subq)))
+        session.exec(delete(TlsCertificate).where(TlsCertificate.port_state_id.in_(routine_closed_port_subq)))
+        session.exec(delete(PortState).where(PortState.id.in_(routine_closed_port_subq)))
+
+    # 6. SQL aggregations for summary metrics
+    active_count = (
+        session.exec(
+            select(func.count())
+            .select_from(HostState)
+            .where(
+                HostState.scan_run_id == scan_run_id,
+                HostState.open_port_count > 0,
+                HostState.status == EntityStatus.OK,
+            )
+        ).one()
+        or 0
+    )
+
+    warning_count = (
+        session.exec(
+            select(func.count())
+            .select_from(HostState)
+            .where(
+                HostState.scan_run_id == scan_run_id,
+                HostState.open_port_count > 0,
+                HostState.status == EntityStatus.WARNING,
+            )
+        ).one()
+        or 0
+    )
+
+    failed_count = (
+        session.exec(
+            select(func.count())
+            .select_from(HostState)
+            .where(
+                HostState.scan_run_id == scan_run_id,
+                HostState.open_port_count > 0,
+                HostState.status == EntityStatus.FAILED,
+            )
+        ).one()
+        or 0
+    )
+
+    ghost_count = (
+        session.exec(
+            select(func.count())
+            .select_from(HostState)
+            .where(
+                HostState.scan_run_id == scan_run_id,
+                HostState.status == EntityStatus.GHOST,
+            )
+        ).one()
+        or 0
+    )
 
     existing_void = (
         int(run.metrics_json["summary"]["void"])
@@ -301,30 +426,43 @@ def evaluate_scan_run(
         and "void" in run.metrics_json["summary"]
         else None
     )
-    void_hosts_count = sum(1 for h in hosts if h.status == EntityStatus.VOID)
+
+    total_void_found = pure_void_count + candidate_void_count
     final_void = (
         void_count
         if void_count is not None
-        else (existing_void if existing_void is not None else void_hosts_count)
+        else (existing_void if existing_void is not None else total_void_found)
     )
 
-    total_service_count = sum(
-        1
-        for h in hosts
-        for p in h.ports
-        if p.status != EntityStatus.VOID
+    total_service_count = (
+        session.exec(
+            select(func.count())
+            .select_from(PortState)
+            .join(HostState, col(PortState.host_state_id) == col(HostState.id))
+            .where(
+                HostState.scan_run_id == scan_run_id,
+                PortState.status != EntityStatus.VOID,
+            )
+        ).one()
+        or 0
     )
-    total_http_check_count = sum(
-        len(p.http_routing_checks)
-        for h in hosts
-        for p in h.ports
+
+    total_http_check_count = (
+        session.exec(
+            select(func.count())
+            .select_from(HttpRoutingCheck)
+            .join(PortState, col(HttpRoutingCheck.port_state_id) == col(PortState.id))
+            .join(HostState, col(PortState.host_state_id) == col(HostState.id))
+            .where(HostState.scan_run_id == scan_run_id)
+        ).one()
+        or 0
     )
 
     summary = {
-        "active": sum(1 for h in hosts if h.open_port_count > 0 and h.status == EntityStatus.OK),
-        "warning": sum(1 for h in hosts if h.open_port_count > 0 and h.status == EntityStatus.WARNING),
-        "failed": sum(1 for h in hosts if h.open_port_count > 0 and h.status == EntityStatus.FAILED),
-        "ghost": sum(1 for h in hosts if h.status == EntityStatus.GHOST),
+        "active": active_count,
+        "warning": warning_count,
+        "failed": failed_count,
+        "ghost": ghost_count,
         "void": final_void,
         "service_count": total_service_count,
         "http_check_count": total_http_check_count,
@@ -335,37 +473,5 @@ def evaluate_scan_run(
     run.metrics_json = metrics
     session.add(run)
     session.commit()
-
-    # Unified pruning pipeline
-    prune_void_hosts = bool(snapshot.get("prune_void_hosts", True))
-    prune_closed_ports = bool(snapshot.get("prune_closed_ports", True))
-
-    void_host_ids = [h.id for h in hosts if h.status == EntityStatus.VOID]
-    if prune_void_hosts and void_host_ids:
-        port_stmt = select(PortState.id).where(col(PortState.host_state_id).in_(void_host_ids))
-        port_ids = list(session.exec(port_stmt).all())
-        if port_ids:
-            session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(port_ids)))
-            session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(port_ids)))
-            session.exec(delete(PortState).where(col(PortState.id).in_(port_ids)))
-        session.exec(delete(HostState).where(col(HostState.id).in_(void_host_ids)))
-
-    if prune_closed_ports:
-        kept_host_ids = [h.id for h in hosts if h.status != EntityStatus.VOID]
-        if kept_host_ids:
-            routine_closed_port_ids = [
-                p.id
-                for h in hosts
-                if h.id in kept_host_ids
-                for p in h.ports
-                if p.status == EntityStatus.VOID
-            ]
-            if routine_closed_port_ids:
-                session.exec(delete(HttpRoutingCheck).where(col(HttpRoutingCheck.port_state_id).in_(routine_closed_port_ids)))
-                session.exec(delete(TlsCertificate).where(col(TlsCertificate.port_state_id).in_(routine_closed_port_ids)))
-                session.exec(delete(PortState).where(col(PortState.id).in_(routine_closed_port_ids)))
-
-    if (prune_void_hosts and void_host_ids) or prune_closed_ports:
-        session.commit()
 
     return summary

@@ -23,7 +23,7 @@ def db_session_fixture():
 
 
 def test_sqlite_pragmas():
-    """Verify that the application SQLite engine configures WAL mode, foreign keys, and busy_timeout."""
+    """Verify that the application SQLite engine configures WAL mode, foreign keys, busy_timeout, and synchronous=NORMAL."""
     with Session(engine) as session:
         fk = session.execute(text("PRAGMA foreign_keys;")).scalar()
         assert fk == 1, "Foreign keys should be enabled (PRAGMA foreign_keys=ON)"
@@ -33,6 +33,53 @@ def test_sqlite_pragmas():
 
         journal_mode = session.execute(text("PRAGMA journal_mode;")).scalar()
         assert str(journal_mode).lower() in ("wal", "memory"), "Journal mode should be WAL"
+
+        sync_mode = session.execute(text("PRAGMA synchronous;")).scalar()
+        assert sync_mode == 1, "Synchronous mode should be NORMAL (1)"
+
+
+def test_global_engine_sqlite_pragmas():
+    """Verify that any SQLite engine receives foreign_keys=ON and synchronous=NORMAL globally."""
+    test_eng = create_engine("sqlite://")
+    with Session(test_eng) as session:
+        fk = session.execute(text("PRAGMA foreign_keys;")).scalar()
+        assert fk == 1, "Global SQLite listener must enable foreign_keys"
+        sync = session.execute(text("PRAGMA synchronous;")).scalar()
+        assert sync == 1, "Global SQLite listener must set synchronous=NORMAL (1)"
+
+
+def test_scan_run_get_does_not_cascade_load_hosts_or_ports(db_session: Session):
+    """Verify session.get(ScanRun, id) does NOT issue SELECT queries for HostState or PortState."""
+    run = models.ScanRun(execution_config_snapshot_json={})
+    db_session.add(run)
+    db_session.commit()
+    run_id = run.id
+
+    host = models.HostState(scan_run_id=run_id, ip_address="192.168.1.1")
+    db_session.add(host)
+    db_session.commit()
+
+    port = models.PortState(host_state_id=host.id, port_number=80)
+    db_session.add(port)
+    db_session.commit()
+
+    db_session.expunge_all()
+
+    queries = []
+    from sqlalchemy import event
+
+    def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+        queries.append(statement)
+
+    event.listen(db_session.bind, "before_cursor_execute", before_cursor_execute)
+    try:
+        loaded_run = db_session.get(models.ScanRun, run_id)
+        assert loaded_run is not None
+        executed_sql = " ".join(queries).lower()
+        assert "host_states" not in executed_sql, "ScanRun retrieval must NOT eagerly load host_states"
+        assert "port_states" not in executed_sql, "ScanRun retrieval must NOT eagerly load port_states"
+    finally:
+        event.remove(db_session.bind, "before_cursor_execute", before_cursor_execute)
 
 
 def test_target_group_retired():

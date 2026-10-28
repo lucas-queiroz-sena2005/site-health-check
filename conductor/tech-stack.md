@@ -3,7 +3,8 @@
 ## Backend
 - **Language:** Python
 - **Framework:** FastAPI
-- **Database:** SQLite (with SQLModel / SQLAlchemy; database-agnostic normalized sorting)
+- **Database:** SQLite with database-agnostic schema design (WAL mode, `synchronous=NORMAL`, `foreign_keys=ON`; normalized `ip_sort_key` for portable sorting; SQLModel / SQLAlchemy Core multi-row bulk upserts and set-based relational pushdown)
+- **Evaluation Architecture:** Pure functional rule core (`evaluator_rules.py`) with 100% test branch coverage separated from relational subquery pushdown engine (`evaluator.py`)
 - **API Architecture:** Dedicated flat table DTOs (`Page[T]`, `HostRowDTO`, `ServiceRowDTO`, `HttpCheckRowDTO`, `HostDetailDTO`), SQL-level pagination and multi-status filtering
 
 ## Frontend
