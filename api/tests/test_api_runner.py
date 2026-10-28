@@ -532,4 +532,97 @@ def test_finalize_run_pruning_toggles(test_engine):
             assert ports_ghost[0].tcp_status == "closed"
 
 
+def test_bulk_upsert_deltas_sync_coalescing(test_engine):
+    """Verify _bulk_upsert_deltas_sync coalesces multiple deltas for the same IP in a single transaction."""
+    from api.services.runner import _bulk_upsert_deltas_sync
+
+    with patch("api.services.runner.db_engine", test_engine):
+        run_id = str(uuid.uuid4())
+        ip = "192.168.1.50"
+        delta1 = (
+            ip,
+            {
+                "metadata": {
+                    "subrun_id": "sub_1",
+                    "resolved_domains": ["vhost1.com"],
+                    "discovered_from": ["192.168.1.1"],
+                },
+                "ports": {
+                    "80": {"tcp_status": "open", "tcp_latency_ms": 10},
+                    "443": {"tcp_status": "closed", "tcp_latency_ms": None},
+                },
+            },
+        )
+        delta2 = (
+            ip,
+            {
+                "metadata": {
+                    "resolved_domains": ["vhost2.com"],
+                    "discovered_from": ["vhost1.com"],
+                },
+                "ports": {
+                    "80": {"tcp_status": "closed", "tcp_latency_ms": None},  # Should NOT overwrite sticky 'open'
+                    "443": {"tcp_status": "open", "tcp_latency_ms": 15},     # Flips to open
+                },
+            },
+        )
+
+        _bulk_upsert_deltas_sync(run_id, [delta1, delta2])
+
+        with Session(test_engine) as session:
+            host = session.exec(
+                select(HostState).where(
+                    HostState.scan_run_id == run_id, HostState.ip_address == ip
+                )
+            ).first()
+            assert host is not None
+            assert host.subrun_id == "sub_1"
+            assert set(host.resolved_domains) == {"vhost1.com", "vhost2.com"}
+            assert set(host.discovered_from) == {"192.168.1.1", "vhost1.com"}
+
+            ports = session.exec(
+                select(PortState).where(PortState.host_state_id == host.id)
+            ).all()
+            p_map = {p.port_number: p for p in ports}
+            assert p_map[80].tcp_status == "open", "Sticky open status must be preserved"
+            assert p_map[443].tcp_status == "open", "Port 443 opened in second delta must be open"
+
+
+@pytest.mark.asyncio
+async def test_ingest_stdout_micro_batching():
+    """Verify _ingest_stdout flushes batches of up to 500 deltas and flushes remaining deltas on EOF."""
+    from unittest.mock import AsyncMock, MagicMock
+    from api.services.runner import _ingest_stdout
+
+    lines = []
+    for i in range(505):
+        ip = f"10.0.{(i // 256)}.{(i % 256)}"
+        line_data = {
+            ip: {
+                "metadata": {"subrun_id": "sub_test"},
+                "ports": {"80": {"tcp_status": "closed"}},
+            }
+        }
+        import json
+        lines.append((json.dumps(line_data) + "\n").encode("utf-8"))
+
+    mock_stdout = AsyncMock()
+    mock_stdout.readline = AsyncMock(side_effect=lines + [b""])
+
+    mock_process = MagicMock()
+    mock_process.stdout = mock_stdout
+
+    calls = []
+
+    def mock_bulk_upsert(run_id, batch):
+        calls.append((run_id, len(batch)))
+
+    with patch("api.services.runner._bulk_upsert_deltas_sync", side_effect=mock_bulk_upsert):
+        await _ingest_stdout("run_test_batch", mock_process)
+
+    assert len(calls) == 2, f"Expected 2 batch calls (500 + 5), got {len(calls)}"
+    assert calls[0] == ("run_test_batch", 500)
+    assert calls[1] == ("run_test_batch", 5)
+
+
 
