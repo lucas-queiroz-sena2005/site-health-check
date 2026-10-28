@@ -1,0 +1,2 @@
+Task: Implement backend void pruning persistence and frontend evaluation toggles (Green & Refactor Phase)
+Summary: Added prune_void_hosts and prune_closed_ports to Scan SQLModel, ScanUpdateRequest, ScanResponse, scans.py router methods, runs.py and scheduler.py. Added switches under Evaluation Settings in ScanConfigForm.tsx.
