@@ -171,3 +171,155 @@ def test_patch_scan_idempotent_controls(client: TestClient):
     assert get_mute.status_code in (404, 405)
     get_unmute = client.get(f"/api/scans/{scan_id}/alerts/unmute")
     assert get_unmute.status_code in (404, 405)
+
+
+def test_scan_cron_expression_validation(client: TestClient):
+    base_payload = {
+        "name": "Cron Validation Scan",
+        "targets": ["example.com"],
+        "ports": [80, 443],
+        "flags": {},
+    }
+
+    # Invalid cron expressions must return 422
+    for bad_cron in ["daily", "* * *", "invalid", "0 0 * * * *", "60 25 * * *"]:
+        resp = client.post("/api/scans", json={**base_payload, "cron_expression": bad_cron})
+        assert resp.status_code == 422, f"Expected 422 for cron '{bad_cron}', got {resp.status_code}"
+        assert "cron" in resp.text.lower()
+
+    # Valid 5-field cron expressions succeed and strip whitespace
+    resp_valid = client.post(
+        "/api/scans", json={**base_payload, "cron_expression": "  */15 * * * *  "}
+    )
+    assert resp_valid.status_code == 201
+    scan_data = resp_valid.json()
+    assert scan_data["cron_expression"] == "*/15 * * * *"
+    scan_id = scan_data["id"]
+
+    # Empty or whitespace cron_expression coerces to None
+    resp_empty_cron = client.patch(f"/api/scans/{scan_id}", json={"cron_expression": "   "})
+    assert resp_empty_cron.status_code == 200
+    assert resp_empty_cron.json()["cron_expression"] is None
+
+    # Invalid cron on PATCH and PUT must return 422
+    resp_bad_patch = client.patch(f"/api/scans/{scan_id}", json={"cron_expression": "bad-cron"})
+    assert resp_bad_patch.status_code == 422
+
+    resp_bad_put = client.put(
+        f"/api/scans/{scan_id}", json={**base_payload, "cron_expression": "bad-cron"}
+    )
+    assert resp_bad_put.status_code == 422
+
+
+def test_scan_name_and_non_empty_targets_ports_validation(client: TestClient):
+    # Empty name returns 422
+    resp_empty_name = client.post(
+        "/api/scans",
+        json={"name": "   ", "targets": ["example.com"], "ports": [80]},
+    )
+    assert resp_empty_name.status_code == 422
+
+    # Empty targets on schedule creation returns 422
+    resp_empty_targets = client.post(
+        "/api/scans",
+        json={"name": "Valid Name", "targets": [], "ports": [80]},
+    )
+    assert resp_empty_targets.status_code == 422
+
+    # Empty ports on schedule creation returns 422
+    resp_empty_ports = client.post(
+        "/api/scans",
+        json={"name": "Valid Name", "targets": ["example.com"], "ports": []},
+    )
+    assert resp_empty_ports.status_code == 422
+
+
+def test_target_sanitization_and_validation(client: TestClient):
+    # Schemes and domain paths are auto-cleaned; CIDR and IP ranges preserved
+    resp = client.post(
+        "/api/scans",
+        json={
+            "name": "Target Clean Scan",
+            "targets": [
+                "  https://example.com/login/path  ",
+                "http://sub.domain.org/",
+                "192.168.1.0/24",
+                "10.0.0.1-10.0.0.50",
+            ],
+            "ports": [80, 443],
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["targets"] == [
+        "example.com",
+        "sub.domain.org",
+        "192.168.1.0/24",
+        "10.0.0.1-10.0.0.50",
+    ]
+
+    # Invalid targets are rejected with 422
+    for bad_target in ["999.999.999.999", "example.com:8080", "not_a_valid_target"]:
+        bad_resp = client.post(
+            "/api/scans",
+            json={"name": "Bad Target", "targets": [bad_target], "ports": [80]},
+        )
+        assert bad_resp.status_code == 422, f"Expected 422 for target '{bad_target}'"
+
+
+def test_port_sanitization_and_validation(client: TestClient):
+    # Numeric strings normalized to int and hyphenated ranges preserved on POST, PUT, PATCH
+    resp = client.post(
+        "/api/scans",
+        json={
+            "name": "Port Range Scan",
+            "targets": ["example.com"],
+            "ports": [80, "443", "8080-8090"],
+        },
+    )
+    assert resp.status_code == 201
+    scan_id = resp.json()["id"]
+    assert resp.json()["ports"] == [80, 443, "8080-8090"]
+
+    patch_resp = client.patch(
+        f"/api/scans/{scan_id}",
+        json={"ports": ["8443", "9000-9005"]},
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["ports"] == [8443, "9000-9005"]
+
+    # Invalid ports return 422 without SystemExit
+    for bad_ports in [[0], [70000], ["abc"], ["9000-8000"], ["100-70000"]]:
+        bad_resp = client.post(
+            "/api/scans",
+            json={"name": "Bad Port", "targets": ["example.com"], "ports": bad_ports},
+        )
+        assert bad_resp.status_code == 422, f"Expected 422 for ports {bad_ports}"
+
+
+def test_settings_and_webhook_validation(client: TestClient):
+    base = {"name": "Settings Scan", "targets": ["example.com"], "ports": [80]}
+
+    # Invalid ghost_window
+    for bad_gw in ["7days", "-5m", "abc", ""]:
+        r = client.post("/api/scans", json={**base, "ghost_window": bad_gw})
+        assert r.status_code == 422
+
+    # Negative tls_warning_days
+    r_tls = client.post("/api/scans", json={**base, "tls_warning_days": -1})
+    assert r_tls.status_code == 422
+
+    # Empty webhook_url coerces to None
+    r_empty_wh = client.post(
+        "/api/scans",
+        json={**base, "alert_config": {"webhook_url": "   "}},
+    )
+    assert r_empty_wh.status_code == 201
+    assert r_empty_wh.json()["alert_config"]["webhook_url"] is None
+
+    # Invalid webhook_url returns 422
+    r_bad_wh = client.post(
+        "/api/scans",
+        json={**base, "alert_config": {"webhook_url": "not-a-url"}},
+    )
+    assert r_bad_wh.status_code == 422
+

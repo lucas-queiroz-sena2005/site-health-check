@@ -151,3 +151,37 @@ async def test_scheduler_respects_custom_timezone(monkeypatch, no_engine_subproc
 
     assert len(no_engine_subprocess) == 1
 
+
+@pytest.mark.asyncio
+async def test_scheduler_handles_malformed_cron_gracefully(monkeypatch):
+    from unittest.mock import MagicMock
+
+    test_engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    SQLModel.metadata.create_all(test_engine)
+    monkeypatch.setattr("api.services.scheduler.engine", test_engine)
+
+    mock_logger = MagicMock()
+    monkeypatch.setattr("api.services.scheduler.logger", mock_logger)
+
+    app_state = DummyAppState()
+
+    with Session(test_engine) as session:
+        scan = Scan(
+            name="Corrupted Cron Scan",
+            cron_expression="not a valid cron",
+            targets=["10.0.0.1"],
+            ports_json=[80],
+            flags_json={},
+        )
+        session.add(scan)
+        session.commit()
+
+    await check_and_run_scheduled_scans(app_state)
+
+    # Should log a warning, NOT logger.exception
+    assert mock_logger.warning.called
+    assert not mock_logger.exception.called
+
+

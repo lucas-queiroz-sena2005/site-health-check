@@ -91,3 +91,15 @@ def test_delete_saved_view_not_found(client: TestClient):
     del_resp = client.delete("/api/views/not-a-uuid")
     assert del_resp.status_code == 404
     assert del_resp.json() == {"detail": "View not found"}
+
+
+def test_saved_view_validation(client: TestClient):
+    # Empty or whitespace-only name returns 422
+    for bad_name in ["", "   "]:
+        r = client.post("/api/views", json={"name": bad_name})
+        assert r.status_code == 422
+
+    # Invalid table_sort_dir returns 422
+    r_dir = client.post("/api/views", json={"name": "Valid View", "table_sort_dir": "random"})
+    assert r_dir.status_code == 422
+
