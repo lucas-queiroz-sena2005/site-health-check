@@ -66,7 +66,7 @@
   - [x] Add `prune_void_hosts` and `prune_closed_ports` to `Scan` table, `ScanUpdateRequest`, `ScanResponse`, `scans.py` router (`create`, `update`, `patch`, `_build_scan_response`), `runs.py`, and `scheduler.py`
   - [x] Add `prune_void_hosts` and `prune_closed_ports` to `DEFAULT_NEW_SCAN` and render the evaluation switches in `ScanConfigForm.tsx`
   - [x] Verify tests pass
-- [~] Task: Implement dashboard fallback states in HostTablePage (Green & Refactor Phase)
-  - [ ] Update `HostTablePage.tsx` to handle 404/error and empty run list gracefully with dedicated fallback views and actions to switch runs, open history, or navigate to `/scan`
-  - [ ] Verify frontend tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Implement dashboard fallback states in HostTablePage (Green & Refactor Phase) 1f6ce94
+  - [x] Update `HostTablePage.tsx` to handle 404/error and empty run list gracefully with dedicated fallback views and actions to switch runs, open history, or navigate to `/scan`
+  - [x] Verify frontend tests pass
+- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
