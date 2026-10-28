@@ -15,5 +15,5 @@
 - [x] **Track: Encapsulated RunManager & Finding-Based Alert Matcher (`run_manager_and_alerts`)** *Link: [./tracks/run_manager_and_alerts/index.md](./tracks/run_manager_and_alerts/index.md)*
 - [x] **Track: Orthogonal REST API for the 3 Tables & IP Drawer (`rest_api_orthogonality`)** *Link: [./tracks/rest_api_orthogonality/index.md](./tracks/rest_api_orthogonality/index.md)*
 - [x] **Track: Dumb React Flat Explorer (`frontend_flat_explorer`)** *Link: [./tracks/frontend_flat_explorer/index.md](./tracks/frontend_flat_explorer/index.md)*
-- [x] **Track: Input Sanitization & Error Handling Workflow (`input_sanitization_and_error_handling`)** *Link: [./tracks/input_sanitization_and_error_handling/index.md](./tracks/input_sanitization_and_error_handling/index.md)*
+- [~] **Track: Input Sanitization & Error Handling Workflow (`input_sanitization_and_error_handling`)** *Link: [./tracks/input_sanitization_and_error_handling/index.md](./tracks/input_sanitization_and_error_handling/index.md)*
 

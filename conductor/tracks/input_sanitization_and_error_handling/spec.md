@@ -89,6 +89,19 @@ All updates apply to [`api/src/api/routers/scans.py`](file:///home/lucasse/Docum
 ### 3.3 Backend Scheduler Resilience ([`api/src/api/services/scheduler.py`](file:///home/lucasse/Documents/site-health-check/api/src/api/services/scheduler.py))
 - Catch `croniter.CroniterBadCronError` specifically and log a concise warning (`logger.warning(...)`) instead of full stack traces.
 
+### 3.4 Void Pruning Evaluation Settings & Dashboard Fallback UX
+1. **Void Pruning Evaluation Settings:**
+   - **Backend:**
+     - Add `prune_void_hosts: bool = Field(default=True)` and `prune_closed_ports: bool = Field(default=True)` to SQLModel `Scan` table, `ScanUpdateRequest`, `ScanResponse`, `POST /api/scans`, `PUT /api/scans/{id}`, and `PATCH /api/scans/{id}`.
+     - Include `prune_void_hosts` and `prune_closed_ports` in `scheduler.py` when dispatching scheduled runs and in `runs.py` when dispatching scans by `scan_id`.
+   - **Frontend:**
+     - Add `prune_void_hosts: true` and `prune_closed_ports: true` to `DEFAULT_NEW_SCAN` in `ScanConfigForm.tsx`.
+     - Render toggle switches under **Evaluation Settings** for "Prune Void Hosts on Finalization" and "Prune Routine Closed Ports on Finalization".
+2. **Dashboard Fallback UX ([`HostTablePage.tsx`](file:///home/lucasse/Documents/site-health-check/frontend/src/pages/HostTablePage.tsx)):**
+   - **Missing / Non-Existent Run Fallback:** If `runParam` does not exist (404/error), do not render a blank page with plain error text. Render the dashboard shell and an informative fallback card (`data-testid="scan-not-found-fallback"`) showing the missing ID, with action buttons to "View Latest Run", "Select from History" (opening `RunHistorySheet`), or "Launch Live Scan".
+   - **No Scan Selected / Empty System Fallback:** If no scan run is selected or the database has zero runs, render `RunSummaryHeader` and an empty-state fallback card (`data-testid="no-scan-selected-fallback"`) encouraging the user to launch a live scan or set up scheduled scans.
+   - **Consistent Loading Shell:** When fetching a run, do not unmount the entire page into plain text.
+
 ---
 
 ## 4. Acceptance Criteria
@@ -101,5 +114,10 @@ All updates apply to [`api/src/api/routers/scans.py`](file:///home/lucasse/Docum
    - Create/Edit Schedule errors keep the user on the form with inputs intact and render the bottom alert banner above the action buttons.
    - Live Scan launch errors close the confirmation overlay, do not trigger terminal streaming/countdown, and render the bottom alert banner on the form.
    - Re-opening modals or switching rows clears stale error banners.
-3. **Zero Regressions:**
-   - All 108 existing backend tests and 41 existing frontend tests pass alongside the new test cases.
+3. **Void Pruning Evaluation Settings:**
+   - Both `prune_void_hosts` and `prune_closed_ports` are exposed under Evaluation Settings in `ScanConfigForm`, persisted to the `Scan` model in backend, and passed to run snapshots.
+4. **Dashboard Fallback States:**
+   - Missing scan run URLs render a fallback card with quick options to view latest run, open history drawer, or launch a scan.
+   - An empty runs database renders a clear empty-state card guiding the user to run their first scan.
+5. **Zero Regressions:**
+   - All existing backend and frontend tests continue to pass alongside new tests, and `npm run build` succeeds.
