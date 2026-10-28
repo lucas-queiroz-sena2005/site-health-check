@@ -34,12 +34,12 @@ Refactor `api/src/api/services/evaluator.py` to delegate set operations to SQLit
   - [x] Evaluating and pruning $> 35,000$ hosts in a single run (exceeding SQLite's 32,766 bind-parameter limit) without `OperationalError: too many SQL variables`.
   - [x] Preserving `scanned_port_count` on active hosts after `prune_closed_ports=True` and preserving idempotency when `evaluate_scan_run` is called a second time after pruning.
   - [x] Preserving open ports for future runs' historical ghost detection and preserving ghost hosts/ports for alerts and UI.
-- [ ] Task: Refactor `api/src/api/services/evaluator.py`:
-  - [ ] Use SQL subquery for historical active `(ip_address, port_number)` lookup (1 bind variable).
-  - [ ] Implement set-based SQL fast-path for pure routine void hosts (count + direct subquery delete when `prune_void_hosts=True`, or bulk SQL `UPDATE` when `prune_void_hosts=False`).
-  - [ ] Evaluate non-void / ghost-candidate hosts in chunks of 500 with `selectinload` and `evaluator_rules.py`.
-  - [ ] Perform explicit bottom-up SQL subquery deletes (`HttpRoutingCheck` -> `TlsCertificate` -> `PortState` -> `HostState`) and SQL `GROUP BY` / `COUNT` summary aggregation.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
+- [x] Task: Refactor `api/src/api/services/evaluator.py`: [ec14610]
+  - [x] Use SQL subquery for historical active `(ip_address, port_number)` lookup (1 bind variable).
+  - [x] Implement set-based SQL fast-path for pure routine void hosts (count + direct subquery delete when `prune_void_hosts=True`, or bulk SQL `UPDATE` when `prune_void_hosts=False`).
+  - [x] Evaluate non-void / ghost-candidate hosts in chunks of 500 with `selectinload` and `evaluator_rules.py`.
+  - [x] Perform explicit bottom-up SQL subquery deletes (`HttpRoutingCheck` -> `TlsCertificate` -> `PortState` -> `HostState`) and SQL `GROUP BY` / `COUNT` summary aggregation.
+- [~] Task: Phase Verification & Checkpoint (Refer to workflow.md).
 
 ---
 
