@@ -27,7 +27,7 @@ Extract pure, deterministic evaluation rules into `api/src/api/services/evaluato
 
 ---
 
-## Phase 3: Relational Pushdown & Set-Based Evaluator Refactor (TDD)
+## Phase 3: Relational Pushdown & Set-Based Evaluator Refactor (TDD) [checkpoint: ec14610]
 Refactor `api/src/api/services/evaluator.py` to delegate set operations to SQLite, use `evaluator_rules.py` for non-void candidate hosts, and eliminate SQLite variable-limit overflows.
 
 - [x] Task: Write failing TDD tests in `api/tests/test_evaluator.py` for: [53cf990]
@@ -39,7 +39,7 @@ Refactor `api/src/api/services/evaluator.py` to delegate set operations to SQLit
   - [x] Implement set-based SQL fast-path for pure routine void hosts (count + direct subquery delete when `prune_void_hosts=True`, or bulk SQL `UPDATE` when `prune_void_hosts=False`).
   - [x] Evaluate non-void / ghost-candidate hosts in chunks of 500 with `selectinload` and `evaluator_rules.py`.
   - [x] Perform explicit bottom-up SQL subquery deletes (`HttpRoutingCheck` -> `TlsCertificate` -> `PortState` -> `HostState`) and SQL `GROUP BY` / `COUNT` summary aggregation.
-- [~] Task: Phase Verification & Checkpoint (Refer to workflow.md).
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md). [ec14610]
 
 ---
 
