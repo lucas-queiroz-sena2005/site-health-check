@@ -21,17 +21,17 @@
 ---
 
 ## Phase 2: Frontend "Wait-Before-Leaving" Interaction Pattern, Bottom Alert Banner & UI Polish (TDD)
-- [~] Task: Write failing frontend tests for API error extraction, bottom alert banners, and wait-before-leaving behavior (Red Phase)
-  - [ ] Add unit tests in `frontend/src/lib/__tests__/utils.test.ts` for `extractApiErrorMessage` verifying FastAPI string details and Pydantic 422 validation error arrays are converted into clean human-readable messages (stripping `"Value error, "` prefixes)
-  - [ ] Add component tests in `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx` verifying:
-    - [ ] Clicking "Create Schedule" or "Save Changes" disables the submit button and waits for the server response
-    - [ ] On server error (e.g. 422 invalid cron or target), the dialog/edit view stays open, user inputs are preserved, and the bottom alert banner displays the human-readable error above the action buttons
-    - [ ] Re-opening the Create modal or switching inline edit rows clears any stale error banner
-    - [ ] On server success, the modal/edit view closes and the table updates
-  - [ ] Add component tests in `frontend/src/pages/__tests__/LiveScanPage.test.tsx` verifying:
-    - [ ] The `"▶ Launch Live Scan"` button is disabled when targets are empty
-    - [ ] When `POST /api/runs` fails, the confirmation dialog closes so the form is not blocked, terminal streaming does not start, and the bottom alert banner renders on `ScanConfigForm` with inputs intact
-- [ ] Task: Implement error extraction utility, bottom alert banners, and "Wait-Before-Leaving" workflows (Green & Refactor Phase)
+- [x] Task: Write failing frontend tests for API error extraction, bottom alert banners, and wait-before-leaving behavior (Red Phase) 54a7004
+  - [x] Add unit tests in `frontend/src/lib/__tests__/utils.test.ts` for `extractApiErrorMessage` verifying FastAPI string details and Pydantic 422 validation error arrays are converted into clean human-readable messages (stripping `"Value error, "` prefixes)
+  - [x] Add component tests in `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx` verifying:
+    - [x] Clicking "Create Schedule" or "Save Changes" disables the submit button and waits for the server response
+    - [x] On server error (e.g. 422 invalid cron or target), the dialog/edit view stays open, user inputs are preserved, and the bottom alert banner displays the human-readable error above the action buttons
+    - [x] Re-opening the Create modal or switching inline edit rows clears any stale error banner
+    - [x] On server success, the modal/edit view closes and the table updates
+  - [x] Add component tests in `frontend/src/pages/__tests__/LiveScanPage.test.tsx` verifying:
+    - [x] The `"▶ Launch Live Scan"` button is disabled when targets are empty
+    - [x] When `POST /api/runs` fails, the confirmation dialog closes so the form is not blocked, terminal streaming does not start, and the bottom alert banner renders on `ScanConfigForm` with inputs intact
+- [~] Task: Implement error extraction utility, bottom alert banners, and "Wait-Before-Leaving" workflows (Green & Refactor Phase)
   - [ ] Implement `extractApiErrorMessage` in `frontend/src/lib/utils.ts`
   - [ ] Update `ScanConfigForm.tsx`:
     - [ ] Accept `isSubmitting?: boolean` and `errorMessage?: string | null` props and render the bottom alert banner directly above the footer buttons
