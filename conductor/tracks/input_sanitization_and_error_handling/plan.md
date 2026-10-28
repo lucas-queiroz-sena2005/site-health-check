@@ -56,13 +56,13 @@
 ---
 
 ## Phase 4: Void Pruning Evaluation Settings & Dashboard Fallback UX (TDD)
-- [ ] Task: Write failing backend and frontend tests for void pruning settings and dashboard fallback states (Red Phase)
-  - [ ] Add backend tests in `api/tests/test_api_scans.py` verifying `prune_void_hosts` and `prune_closed_ports` can be set on `POST /api/scans`, updated via `PUT` and `PATCH`, reflected in `ScanResponse`, and passed into scheduled run snapshots
-  - [ ] Add frontend tests in `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx` verifying `prune_void_hosts` and `prune_closed_ports` switches render under "Evaluation Settings" and toggle form values
-  - [ ] Add frontend tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` verifying:
-    - [ ] Navigating to a non-existent run ID renders the "Scan Run Not Found" fallback card with action buttons (and keeps history sheet accessible)
-    - [ ] Having zero runs in the database renders the "No Scan Runs Recorded" empty-state card with live scan and schedule actions
-- [ ] Task: Implement backend void pruning persistence and frontend evaluation toggles (Green & Refactor Phase)
+- [x] Task: Write failing backend and frontend tests for void pruning settings and dashboard fallback states (Red Phase) 02a0cf8
+  - [x] Add backend tests in `api/tests/test_api_scans.py` verifying `prune_void_hosts` and `prune_closed_ports` can be set on `POST /api/scans`, updated via `PUT` and `PATCH`, reflected in `ScanResponse`, and passed into scheduled run snapshots
+  - [x] Add frontend tests in `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx` verifying `prune_void_hosts` and `prune_closed_ports` switches render under "Evaluation Settings" and toggle form values
+  - [x] Add frontend tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` verifying:
+    - [x] Navigating to a non-existent run ID renders the "Scan Run Not Found" fallback card with action buttons (and keeps history sheet accessible)
+    - [x] Having zero runs in the database renders the "No Scan Runs Recorded" empty-state card with live scan and schedule actions
+- [~] Task: Implement backend void pruning persistence and frontend evaluation toggles (Green & Refactor Phase)
   - [ ] Add `prune_void_hosts` and `prune_closed_ports` to `Scan` table, `ScanUpdateRequest`, `ScanResponse`, `scans.py` router (`create`, `update`, `patch`, `_build_scan_response`), `runs.py`, and `scheduler.py`
   - [ ] Add `prune_void_hosts` and `prune_closed_ports` to `DEFAULT_NEW_SCAN` and render the evaluation switches in `ScanConfigForm.tsx`
   - [ ] Verify tests pass
