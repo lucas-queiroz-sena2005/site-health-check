@@ -1,0 +1,2 @@
+Task: Implement error extraction utility, bottom alert banners, and Wait-Before-Leaving workflows (Green & Refactor Phase)
+Summary: Implemented extractApiErrorMessage in utils.ts, added bottom error banner and clamped controls to ScanConfigForm.tsx, updated ScheduledScansPage.tsx and LiveScanPage.tsx to wait for API responses before closing views or launching streams, and verified all 48 frontend tests pass.
