@@ -502,4 +502,103 @@ def test_evaluate_scan_run_preserves_existing_metrics(session: Session):
     assert run.metrics_json["summary"] == summary
 
 
+def test_evaluate_scan_run_preserves_scanned_port_count_and_idempotency_after_pruning(session: Session):
+    """Verify that host.scanned_port_count reflects all probed ports before pruning,
+
+    and remains idempotent if evaluate_scan_run is invoked again.
+    """
+    run = ScanRun(
+        execution_config_snapshot_json={
+            "prune_void_hosts": True,
+            "prune_closed_ports": True,
+            "ghost_window": "7d",
+        }
+    )
+    session.add(run)
+    session.commit()
+
+    host = HostState(scan_run_id=run.id, ip_address="192.168.1.10")
+    session.add(host)
+    session.commit()
+
+    p_open = PortState(host_state_id=host.id, port_number=80, tcp_status="open")
+    p_closed = PortState(host_state_id=host.id, port_number=8080, tcp_status="closed")
+    session.add_all([p_open, p_closed])
+    session.commit()
+
+    # First evaluation pass
+    summary1 = evaluate_scan_run(run.id, session)
+    session.refresh(host)
+    assert host.scanned_port_count == 2, "scanned_port_count must record 2 probed ports"
+    assert host.open_port_count == 1
+    assert summary1["active"] == 1
+
+    # Routine closed port 8080 was pruned from SQLite
+    remaining_ports = session.exec(select(PortState).where(PortState.host_state_id == host.id)).all()
+    assert len(remaining_ports) == 1
+    assert remaining_ports[0].port_number == 80
+
+    # Second evaluation pass (idempotency check)
+    summary2 = evaluate_scan_run(run.id, session)
+    session.refresh(host)
+    assert host.scanned_port_count == 2, "scanned_port_count must remain 2 on second pass after pruning"
+    assert host.open_port_count == 1
+    assert summary2["active"] == 1
+
+
+def test_evaluate_scan_run_large_scale_exceeding_sqlite_variable_limit(session: Session):
+    """Verify evaluate_scan_run handles >35,000 hosts without hitting SQLite's 32,766 parameter limit."""
+    run = ScanRun(
+        execution_config_snapshot_json={
+            "prune_void_hosts": True,
+            "prune_closed_ports": True,
+            "ghost_window": "7d",
+        }
+    )
+    session.add(run)
+    session.commit()
+
+    # Bulk insert 35,000 void hosts
+    TOTAL_HOSTS = 35000
+    host_mappings = [
+        {
+            "id": f"{run.id}_10.{(i // 256)}.{(i % 256)}",
+            "scan_run_id": run.id,
+            "ip_address": f"10.{(i // 256)}.{(i % 256)}",
+            "status": "ok",
+        }
+        for i in range(TOTAL_HOSTS)
+    ]
+    port_mappings = [
+        {
+            "id": f"{m['id']}_80",
+            "host_state_id": m["id"],
+            "port_number": 80,
+            "tcp_status": "closed",
+            "status": "ok",
+        }
+        for m in host_mappings
+    ]
+
+    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+    from api.models import HostState, PortState
+
+    # Chunked raw inserts for test fixture speed (staying within SQLite 32,766 limit per insert)
+    CHUNK = 1000
+    for i in range(0, TOTAL_HOSTS, CHUNK):
+        session.exec(sqlite_insert(HostState).values(host_mappings[i : i + CHUNK]))
+        session.exec(sqlite_insert(PortState).values(port_mappings[i : i + CHUNK]))
+    session.commit()
+
+    # Must NOT raise OperationalError: too many SQL variables
+    summary = evaluate_scan_run(run.id, session)
+    assert summary["void"] == TOTAL_HOSTS
+    assert summary["active"] == 0
+
+    # Verify pruned from SQLite
+    remaining_hosts_count = len(session.exec(select(HostState.id).where(HostState.scan_run_id == run.id)).all())
+    assert remaining_hosts_count == 0, "All 35,000 routine void hosts should be pruned"
+
+
+
 
