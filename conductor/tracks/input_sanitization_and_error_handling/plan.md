@@ -62,11 +62,11 @@
   - [x] Add frontend tests in `frontend/src/pages/__tests__/HostTablePage.test.tsx` verifying:
     - [x] Navigating to a non-existent run ID renders the "Scan Run Not Found" fallback card with action buttons (and keeps history sheet accessible)
     - [x] Having zero runs in the database renders the "No Scan Runs Recorded" empty-state card with live scan and schedule actions
-- [~] Task: Implement backend void pruning persistence and frontend evaluation toggles (Green & Refactor Phase)
-  - [ ] Add `prune_void_hosts` and `prune_closed_ports` to `Scan` table, `ScanUpdateRequest`, `ScanResponse`, `scans.py` router (`create`, `update`, `patch`, `_build_scan_response`), `runs.py`, and `scheduler.py`
-  - [ ] Add `prune_void_hosts` and `prune_closed_ports` to `DEFAULT_NEW_SCAN` and render the evaluation switches in `ScanConfigForm.tsx`
-  - [ ] Verify tests pass
-- [ ] Task: Implement dashboard fallback states in HostTablePage (Green & Refactor Phase)
+- [x] Task: Implement backend void pruning persistence and frontend evaluation toggles (Green & Refactor Phase) 1962cfb
+  - [x] Add `prune_void_hosts` and `prune_closed_ports` to `Scan` table, `ScanUpdateRequest`, `ScanResponse`, `scans.py` router (`create`, `update`, `patch`, `_build_scan_response`), `runs.py`, and `scheduler.py`
+  - [x] Add `prune_void_hosts` and `prune_closed_ports` to `DEFAULT_NEW_SCAN` and render the evaluation switches in `ScanConfigForm.tsx`
+  - [x] Verify tests pass
+- [~] Task: Implement dashboard fallback states in HostTablePage (Green & Refactor Phase)
   - [ ] Update `HostTablePage.tsx` to handle 404/error and empty run list gracefully with dedicated fallback views and actions to switch runs, open history, or navigate to `/scan`
   - [ ] Verify frontend tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
