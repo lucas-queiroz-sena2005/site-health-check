@@ -1,6 +1,6 @@
 # Implementation Plan: Input Sanitization & Error Handling Workflow (`input_sanitization_and_error_handling`)
 
-## Phase 1: Backend Sanitization, Validation & Scheduler Resilience (TDD)
+## Phase 1: Backend Sanitization, Validation & Scheduler Resilience (TDD) [checkpoint: 4b791cb]
 - [x] Task: Write failing backend tests for cron, target, port, and setting validation while guarding against inheritance regressions (Red Phase) 72cb140
   - [x] Add unit tests in `api/tests/test_api_scans.py` asserting invalid cron expressions (`"daily"`, `"* * *"`, `"invalid"`) return HTTP 422 with a human-readable message, while valid 5-field cron expressions (`0 0 * * *`, `*/15 * * * *`) and `None`/`""` succeed
   - [x] Add unit tests asserting empty scan names or empty scan targets/ports on `POST /api/scans` and `PUT /api/scans/{id}` return HTTP 422
@@ -16,12 +16,12 @@
   - [x] Add `name` and `table_sort_dir` validators on `SavedViewCreate` in `api/src/api/routers/views.py`
   - [x] Update `api/src/api/services/scheduler.py` to catch `croniter.CroniterBadCronError` with `logger.warning`
   - [x] Run `.venv/bin/pytest api/` and verify all 108 existing tests + new tests pass
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 4b791cb
 
 ---
 
 ## Phase 2: Frontend "Wait-Before-Leaving" Interaction Pattern, Bottom Alert Banner & UI Polish (TDD)
-- [ ] Task: Write failing frontend tests for API error extraction, bottom alert banners, and wait-before-leaving behavior (Red Phase)
+- [~] Task: Write failing frontend tests for API error extraction, bottom alert banners, and wait-before-leaving behavior (Red Phase)
   - [ ] Add unit tests in `frontend/src/lib/__tests__/utils.test.ts` for `extractApiErrorMessage` verifying FastAPI string details and Pydantic 422 validation error arrays are converted into clean human-readable messages (stripping `"Value error, "` prefixes)
   - [ ] Add component tests in `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx` verifying:
     - [ ] Clicking "Create Schedule" or "Save Changes" disables the submit button and waits for the server response
