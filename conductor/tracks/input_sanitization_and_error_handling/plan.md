@@ -55,7 +55,7 @@
 
 ---
 
-## Phase 4: Void Pruning Evaluation Settings & Dashboard Fallback UX (TDD)
+## Phase 4: Void Pruning Evaluation Settings & Dashboard Fallback UX (TDD) [checkpoint: 1f6ce94]
 - [x] Task: Write failing backend and frontend tests for void pruning settings and dashboard fallback states (Red Phase) 02a0cf8
   - [x] Add backend tests in `api/tests/test_api_scans.py` verifying `prune_void_hosts` and `prune_closed_ports` can be set on `POST /api/scans`, updated via `PUT` and `PATCH`, reflected in `ScanResponse`, and passed into scheduled run snapshots
   - [x] Add frontend tests in `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx` verifying `prune_void_hosts` and `prune_closed_ports` switches render under "Evaluation Settings" and toggle form values
@@ -69,4 +69,4 @@
 - [x] Task: Implement dashboard fallback states in HostTablePage (Green & Refactor Phase) 1f6ce94
   - [x] Update `HostTablePage.tsx` to handle 404/error and empty run list gracefully with dedicated fallback views and actions to switch runs, open history, or navigate to `/scan`
   - [x] Verify frontend tests pass
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 1f6ce94
