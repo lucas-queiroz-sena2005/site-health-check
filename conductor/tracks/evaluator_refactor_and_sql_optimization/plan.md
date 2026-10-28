@@ -47,5 +47,5 @@ Refactor `api/src/api/services/evaluator.py` to delegate set operations to SQLit
 Verify end-to-end `/16` performance and concurrency safety across the entire test suite.
 
 - [x] Task: Create `api/tests/test_scale_slash16.py` testing full `/16` (65,536 IPs) batched ingestion + evaluation + pruning + historical ghost diffing on a subsequent run, asserting completion in $< 5$ seconds. [1965a1f]
-- [~] Task: Run full backend test suite (`.venv/bin/pytest`) and frontend test suite (`npm test`) and verify 100% pass rate.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
+- [x] Task: Run full backend test suite (`.venv/bin/pytest`) and frontend test suite (`npm test`) and verify 100% pass rate. [1965a1f]
+- [~] Task: Phase Verification & Checkpoint (Refer to workflow.md).
