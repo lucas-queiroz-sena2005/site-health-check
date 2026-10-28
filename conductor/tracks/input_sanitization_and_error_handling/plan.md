@@ -1,14 +1,14 @@
 # Implementation Plan: Input Sanitization & Error Handling Workflow (`input_sanitization_and_error_handling`)
 
 ## Phase 1: Backend Sanitization, Validation & Scheduler Resilience (TDD)
-- [ ] Task: Write failing backend tests for cron, target, port, and setting validation while guarding against inheritance regressions (Red Phase)
-  - [ ] Add unit tests in `api/tests/test_api_scans.py` asserting invalid cron expressions (`"daily"`, `"* * *"`, `"invalid"`) return HTTP 422 with a human-readable message, while valid 5-field cron expressions (`0 0 * * *`, `*/15 * * * *`) and `None`/`""` succeed
-  - [ ] Add unit tests asserting empty scan names or empty scan targets/ports on `POST /api/scans` and `PUT /api/scans/{id}` return HTTP 422
-  - [ ] Add unit tests asserting targets with `http://` or `https://` prefixes and domain paths (`https://example.com/login`) are auto-cleaned to `example.com`, while CIDR blocks (`192.168.1.0/24`) and IP ranges (`10.0.0.1-10.0.0.50`) are preserved and invalid targets (`"999.999.999.999"`, `"example.com:8080"`) return HTTP 422
-  - [ ] Add unit tests asserting valid integer ports (`80`, `443`) and port range strings (`"8080-8090"`) succeed on both create (`POST`), replace (`PUT`), and partial update (`PATCH`), while invalid ports (`0`, `70000`, `"abc"`, `"9000-8000"`) return HTTP 422 without triggering `SystemExit`
-  - [ ] Add unit tests asserting `ghost_window` must match `^\d+[smhd]$`, `tls_warning_days >= 0`, and `alert_config.webhook_url` coerces `""` to `None` while rejecting invalid non-HTTP strings
-  - [ ] Add unit tests in `api/tests/test_api_scheduler.py` verifying `check_and_run_scheduled_scans` catches `CroniterBadCronError` and logs a concise warning without unhandled tracebacks
-- [ ] Task: Implement backend validators, sanitizers, and scheduler resilience (Green & Refactor Phase)
+- [x] Task: Write failing backend tests for cron, target, port, and setting validation while guarding against inheritance regressions (Red Phase) 72cb140
+  - [x] Add unit tests in `api/tests/test_api_scans.py` asserting invalid cron expressions (`"daily"`, `"* * *"`, `"invalid"`) return HTTP 422 with a human-readable message, while valid 5-field cron expressions (`0 0 * * *`, `*/15 * * * *`) and `None`/`""` succeed
+  - [x] Add unit tests asserting empty scan names or empty scan targets/ports on `POST /api/scans` and `PUT /api/scans/{id}` return HTTP 422
+  - [x] Add unit tests asserting targets with `http://` or `https://` prefixes and domain paths (`https://example.com/login`) are auto-cleaned to `example.com`, while CIDR blocks (`192.168.1.0/24`) and IP ranges (`10.0.0.1-10.0.0.50`) are preserved and invalid targets (`"999.999.999.999"`, `"example.com:8080"`) return HTTP 422
+  - [x] Add unit tests asserting valid integer ports (`80`, `443`) and port range strings (`"8080-8090"`) succeed on both create (`POST`), replace (`PUT`), and partial update (`PATCH`), while invalid ports (`0`, `70000`, `"abc"`, `"9000-8000"`) return HTTP 422 without triggering `SystemExit`
+  - [x] Add unit tests asserting `ghost_window` must match `^\d+[smhd]$`, `tls_warning_days >= 0`, and `alert_config.webhook_url` coerces `""` to `None` while rejecting invalid non-HTTP strings
+  - [x] Add unit tests in `api/tests/test_api_scheduler.py` verifying `check_and_run_scheduled_scans` catches `CroniterBadCronError` and logs a concise warning without unhandled tracebacks
+- [~] Task: Implement backend validators, sanitizers, and scheduler resilience (Green & Refactor Phase)
   - [ ] Keep `ExecutionConfig` default `targets=[]` and `ports=[]` permissive so `ExecutionConfig()`, `ScanResponse`, `ScanRunResponse`, and `POST /api/runs` (`{"scan_id": "..."}` and `{"targets": []}` returning 400) remain 100% backward-compatible
   - [ ] Implement pure target & port sanitization/validation helpers in `api/src/api/models.py` (reusing `engine.parsing.validate_and_clean_target` and validating port integers/ranges without `@exit_on_error`)
   - [ ] Add `ghost_window`, `tls_warning_days`, and `AlertConfig.webhook_url` validators in `api/src/api/models.py`
