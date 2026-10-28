@@ -14,7 +14,7 @@ Eliminate unconditional `lazy="selectin"` cascades on `ScanRun`/`HostState`, con
 
 ---
 
-## Phase 2: Functional Core Rule Engine Extraction (TDD)
+## Phase 2: Functional Core Rule Engine Extraction (TDD) [checkpoint: d20759c]
 Extract pure, deterministic evaluation rules into `api/src/api/services/evaluator_rules.py` with zero database dependencies.
 
 - [x] Task: Write failing TDD unit tests in `api/tests/test_evaluator_rules.py` covering all branch combinations for: [7833f22]
@@ -23,7 +23,7 @@ Extract pure, deterministic evaluation rules into `api/src/api/services/evaluato
   - [x] `evaluate_port` (closed routine void, closed historical ghost, error TCP, open healthy/warning/failed).
   - [x] `evaluate_host_status` (open ports rollup, ghost port warning rollup, error TCP failure rollup, 0 open ports ghost vs void).
 - [x] Task: Implement `api/src/api/services/evaluator_rules.py` to pass all unit tests. [d20759c]
-- [~] Task: Phase Verification & Checkpoint (Refer to workflow.md).
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md). [d20759c]
 
 ---
 
