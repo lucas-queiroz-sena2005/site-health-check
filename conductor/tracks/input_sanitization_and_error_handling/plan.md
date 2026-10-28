@@ -31,18 +31,18 @@
   - [x] Add component tests in `frontend/src/pages/__tests__/LiveScanPage.test.tsx` verifying:
     - [x] The `"▶ Launch Live Scan"` button is disabled when targets are empty
     - [x] When `POST /api/runs` fails, the confirmation dialog closes so the form is not blocked, terminal streaming does not start, and the bottom alert banner renders on `ScanConfigForm` with inputs intact
-- [~] Task: Implement error extraction utility, bottom alert banners, and "Wait-Before-Leaving" workflows (Green & Refactor Phase)
-  - [ ] Implement `extractApiErrorMessage` in `frontend/src/lib/utils.ts`
-  - [ ] Update `ScanConfigForm.tsx`:
-    - [ ] Accept `isSubmitting?: boolean` and `errorMessage?: string | null` props and render the bottom alert banner directly above the footer buttons
-    - [ ] Fix target placeholder from `10.0.0.1-50` to `10.0.0.1-10.0.0.50`
-    - [ ] Clamp numeric flag steppers (`out_of_scope_depth >= 0`, `timeout >= 1`, `workers >= 1`, `rate >= 0.1`) and `tls_warning_days >= 0`
-    - [ ] Disable `"▶ Launch Live Scan"` when targets are empty or `isSubmitting`/`isScanning` is true
-    - [ ] In live mode, await `onSave(form)` inside the confirmation dialog before closing so `"Launching..."` is shown during the request
-  - [ ] Update `ScheduledScansPage.tsx` to use `extractApiErrorMessage`, await mutations, keep modals/edit views open on error, pass `errorMessage` and `isSubmitting` to `ScanConfigForm`, reset mutation errors on modal toggle/row change, and show errors inside the `"Force Scheduled Scan"` dialog if `"Scan Now"` fails
-  - [ ] Update `LiveScanPage.tsx` to use `extractApiErrorMessage`, surface launch errors in `ScanConfigForm`'s bottom alert banner without entering the finished/redirect terminal state, and check `res.ok` on `handleStop`
-  - [ ] Run `cd frontend && env -u LD_LIBRARY_PATH npx vitest run` and verify all existing + new frontend tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Implement error extraction utility, bottom alert banners, and "Wait-Before-Leaving" workflows (Green & Refactor Phase) 602da74
+  - [x] Implement `extractApiErrorMessage` in `frontend/src/lib/utils.ts`
+  - [x] Update `ScanConfigForm.tsx`:
+    - [x] Accept `isSubmitting?: boolean` and `errorMessage?: string | null` props and render the bottom alert banner directly above the footer buttons
+    - [x] Fix target placeholder from `10.0.0.1-50` to `10.0.0.1-10.0.0.50`
+    - [x] Clamp numeric flag steppers (`out_of_scope_depth >= 0`, `timeout >= 1`, `workers >= 1`, `rate >= 0.1`) and `tls_warning_days >= 0`
+    - [x] Disable `"▶ Launch Live Scan"` when targets are empty or `isSubmitting`/`isScanning` is true
+    - [x] In live mode, await `onSave(form)` inside the confirmation dialog before closing so `"Launching..."` is shown during the request
+  - [x] Update `ScheduledScansPage.tsx` to use `extractApiErrorMessage`, await mutations, keep modals/edit views open on error, pass `errorMessage` and `isSubmitting` to `ScanConfigForm`, reset mutation errors on modal toggle/row change, and show errors inside the `"Force Scheduled Scan"` dialog if `"Scan Now"` fails
+  - [x] Update `LiveScanPage.tsx` to use `extractApiErrorMessage`, surface launch errors in `ScanConfigForm`'s bottom alert banner without entering the finished/redirect terminal state, and check `res.ok` on `handleStop`
+  - [x] Run `cd frontend && env -u LD_LIBRARY_PATH npx vitest run` and verify all existing + new frontend tests pass
+- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ---
 
