@@ -19,9 +19,9 @@ A finalized, build-ready architectural spec for the database structure, scheduli
 
 ## Decisions so far
 
-- [01-database-schema.md](file:///home/crow/Projects/site-health-check/.scratch/mvp-architecture/issues/01-database-schema.md): SQLAlchemy schema defined with Junction Tables (Option 1) for M:N scheduling. Enforces governance via Immutable Snapshots, Soft Deletes, and Blast Radius limits.
-- [02-frontend-ux.md](file:///home/crow/Projects/site-health-check/.scratch/mvp-architecture/issues/02-frontend-ux.md): Frontend specified as a global shell with a Hierarchical Table viewer (Topology DAG dropped for MVP). FastAPI handles Auto-Classification. SANs are pooled to prevent pollution.
-- [03-api-endpoints.md](file:///home/crow/Projects/site-health-check/.scratch/mvp-architecture/issues/03-api-endpoints.md): FastAPI contract defined. Implements Schema-Driven dynamic forms, 3-in-1 Schedule creation, and WebSocket streaming for Live Operations logs.
+- [01-database-schema.md](./01-database-schema.md): SQLAlchemy schema defined with Junction Tables (Option 1) for M:N scheduling. Enforces governance via Immutable Snapshots, Soft Deletes, and Blast Radius limits.
+- [02-frontend-ux.md](./02-frontend-ux.md): Frontend specified as a global shell with a Hierarchical Table viewer (Topology DAG dropped for MVP). FastAPI handles Auto-Classification. SANs are pooled to prevent pollution.
+- [03-api-endpoints.md](./03-api-endpoints.md): FastAPI contract defined. Implements Schema-Driven dynamic forms, 3-in-1 Schedule creation, and WebSocket streaming for Live Operations logs.
 
 ## Not yet specified
 

@@ -29,6 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ScanConfigForm, EXECUTION_FLAGS_SCHEMA, DEFAULT_NEW_SCAN } from '@/components/scans/ScanConfigForm'
+import { extractApiErrorMessage } from '@/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { BellIcon, BellOffIcon } from '@hugeicons/core-free-icons'
 
@@ -66,7 +67,10 @@ export function ScheduledScansPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/scans/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete scan')
+      if (!res.ok) {
+        const msg = await extractApiErrorMessage(res, 'Failed to delete scan')
+        throw new Error(msg)
+      }
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['scans'] })
@@ -82,7 +86,10 @@ export function ScheduledScansPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
-      if (!res.ok) throw new Error('Failed to create scan')
+      if (!res.ok) {
+        const msg = await extractApiErrorMessage(res, 'Failed to create scan')
+        throw new Error(msg)
+      }
       return res.json()
     },
     onSuccess: () => {
@@ -98,7 +105,10 @@ export function ScheduledScansPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
-      if (!res.ok) throw new Error('Failed to update scan')
+      if (!res.ok) {
+        const msg = await extractApiErrorMessage(res, 'Failed to update scan')
+        throw new Error(msg)
+      }
       return res.json()
     },
     onSuccess: () => {
@@ -109,8 +119,15 @@ export function ScheduledScansPage() {
 
   const forceScanMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/scans/${id}/launch`, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to launch scan')
+      const res = await fetch('/api/runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scan_id: id }),
+      })
+      if (!res.ok) {
+        const msg = await extractApiErrorMessage(res, 'Failed to launch scan')
+        throw new Error(msg)
+      }
       return res.json()
     },
     onSuccess: (data) => {
@@ -123,9 +140,15 @@ export function ScheduledScansPage() {
 
   const toggleMuteMutation = useMutation({
     mutationFn: async ({ id, muted }: { id: string; muted: boolean }) => {
-      const endpoint = muted ? `/api/scans/${id}/alerts/unmute` : `/api/scans/${id}/alerts/mute`
-      const res = await fetch(endpoint, { method: 'POST' })
-      if (!res.ok) throw new Error('Failed to toggle alerts')
+      const res = await fetch(`/api/scans/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alerts_muted: !muted }),
+      })
+      if (!res.ok) {
+        const msg = await extractApiErrorMessage(res, 'Failed to toggle alerts')
+        throw new Error(msg)
+      }
       return res.json()
     },
     onSuccess: (updatedScan) => {
@@ -155,7 +178,13 @@ export function ScheduledScansPage() {
           <p className="text-muted-foreground mt-1">Manage and monitor automated periodic checks.</p>
         </div>
         
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <Dialog
+          open={isCreateModalOpen}
+          onOpenChange={(open) => {
+            createMutation.reset()
+            setIsCreateModalOpen(open)
+          }}
+        >
           <DialogTrigger render={<Button size="lg" className="font-semibold shadow-sm">+ Create New Schedule</Button>} />
           <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-8 border-2 border-border shadow-xl">
             <DialogHeader className="text-center pb-6 border-b-2 border-border/50 mb-6">
@@ -165,9 +194,14 @@ export function ScheduledScansPage() {
               <ScanConfigForm
                 initialData={DEFAULT_NEW_SCAN}
                 onSave={handleCreate}
-                onCancel={() => setIsCreateModalOpen(false)}
+                onCancel={() => {
+                  createMutation.reset()
+                  setIsCreateModalOpen(false)
+                }}
                 mode="schedule"
                 isCreating={true}
+                isSubmitting={createMutation.isPending}
+                errorMessage={createMutation.error instanceof Error ? createMutation.error.message : null}
               />
             </div>
           </DialogContent>
@@ -253,8 +287,13 @@ export function ScheduledScansPage() {
                             <ScanConfigForm
                               initialData={scan}
                               onSave={(data) => handleSaveInline(scan.id, data)}
-                              onCancel={() => setEditingScanId(null)}
+                              onCancel={() => {
+                                updateMutation.reset()
+                                setEditingScanId(null)
+                              }}
                               mode="schedule"
+                              isSubmitting={updateMutation.isPending}
+                              errorMessage={updateMutation.error instanceof Error ? updateMutation.error.message : null}
                             />
                           ) : (
                             <div className="flex items-start justify-between">
@@ -319,12 +358,21 @@ export function ScheduledScansPage() {
                                 </div>
                               </div>
                               <div className="flex flex-col gap-3 shrink-0 min-w-[140px]">
-                                <AlertDialog open={scanNowId === scan.id} onOpenChange={(open) => !open && setScanNowId(null)}>
+                                <AlertDialog
+                                  open={scanNowId === scan.id}
+                                  onOpenChange={(open) => {
+                                    forceScanMutation.reset()
+                                    if (!open) setScanNowId(null)
+                                  }}
+                                >
                                   <AlertDialogTrigger render={
                                     <Button 
                                       variant="outline" 
                                       className="text-primary border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/40 font-bold justify-start px-4"
-                                      onClick={() => setScanNowId(scan.id)}
+                                      onClick={() => {
+                                        forceScanMutation.reset()
+                                        setScanNowId(scan.id)
+                                      }}
                                     >
                                       ▶ Scan Now
                                     </Button>
@@ -337,8 +385,17 @@ export function ScheduledScansPage() {
                                         This will scan <strong className="text-foreground">{scan.targets.length}</strong> targets right now, consuming engine workers and generating network traffic. Proceed?
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
+                                    {forceScanMutation.error instanceof Error && (
+                                      <div
+                                        role="alert"
+                                        data-testid="force-scan-error-banner"
+                                        className="rounded-lg border-2 border-destructive/40 bg-destructive/10 px-4 py-3 text-xs font-semibold text-destructive"
+                                      >
+                                        {forceScanMutation.error.message}
+                                      </div>
+                                    )}
                                     <AlertDialogFooter className="mt-4">
-                                      <AlertDialogCancel className="border-2 font-bold">Cancel</AlertDialogCancel>
+                                      <AlertDialogCancel className="border-2 font-bold" disabled={forceScanMutation.isPending}>Cancel</AlertDialogCancel>
                                       <AlertDialogAction 
                                         className="font-bold" 
                                         onClick={() => forceScanMutation.mutate(scan.id)}
@@ -349,7 +406,14 @@ export function ScheduledScansPage() {
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
-                                <Button variant="outline" className="border-2 border-border font-bold justify-start px-4" onClick={() => setEditingScanId(scan.id)}>
+                                <Button
+                                  variant="outline"
+                                  className="border-2 border-border font-bold justify-start px-4"
+                                  onClick={() => {
+                                    updateMutation.reset()
+                                    setEditingScanId(scan.id)
+                                  }}
+                                >
                                   ✎ Edit Schedule
                                 </Button>
                                 <Button

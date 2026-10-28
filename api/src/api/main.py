@@ -14,18 +14,17 @@ logging.basicConfig(
 
 
 from api.database import engine, init_db
-from api.routers import alerts, results, runs, scans, schemas, views
+from api.routers import alerts, runs, scans, schemas, views
+from api.services.run_manager import RunManager
 from api.services.scheduler import scheduler_loop
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient()
+    app.state.run_manager = RunManager()
     
     await asyncio.to_thread(init_db)
-    app.state.log_subscribers = {}
-    app.state.run_logs = {}
-    app.state.processes = {}
     
     from sqlmodel import Session, select
 
@@ -42,6 +41,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        await app.state.run_manager.shutdown()
         await app.state.http_client.aclose()
         scheduler_task.cancel()
         try:
@@ -74,6 +74,7 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json"
 )
+app.state.run_manager = RunManager()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -86,7 +87,6 @@ api_router = APIRouter(prefix="/api", tags=["api"])
 api_router.include_router(runs.router)
 api_router.include_router(scans.router)
 api_router.include_router(schemas.router)
-api_router.include_router(results.router)
 api_router.include_router(views.router)
 api_router.include_router(alerts.router)
 

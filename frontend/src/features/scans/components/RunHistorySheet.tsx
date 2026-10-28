@@ -10,17 +10,23 @@ import {
 import { Button } from "@/components/ui/button"
 
 import { useQuery } from '@tanstack/react-query'
+import type { ScanRunResponse } from '../types'
+import { scanQueryKeys } from '../api/queryKeys'
 
 export function RunHistorySheet({ 
   selectedRunId, 
-  onSelectRun 
+  onSelectRun,
+  triggerLabel,
+  className,
 }: { 
   selectedRunId: string | null
   onSelectRun: (id: string | null) => void 
+  triggerLabel?: string
+  className?: string
 }) {
   const [open, setOpen] = useState(false)
-  const { data: runs = [], isLoading, refetch } = useQuery({
-    queryKey: ['runs', 'history'],
+  const { data: runs = [], isLoading, refetch } = useQuery<ScanRunResponse[]>({
+    queryKey: scanQueryKeys.history(),
     queryFn: async () => {
       const res = await fetch(`/api/runs?limit=50`)
       if (!res.ok) throw new Error('Network error')
@@ -43,7 +49,7 @@ export function RunHistorySheet({
     if (id === 'mock-run-id-2') return "Scheduled (2 hrs ago)"
     
     // Find in loaded runs
-    const run = runs.find((r: any) => r.id === id)
+    const run = Array.isArray(runs) ? runs.find((r) => r.id === id) : undefined
     if (run) {
       return run.scan_name || 'Ad-hoc Scan'
     }
@@ -55,12 +61,15 @@ export function RunHistorySheet({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger 
         render={
-          <Button variant="outline" className="min-w-[200px] justify-between border-2 border-border bg-background text-foreground shadow-sm font-semibold hover:border-primary/50 transition-colors">
+          <Button
+            variant="outline"
+            className={className || "min-w-[200px] justify-between border-2 border-border bg-background text-foreground shadow-sm font-semibold hover:border-primary/50 transition-colors"}
+          >
             <div className="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 opacity-70"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>{getRunLabel(selectedRunId)}</span>
+              <span>{triggerLabel || getRunLabel(selectedRunId)}</span>
             </div>
-            <span className="opacity-40 text-xs ml-4 uppercase tracking-wider">History</span>
+            {!triggerLabel && <span className="opacity-40 text-xs ml-4 uppercase tracking-wider">History</span>}
           </Button>
         }
       />
@@ -72,14 +81,15 @@ export function RunHistorySheet({
         
         <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 pr-4">
 
-          {runs.map((run: any) => (
-            <div 
+          {runs.map((run) => (
+            <button 
+              type="button"
               key={run.id}
               onClick={() => {
                 onSelectRun(run.id)
                 setOpen(false)
               }}
-              className={`p-3 rounded-md border-2 cursor-pointer transition-colors ${
+              className={`w-full text-left p-3 rounded-md border-2 cursor-pointer transition-colors ${
                 selectedRunId === run.id 
                   ? 'border-primary bg-primary/10' 
                   : 'border-border hover:border-primary/50 bg-card'
@@ -105,7 +115,7 @@ export function RunHistorySheet({
                 <span>Targets: <strong className="text-foreground">{run.targets?.length || 0}</strong></span>
                 <span>Started: <strong className="text-foreground">{run.started_at ? new Date(run.started_at).toLocaleString() : 'N/A'}</strong></span>
               </div>
-            </div>
+            </button>
           ))}
           
           {isLoading && (

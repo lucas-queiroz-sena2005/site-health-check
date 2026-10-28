@@ -57,7 +57,7 @@ async def check_http_routing(ip: str, port: int, host_header: str | None, flags:
     try:
         async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
             start_time = time.perf_counter()
-            async with session.get(url, timeout=flags.timeout_seconds, allow_redirects=False) as response:
+            async with session.get(url, timeout=flags.timeout, allow_redirects=False) as response:
                 result.status_code = response.status
                 result.http_latency_ms = int((time.perf_counter() - start_time) * 1000)
                 result.server_header = response.headers.get("Server")

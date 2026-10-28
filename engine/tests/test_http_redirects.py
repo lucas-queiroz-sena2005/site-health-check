@@ -170,3 +170,167 @@ async def test_engine_redirect_depth_limit():
     # Verify it was indeed called for 127.0.0.1
     assert mock_http.call_args[0][0] == "127.0.0.1"
 
+
+@pytest.mark.asyncio
+async def test_engine_skips_http_on_closed_tcp():
+    queue = asyncio.Queue()
+    initial_task = EngineTask(
+        target="127.0.0.1",
+        ports=[80],
+        context=TaskContext(
+            flags=TaskFlags(check_http=True),
+            depth=0
+        )
+    )
+    await queue.put(initial_task)
+
+    async def mock_resolve_target(target):
+        return "127.0.0.1", None, False
+
+    async def mock_check_tcp_and_tls(ip, port, server_hostname):
+        from engine.schemas.engine import PortState
+        return PortState(tcp_status="closed")
+
+    mock_http = AsyncMock()
+
+    engine_module.is_cancelled = False
+    engine_module.seen_tcp.clear()
+    engine_module.seen_http.clear()
+    if hasattr(engine_module, "open_tcp"):
+        engine_module.open_tcp.clear()
+
+    with patch.object(engine_module, 'resolve_target', side_effect=mock_resolve_target), \
+         patch.object(engine_module, 'check_tcp_and_tls', side_effect=mock_check_tcp_and_tls), \
+         patch.object(engine_module, 'check_http_routing', new=mock_http), \
+         patch('sys.stdout.write'), \
+         patch('sys.stdout.flush'):
+        limiter = engine_module.AsyncTokenBucket(50.0)
+        worker_task = asyncio.create_task(scanner_routine("test_routine", queue, limiter))
+        await asyncio.sleep(0.1)
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+
+    # HTTP routing probe MUST NOT be called when TCP port is closed!
+    assert mock_http.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_engine_san_discovery_lineage():
+    from engine.schemas.engine import TlsCertificate, PortState
+    queue = asyncio.Queue()
+    initial_task = EngineTask(
+        target="127.0.0.1",
+        ports=[443],
+        context=TaskContext(
+            flags=TaskFlags(recursive_san=True, out_of_scope_depth=2),
+            depth=0
+        )
+    )
+    await queue.put(initial_task)
+
+    async def mock_resolve_target(target):
+        return "127.0.0.1", None, False
+
+    cert = TlsCertificate(
+        valid=True,
+        domains_discovered_sans=["remote.example.com"]
+    )
+    async def mock_check_tcp_and_tls(ip, port, server_hostname):
+        return PortState(tcp_status="open", tls_certificate=cert)
+
+    mock_http = AsyncMock()
+    mock_http.return_value = HttpRoutingCheck(status_code=200)
+
+    engine_module.is_cancelled = False
+    engine_module.seen_tcp.clear()
+    engine_module.seen_http.clear()
+    if hasattr(engine_module, "open_tcp"):
+        engine_module.open_tcp.clear()
+
+    put_calls = []
+    orig_put = queue.put
+    async def mock_put(item):
+        put_calls.append(item)
+        await orig_put(item)
+
+    with patch.object(engine_module, 'resolve_target', side_effect=mock_resolve_target), \
+         patch.object(engine_module, 'check_tcp_and_tls', side_effect=mock_check_tcp_and_tls), \
+         patch.object(engine_module, 'check_http_routing', new=mock_http), \
+         patch.object(queue, 'put', side_effect=mock_put), \
+         patch('sys.stdout.write'), \
+         patch('sys.stdout.flush'):
+        limiter = engine_module.AsyncTokenBucket(50.0)
+        worker_task = asyncio.create_task(scanner_routine("test_routine", queue, limiter))
+        await asyncio.sleep(0.1)
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+
+    # Verify remote.example.com was queued with discovered_from="127.0.0.1" (NOT None!)
+    assert len(put_calls) == 1
+    new_task = put_calls[0]
+    assert new_task.target == "remote.example.com"
+    assert new_task.context.discovered_from == "127.0.0.1"
+
+
+@pytest.mark.asyncio
+async def test_engine_same_ip_vhost_no_self_loop():
+    import json
+    queue = asyncio.Queue()
+    # A vhost on same IP with discovered_from="127.0.0.1"
+    initial_task = EngineTask(
+        target="vhost.local",
+        ports=[443],
+        context=TaskContext(
+            flags=TaskFlags(check_http=False),
+            discovered_from="127.0.0.1",
+            depth=0
+        )
+    )
+    await queue.put(initial_task)
+
+    async def mock_resolve_target(target):
+        return "127.0.0.1", target, True
+
+    async def mock_check_tcp_and_tls(ip, port, server_hostname):
+        from engine.schemas.engine import PortState
+        return PortState(tcp_status="open")
+
+    engine_module.is_cancelled = False
+    engine_module.seen_tcp.clear()
+    engine_module.seen_http.clear()
+    if hasattr(engine_module, "open_tcp"):
+        engine_module.open_tcp.clear()
+
+    emitted_deltas = []
+    def mock_stdout_write(s):
+        if s.strip():
+            try:
+                emitted_deltas.append(json.loads(s.strip()))
+            except Exception:
+                pass
+
+    with patch.object(engine_module, 'resolve_target', side_effect=mock_resolve_target), \
+         patch.object(engine_module, 'check_tcp_and_tls', side_effect=mock_check_tcp_and_tls), \
+         patch('sys.stdout.write', side_effect=mock_stdout_write), \
+         patch('sys.stdout.flush'):
+        limiter = engine_module.AsyncTokenBucket(50.0)
+        worker_task = asyncio.create_task(scanner_routine("test_routine", queue, limiter))
+        await asyncio.sleep(0.1)
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+
+    assert len(emitted_deltas) > 0
+    delta = emitted_deltas[0]
+    discovered = delta["127.0.0.1"]["metadata"]["discovered_from"]
+    assert "127.0.0.1" not in discovered
+
+

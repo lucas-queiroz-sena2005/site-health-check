@@ -55,3 +55,21 @@ Sometimes, an SRE needs instant gratification without waiting for the next cron 
 - **The Data Flow:** The React UI sends a request to the Flask API. The Flask API spawns a transient, one-off subprocess of the Engine: `site-health-check --target unicamp_students --tcp-only`. 
 - **The Result:** The Engine runs instantly and streams the JSON results directly back to the Flask API, which pushes it to the UI via WebSockets or polling. 
 - **Database Impact:** This transaction **bypasses the SQLite database**. It is a transient investigation, leaving the persistent hospital charts unmodified. Every ad-hoc scan is timestamped and logged for auditing purposes.
+
+---
+
+## 4. Concurrency Architecture & SQLite Lock Prevention (ADR 0023)
+
+To guarantee thread-safety and eliminate `sqlite3.OperationalError: database is locked` exceptions under concurrent execution, the control plane employs a multi-tiered concurrency defense:
+
+![Concurrency Architecture & SQLite Lock-Prevention Flow](./diagrams/concurrency_architecture.svg)
+*(High-resolution raster version: [concurrency_architecture.png](./diagrams/concurrency_architecture.png))*
+
+### Concurrency Guards
+1. **In-Memory Runner Lock:** An `asyncio.Lock` per `scan_id` ensures only one background worker mutates an active scan run at any time.
+2. **SQLite Write-Ahead Logging (WAL) & Busy Timeout:**
+   - `PRAGMA journal_mode = WAL;` allows non-blocking reads from `-wal` and `-shm` during active background writing.
+   - `PRAGMA busy_timeout = 5000;` automatically queues competing writers up to 5 seconds.
+   - `PRAGMA foreign_keys = ON;` and `PRAGMA synchronous = NORMAL;` guarantee constraint integrity and async write throughput.
+3. **Single-Pass In-Memory Evaluation:** Finding codes and rollups are computed deterministically in RAM by the Evaluator Pipeline and written in a single atomic database commit during scan run finalization.
+

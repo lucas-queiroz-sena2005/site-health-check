@@ -26,9 +26,9 @@ def client_fixture(session: Session):
     app.dependency_overrides.clear()
 
 def test_launch_run_and_list_runs(client: TestClient):
-    # Launch an ad-hoc run
+    # Launch an ad-hoc run via unified POST /api/runs
     launch_resp = client.post(
-        "/api/runs/launch",
+        "/api/runs",
         json={
             "targets": ["10.0.0.1"],
             "ports": [80, 443],
@@ -66,8 +66,8 @@ def test_launch_scheduled_scan_endpoint(client: TestClient):
     assert scan_resp.status_code == 201
     scan_id = scan_resp.json()["id"]
 
-    # Force launch the scheduled scan
-    force_resp = client.post(f"/api/scans/{scan_id}/launch")
+    # Launch the scheduled scan via unified POST /api/runs
+    force_resp = client.post("/api/runs", json={"scan_id": scan_id})
     assert force_resp.status_code == 201
     forced_run = force_resp.json()
     assert forced_run["scan_id"] == scan_id
@@ -80,6 +80,17 @@ def test_launch_scheduled_scan_endpoint(client: TestClient):
     filtered_runs = filter_resp.json()
     assert len(filtered_runs) == 1
     assert filtered_runs[0]["id"] == forced_run["id"]
+
+def test_retired_launch_routes_return_404(client: TestClient):
+    # Retired launch routes must return 404 or 405
+    resp1 = client.post(
+        "/api/runs/launch",
+        json={"targets": ["10.0.0.1"], "ports": [80], "flags": {}},
+    )
+    assert resp1.status_code in (404, 405)
+
+    resp2 = client.post("/api/scans/some-scan-id/launch")
+    assert resp2.status_code in (404, 405)
 
 class FakeProcess:
     def __init__(self):
@@ -97,18 +108,18 @@ def test_abort_run_sends_sigterm(client: TestClient):
     import signal
 
     launch_resp = client.post(
-        "/api/runs/launch",
+        "/api/runs",
         json={"targets": ["10.0.0.1"], "ports": [80], "flags": {}},
     )
     assert launch_resp.status_code == 201
     run_id = launch_resp.json()["id"]
 
     process = FakeProcess()
-    app.state.processes = {run_id: process}
+    app.state.run_manager.register_process(run_id, process)
     try:
         abort_resp = client.post(f"/api/runs/{run_id}/abort")
     finally:
-        app.state.processes = {}
+        app.state.run_manager.unregister_process(run_id)
 
     assert abort_resp.status_code == 202
     assert "Abort signal sent" in abort_resp.json()["message"]
@@ -116,7 +127,6 @@ def test_abort_run_sends_sigterm(client: TestClient):
 
 
 def test_abort_unknown_run_returns_404(client: TestClient):
-    app.state.processes = {}
     resp = client.post("/api/runs/does-not-exist/abort")
     assert resp.status_code == 404
 
@@ -128,6 +138,80 @@ def test_abort_finished_run_returns_409(client: TestClient, session: Session):
     session.add(run)
     session.commit()
 
-    app.state.processes = {}
     resp = client.post(f"/api/runs/{run.id}/abort")
     assert resp.status_code == 409
+
+
+def test_stream_run_logs_delegates_to_run_manager(client: TestClient, session: Session):
+    from fastapi.sse import ServerSentEvent
+    from api.models import ScanRun, ScanRunStatus
+
+    run_id = "test-stream-endpoint-run"
+    run = ScanRun(id=run_id, execution_config_snapshot_json={}, status=ScanRunStatus.COMPLETED)
+    session.add(run)
+    session.commit()
+
+    app.state.run_manager.publish_log(run_id, ServerSentEvent(data={"msg": "first"}, event="log"))
+
+    with client.stream("GET", f"/api/runs/{run_id}/stream") as response:
+        assert response.status_code == 200
+        content = "\n".join(response.iter_lines())
+        assert "first" in content
+
+
+def test_unified_create_run_endpoint(client: TestClient):
+    # 1. Ad-hoc run launch via POST /api/runs
+    resp_adhoc = client.post(
+        "/api/runs",
+        json={
+            "targets": ["10.0.0.1"],
+            "ports": [80, 443],
+            "flags": {"check_tcp": True},
+        },
+    )
+    assert resp_adhoc.status_code == 201
+    run_adhoc = resp_adhoc.json()
+    assert run_adhoc["targets"] == ["10.0.0.1"]
+    assert run_adhoc["scan_id"] is None
+
+    # Missing targets without scan_id returns 400
+    resp_empty = client.post("/api/runs", json={"targets": []})
+    assert resp_empty.status_code == 400
+
+    # 2. Create a scheduled scan
+    scan_resp = client.post(
+        "/api/scans",
+        json={
+            "name": "Unified Production Scan",
+            "cron_expression": "0 0 * * *",
+            "targets": ["prod.example.com"],
+            "ports": [443],
+            "flags": {"check_http": True},
+        },
+    )
+    assert scan_resp.status_code == 201
+    scan_id = scan_resp.json()["id"]
+
+    # Launch scheduled scan via POST /api/runs supplying only scan_id
+    resp_sched = client.post("/api/runs", json={"scan_id": scan_id})
+    assert resp_sched.status_code == 201
+    run_sched = resp_sched.json()
+    assert run_sched["scan_id"] == scan_id
+    assert run_sched["scan_name"] == "Unified Production Scan"
+    assert run_sched["targets"] == ["prod.example.com"]
+    assert run_sched["ports"] == [443]
+
+    # Launch with runtime overrides
+    resp_override = client.post(
+        "/api/runs",
+        json={"scan_id": scan_id, "targets": ["override.example.com"], "ports": [8443]},
+    )
+    assert resp_override.status_code == 201
+    run_override = resp_override.json()
+    assert run_override["targets"] == ["override.example.com"]
+    assert run_override["ports"] == [8443]
+
+    # Non-existent scan_id returns 404
+    resp_404 = client.post("/api/runs", json={"scan_id": "nonexistent-scan-id"})
+    assert resp_404.status_code == 404
+

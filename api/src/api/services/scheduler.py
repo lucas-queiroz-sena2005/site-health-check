@@ -8,20 +8,9 @@ from sqlmodel import Session, col, desc, select
 from api.config import settings
 from api.database import engine
 from api.models import Scan, ScanRun, ScanRunStatus
-from api.routers.runs import run_engine_cli
-from api.services.alerts import evaluate_and_dispatch_alert
 
 logger = logging.getLogger("scheduler")
 
-async def run_scheduled_scan_with_alerts(run_id: str, snapshot: dict, app_state):
-    """Runs the engine and evaluates alerts sequentially in the background."""
-    await run_engine_cli(run_id, snapshot, app_state)
-    
-    try:
-        with Session(engine) as session:
-            await evaluate_and_dispatch_alert(run_id, session)
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Failed to process alerts for scheduled scan {run_id}: {e}")
 
 async def check_and_run_scheduled_scans(app_state):
     tz = settings.get_tz()
@@ -82,9 +71,7 @@ async def check_and_run_scheduled_scans(app_state):
                             
                 if should_run:
                     logger.info(f"Triggering scheduled scan: {scan.name} ({scan.id})")
-                    targets = []
-                    for tg in scan.target_groups:
-                        targets.extend(tg.targets_json)
+                    targets = scan.targets or []
                         
                     snapshot = {
                         "targets": targets,
@@ -92,6 +79,8 @@ async def check_and_run_scheduled_scans(app_state):
                         "flags": scan.flags_json or {},
                         "ghost_window": scan.ghost_window,
                         "tls_warning_days": scan.tls_warning_days,
+                        "prune_void_hosts": scan.prune_void_hosts,
+                        "prune_closed_ports": scan.prune_closed_ports,
                         "alert_config": scan.alert_config_json,
                     }
                     
@@ -105,8 +94,13 @@ async def check_and_run_scheduled_scans(app_state):
                     session.commit()
                     session.refresh(run)
                     
-                    # 3. Swap out run_engine_cli for the new wrapper here
-                    asyncio.create_task(run_scheduled_scan_with_alerts(run.id, snapshot, app_state))
+                    await app_state.run_manager.dispatch_run(
+                        run.id, snapshot, scan_id=scan.id
+                    )
+            except (croniter.CroniterBadCronError, croniter.CroniterBadDateError, ValueError) as e:
+                logger.warning(
+                    f"Skipping scheduled scan {scan.id} due to invalid cron expression {scan.cron_expression!r}: {e}"
+                )
             except Exception as e:
                 logger.exception(f"Error checking schedule for scan {scan.id}: {e}", exc_info=True)
 

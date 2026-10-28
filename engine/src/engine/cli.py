@@ -19,7 +19,17 @@ def build_parser() -> argparse.ArgumentParser:
         description="Web Health Auditor & Network Prober",
     )
     parser.add_argument(
-        "target", help="Target Host or URL (e.g., example.com or 192.168.1.50)"
+        "target",
+        nargs="?",
+        default=None,
+        help="Target Host or URL (e.g., example.com or 192.168.1.50)",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        default=None,
+        help="Path to JSON execution config file, or '-' to read from stdin",
     )
 
     parser.add_argument(
@@ -93,32 +103,93 @@ def main(args: list | None = None) -> int:
     """Main CLI entrypoint."""
     parser = build_parser()
     parsed_args = parser.parse_args(args)
-    validation_result = validate_and_clean_target(parsed_args.target)
-    if not validation_result.is_valid:
-        logger.error(validation_result.error_message)
-        return 1
 
-    expanded_targets = expand_target_ranges(validation_result.segments)
-    target_ports = parse_ports(parsed_args.ports)
-  
-    flags = TaskFlags(
-        check_http=parsed_args.check_http,
-        timeout_seconds=parsed_args.timeout,
-        recursive_san_check=parsed_args.recursive_san,
-        check_virtual_hosts=parsed_args.check_virtual_hosts,
-        out_of_scope_depth=parsed_args.out_of_scope_depth,
-        rate=parsed_args.rate,
-        user_agent=parsed_args.user_agent
-    )
-    
     json_payload = []
-    for t in expanded_targets:
-        task = TaskConfig(
-            target=t,
-            ports=target_ports,
-            flags=flags
+    workers_count = getattr(parsed_args, "workers", 100)
+
+    if parsed_args.config:
+        try:
+            if parsed_args.config == "-":
+                first_line = sys.stdin.readline()
+                try:
+                    config_data = json.loads(first_line)
+                except Exception:
+                    rest = sys.stdin.read()
+                    config_data = json.loads(first_line + rest)
+            else:
+                with open(parsed_args.config, "r", encoding="utf-8") as f:
+                    config_data = json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to read execution config: {e}")
+            return 1
+
+        if not isinstance(config_data, dict):
+            logger.error("Execution config must be a JSON object")
+            return 1
+
+        targets = config_data.get("targets", [])
+        if isinstance(targets, str):
+            targets = [targets]
+        elif not isinstance(targets, list):
+            logger.error("Invalid 'targets' field in execution config")
+            return 1
+
+        raw_ports = config_data.get("ports", ["443"])
+        if isinstance(raw_ports, list):
+            ports_str = ",".join(str(p) for p in raw_ports)
+        else:
+            ports_str = str(raw_ports)
+        target_ports = parse_ports(ports_str)
+
+        raw_flags = config_data.get("flags") or {}
+        flags = TaskFlags.model_validate(raw_flags)
+        workers_count = flags.workers
+
+        for target in targets:
+            validation_result = validate_and_clean_target(str(target))
+            if not validation_result.is_valid:
+                logger.error(validation_result.error_message)
+                return 1
+
+            expanded_targets = expand_target_ranges(validation_result.segments)
+            for t in expanded_targets:
+                task = TaskConfig(
+                    target=t,
+                    ports=target_ports,
+                    flags=flags
+                )
+                json_payload.append(task.to_dict())
+    else:
+        if not parsed_args.target:
+            parser.error("the following arguments are required: target (or --config)")
+            return 2
+
+        validation_result = validate_and_clean_target(parsed_args.target)
+        if not validation_result.is_valid:
+            logger.error(validation_result.error_message)
+            return 1
+
+        expanded_targets = expand_target_ranges(validation_result.segments)
+        target_ports = parse_ports(parsed_args.ports)
+      
+        flags = TaskFlags(
+            check_http=parsed_args.check_http,
+            timeout=parsed_args.timeout,
+            recursive_san=parsed_args.recursive_san,
+            check_virtual_hosts=parsed_args.check_virtual_hosts,
+            out_of_scope_depth=parsed_args.out_of_scope_depth,
+            rate=parsed_args.rate,
+            user_agent=parsed_args.user_agent,
+            workers=getattr(parsed_args, "workers", 100),
         )
-        json_payload.append(task.to_dict())
+        
+        for t in expanded_targets:
+            task = TaskConfig(
+                target=t,
+                ports=target_ports,
+                flags=flags
+            )
+            json_payload.append(task.to_dict())
     
     logger.info("\n[*] Standardized Payload Built:")
     logger.info(json.dumps(json_payload, indent=2))
@@ -140,7 +211,7 @@ def main(args: list | None = None) -> int:
     signal.signal(signal.SIGTERM, handle_signal)
 
     # --- The Engine Boundary ---
-    run_engine(json_payload, workers_count=parsed_args.workers)
+    run_engine(json_payload, workers_count=workers_count)
 
     if aborted:
         sys.stdout.write(json.dumps({"status": "aborted", "reason": "signal"}) + "\n")

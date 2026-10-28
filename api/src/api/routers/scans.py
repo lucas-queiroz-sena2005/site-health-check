@@ -1,10 +1,10 @@
-import asyncio
 from datetime import datetime, timezone
+import re
 from typing import Annotated, Any
 
 import croniter
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Path, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, HTTPException, Path, Request, status
+from pydantic import BaseModel, Field as PydanticField, field_validator
 from sqlmodel import desc, select
 
 from api.config import settings
@@ -16,20 +16,123 @@ from api.models import (
     Scan,
     ScanRun,
     ScanRunStatus,
-    ScanTargetGroupLink,
-    TargetGroup,
+    sanitize_and_validate_ports,
+    sanitize_and_validate_targets,
 )
-from api.routers.runs import ScanRunResponse, run_engine_cli
-from api.services.alerts import dispatch_mute_status_notification
-from api.services.scheduler import run_scheduled_scan_with_alerts
+from api.routers.runs import ScanRunResponse
 
 router = APIRouter(prefix="/scans", tags=["scans"])
+
+
+def validate_cron_expression(v: str | None) -> str | None:
+    if v is None:
+        return None
+    cleaned = v.strip()
+    if not cleaned:
+        return None
+    if len(cleaned.split()) != 5 or not croniter.croniter.is_valid(cleaned):
+        raise ValueError(
+            "Invalid cron expression format (expected 5 fields, e.g. '0 0 * * *')"
+        )
+    return cleaned
+
 
 class ScanCreateRequest(ExecutionConfig):
     name: str
     cron_expression: str | None = None
     alert_config: AlertConfig | None = None
     alerts_muted: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Scan name cannot be empty")
+        return cleaned
+
+    @field_validator("cron_expression")
+    @classmethod
+    def validate_cron(cls, v: str | None) -> str | None:
+        return validate_cron_expression(v)
+
+    @field_validator("targets")
+    @classmethod
+    def validate_non_empty_targets(cls, v: list[str]) -> list[str]:
+        cleaned = sanitize_and_validate_targets(v)
+        if not cleaned:
+            raise ValueError("At least one target must be specified")
+        return cleaned
+
+    @field_validator("ports")
+    @classmethod
+    def validate_non_empty_ports(cls, v: list[str | int]) -> list[str | int]:
+        cleaned = sanitize_and_validate_ports(v)
+        if not cleaned:
+            raise ValueError("At least one port must be specified")
+        return cleaned
+
+
+class ScanUpdateRequest(BaseModel):
+    name: str | None = None
+    cron_expression: str | None = None
+    is_active: bool | None = None
+    targets: list[str] | None = None
+    ports: list[str | int] | None = None
+    flags: ExecutionFlags | None = None
+    ghost_window: str | None = None
+    tls_warning_days: int | None = PydanticField(default=None, ge=0, le=3650)
+    prune_void_hosts: bool | None = None
+    prune_closed_ports: bool | None = None
+    alert_config: AlertConfig | None = None
+    alerts_muted: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str | None) -> str | None:
+        if v is not None:
+            cleaned = v.strip()
+            if not cleaned:
+                raise ValueError("Scan name cannot be empty")
+            return cleaned
+        return v
+
+    @field_validator("cron_expression")
+    @classmethod
+    def validate_cron(cls, v: str | None) -> str | None:
+        return validate_cron_expression(v)
+
+    @field_validator("targets")
+    @classmethod
+    def validate_targets(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None:
+            cleaned = sanitize_and_validate_targets(v)
+            if not cleaned:
+                raise ValueError("At least one target must be specified")
+            return cleaned
+        return v
+
+    @field_validator("ports")
+    @classmethod
+    def validate_ports(cls, v: list[str | int] | None) -> list[str | int] | None:
+        if v is not None:
+            cleaned = sanitize_and_validate_ports(v)
+            if not cleaned:
+                raise ValueError("At least one port must be specified")
+            return cleaned
+        return v
+
+    @field_validator("ghost_window")
+    @classmethod
+    def validate_ghost_window(cls, v: str | None) -> str | None:
+        if v is not None:
+            cleaned = v.strip().lower()
+            if not re.fullmatch(r"^\d+[smhd]$", cleaned):
+                raise ValueError(
+                    "Ghost window must be a positive number followed by s, m, h, or d (e.g. '7d', '24h', '30m')"
+                )
+            return cleaned
+        return v
 
 class ScanResponse(ExecutionConfig):
     id: str
@@ -46,9 +149,7 @@ def _build_scan_response(
     scan: Scan, session: SessionDep, targets: list[str] | None = None
 ) -> ScanResponse:
     if targets is None:
-        targets = []
-        for tg in scan.target_groups:
-            targets.extend(tg.targets_json)
+        targets = scan.targets or []
 
     run_stmt = (
         select(ScanRun)
@@ -85,6 +186,8 @@ def _build_scan_response(
         flags=ExecutionFlags.model_validate(scan.flags_json),
         ghost_window=scan.ghost_window,
         tls_warning_days=scan.tls_warning_days,
+        prune_void_hosts=scan.prune_void_hosts,
+        prune_closed_ports=scan.prune_closed_ports,
         alert_config=(
             AlertConfig.model_validate(scan.alert_config_json)
             if scan.alert_config_json
@@ -96,41 +199,26 @@ def _build_scan_response(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse:
-    # 1. Create an ad-hoc target group for these targets
-    target_group = TargetGroup(
-        name=f"Ad-hoc Target Group for {request.name}",
-        is_ad_hoc=True,
-        targets_json=request.targets,
-    )
-    session.add(target_group)
-
-    # 2. Create the scan
     scan = Scan(
         name=request.name,
         cron_expression=request.cron_expression,
+        targets=request.targets,
         ports_json=request.ports,
         flags_json=request.flags.model_dump(),
         ghost_window=request.ghost_window,
         tls_warning_days=request.tls_warning_days,
+        prune_void_hosts=request.prune_void_hosts,
+        prune_closed_ports=request.prune_closed_ports,
         alert_config_json=(
             request.alert_config.model_dump() if request.alert_config else None
         ),
         alerts_muted=request.alerts_muted,
     )
     session.add(scan)
-
-    session.commit()  # Commit to get IDs
-
-    # 3. Link them
-    link = ScanTargetGroupLink(
-        scan_id=scan.id,
-        target_group_id=target_group.id,
-    )
-    session.add(link)
     session.commit()
     session.refresh(scan)
 
-    return _build_scan_response(scan, session, targets=request.targets)
+    return _build_scan_response(scan, session, targets=scan.targets)
 
 
 @router.get("")
@@ -150,141 +238,68 @@ def update_scan(
 
     scan.name = request.name
     scan.cron_expression = request.cron_expression
+    scan.targets = request.targets
     scan.ports_json = request.ports
     scan.flags_json = request.flags.model_dump()
     scan.ghost_window = request.ghost_window
     scan.tls_warning_days = request.tls_warning_days
+    scan.prune_void_hosts = request.prune_void_hosts
+    scan.prune_closed_ports = request.prune_closed_ports
     scan.alert_config_json = (
         request.alert_config.model_dump() if request.alert_config else None
     )
     scan.alerts_muted = request.alerts_muted
     session.add(scan)
-
-    # Update targets (delete old links, recreate ad-hoc)
-    for tg in scan.target_groups:
-        if tg.is_ad_hoc:
-            session.delete(tg)
-    scan.target_groups = []
-
-    target_group = TargetGroup(
-        name=f"Ad-hoc Target Group for {request.name}",
-        is_ad_hoc=True,
-        targets_json=request.targets,
-    )
-    session.add(target_group)
-    session.commit()
-
-    link = ScanTargetGroupLink(
-        scan_id=scan.id,
-        target_group_id=target_group.id,
-    )
-    session.add(link)
     session.commit()
     session.refresh(scan)
 
-    return _build_scan_response(scan, session, targets=request.targets)
+    return _build_scan_response(scan, session, targets=scan.targets)
 
 
-@router.post("/{id}/alerts/mute", response_model=ScanResponse)
-def mute_scan_alerts(
+@router.patch("/{id}", response_model=ScanResponse)
+def patch_scan(
     id: Annotated[str, Path()],
+    request: ScanUpdateRequest,
     session: SessionDep,
 ) -> ScanResponse:
     scan = session.get(Scan, id)
     if not scan or scan.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Scan not found")
-    scan.alerts_muted = True
+
+    fields_set = request.model_fields_set
+    if "name" in fields_set and request.name is not None:
+        scan.name = request.name
+    if "cron_expression" in fields_set:
+        scan.cron_expression = request.cron_expression
+    if "is_active" in fields_set and request.is_active is not None:
+        scan.is_active = request.is_active
+    if "targets" in fields_set and request.targets is not None:
+        scan.targets = request.targets
+    if "ports" in fields_set and request.ports is not None:
+        scan.ports_json = request.ports
+    if "flags" in fields_set and request.flags is not None:
+        scan.flags_json = request.flags.model_dump()
+    if "ghost_window" in fields_set and request.ghost_window is not None:
+        scan.ghost_window = request.ghost_window
+    if "tls_warning_days" in fields_set and request.tls_warning_days is not None:
+        scan.tls_warning_days = request.tls_warning_days
+    if "prune_void_hosts" in fields_set and request.prune_void_hosts is not None:
+        scan.prune_void_hosts = request.prune_void_hosts
+    if "prune_closed_ports" in fields_set and request.prune_closed_ports is not None:
+        scan.prune_closed_ports = request.prune_closed_ports
+    if "alert_config" in fields_set:
+        scan.alert_config_json = (
+            request.alert_config.model_dump() if request.alert_config else None
+        )
+    if "alerts_muted" in fields_set and request.alerts_muted is not None:
+        scan.alerts_muted = request.alerts_muted
+
     session.add(scan)
     session.commit()
     session.refresh(scan)
-    return _build_scan_response(scan, session)
 
+    return _build_scan_response(scan, session, targets=scan.targets)
 
-@router.post("/{id}/alerts/unmute", response_model=ScanResponse)
-def unmute_scan_alerts(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-) -> ScanResponse:
-    scan = session.get(Scan, id)
-    if not scan or scan.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    scan.alerts_muted = False
-    session.add(scan)
-    session.commit()
-    session.refresh(scan)
-    return _build_scan_response(scan, session)
-
-
-@router.get("/{id}/alerts/mute", response_class=HTMLResponse)
-def get_mute_scan_alerts(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-    background_tasks: BackgroundTasks,
-) -> HTMLResponse:
-    scan = session.get(Scan, id)
-    if not scan or scan.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    was_muted = scan.alerts_muted
-    scan.alerts_muted = True
-    session.add(scan)
-    session.commit()
-    if not was_muted:
-        background_tasks.add_task(dispatch_mute_status_notification, scan, True)
-    unmute_url = f"/api/scans/{scan.id}/alerts/unmute"
-    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
-    html_content = (
-        "<!DOCTYPE html>"
-        "<html>"
-        "<head><title>Alerts Muted</title><meta name='viewport' content='width=device-width, initial-scale=1'></head>"
-        "<body style='font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; color: #0f172a;'>"
-        "<div style='background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px 32px; max-width: 480px; text-align: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);'>"
-        "<h2 style='margin: 0 0 12px; font-size: 20px;'>Alerts Muted</h2>"
-        f"<p style='margin: 0 0 20px; color: #475569; font-size: 15px;'>Automated alerts for schedule <strong>{scan.name}</strong> have been turned off.</p>"
-        "<div style='display: flex; gap: 12px; justify-content: center;'>"
-        f"<a href='{unmute_url}' style='display: inline-block; padding: 8px 16px; background: #0f172a; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;'>Turn Back On</a>"
-        f"<a href='{dashboard_url}' style='display: inline-block; padding: 8px 16px; background: #e2e8f0; color: #0f172a; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;'>Open Dashboard</a>"
-        "</div>"
-        "</div>"
-        "</body>"
-        "</html>"
-    )
-    return HTMLResponse(content=html_content)
-
-
-@router.get("/{id}/alerts/unmute", response_class=HTMLResponse)
-def get_unmute_scan_alerts(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-    background_tasks: BackgroundTasks,
-) -> HTMLResponse:
-    scan = session.get(Scan, id)
-    if not scan or scan.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Scan not found")
-    was_muted = scan.alerts_muted
-    scan.alerts_muted = False
-    session.add(scan)
-    session.commit()
-    if was_muted:
-        background_tasks.add_task(dispatch_mute_status_notification, scan, False)
-    mute_url = f"/api/scans/{scan.id}/alerts/mute"
-    dashboard_url = f"{settings.app_base_url}/scheduled-runs"
-    html_content = (
-        "<!DOCTYPE html>"
-        "<html>"
-        "<head><title>Alerts Active</title><meta name='viewport' content='width=device-width, initial-scale=1'></head>"
-        "<body style='font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; color: #0f172a;'>"
-        "<div style='background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px 32px; max-width: 480px; text-align: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);'>"
-        "<h2 style='margin: 0 0 12px; font-size: 20px;'>Alerts Active</h2>"
-        f"<p style='margin: 0 0 20px; color: #475569; font-size: 15px;'>Automated alerts for schedule <strong>{scan.name}</strong> are now active.</p>"
-        "<div style='display: flex; gap: 12px; justify-content: center;'>"
-        f"<a href='{mute_url}' style='display: inline-block; padding: 8px 16px; background: #dc2626; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;'>Mute Alerts</a>"
-        f"<a href='{dashboard_url}' style='display: inline-block; padding: 8px 16px; background: #e2e8f0; color: #0f172a; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;'>Open Dashboard</a>"
-        "</div>"
-        "</div>"
-        "</body>"
-        "</html>"
-    )
-    return HTMLResponse(content=html_content)
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_scan(id: Annotated[str, Path()], session: SessionDep):
@@ -296,54 +311,4 @@ def delete_scan(id: Annotated[str, Path()], session: SessionDep):
     scan.is_active = False
     session.add(scan)
     session.commit()
-
-@router.post("/{id}/launch", status_code=status.HTTP_201_CREATED)
-async def launch_scheduled_scan(
-    id: Annotated[str, Path()],
-    session: SessionDep,
-    request: Request,
-) -> ScanRunResponse:
-    scan = session.get(Scan, id)
-    if not scan or scan.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Scan not found")
-        
-    targets = []
-    for tg in scan.target_groups:
-        targets.extend(tg.targets_json)
-        
-    snapshot = {
-        "targets": targets,
-        "ports": scan.ports_json or [80, 443],
-        "flags": scan.flags_json or {},
-        "ghost_window": scan.ghost_window,
-        "tls_warning_days": scan.tls_warning_days,
-        "alert_config": scan.alert_config_json,
-    }
-    
-    run = ScanRun(
-        scan_id=scan.id,
-        execution_config_snapshot_json=snapshot,
-        status=ScanRunStatus.PENDING,
-        started_at=datetime.now(timezone.utc)
-    )
-    session.add(run)
-    session.commit()
-    session.refresh(run)
-    
-    asyncio.create_task(run_scheduled_scan_with_alerts(run.id, snapshot, request.app.state))
-    
-    return ScanRunResponse(
-        id=run.id,
-        scan_id=run.scan_id,
-        scan_name=scan.name,
-        status=run.status,
-        started_at=run.started_at,
-        finished_at=run.finished_at,
-        metrics_json=run.metrics_json,
-        targets=targets,
-        ports=scan.ports_json or [80, 443],
-        flags=ExecutionFlags.model_validate(scan.flags_json or {}),
-        ghost_window=scan.ghost_window,
-        tls_warning_days=scan.tls_warning_days,
-    )
 

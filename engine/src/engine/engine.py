@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Track seen combinations to avoid duplicate probes
 seen_tcp = set()
 seen_http = set()
+open_tcp = set()
 
 # Global to handle cancellation gracefully
 is_cancelled = False
@@ -59,10 +60,10 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                 
             max_depth = task.context.flags.out_of_scope_depth
             if current_depth > max_depth:
-                logger.info(f"[Routine {routine_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
+                logger.debug(f"[Routine {routine_id}] Skipping {target} (IP: {state_key}) - Exceeds max depth ({current_depth} > {max_depth})")
                 continue
 
-            logger.info(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
+            logger.debug(f"[Routine {routine_id}] Processing {target} (IP: {state_key}) on ports {ports} (Depth {current_depth})")
             
             # Initialize localized IpState for this task
             local_state = IpState()
@@ -72,7 +73,7 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                 # If not a domain, we map root_target to resolved_from so the UI categorizes it cleanly under the root block
                 local_state.metadata.resolved_from = task.context.root_target or target
                 
-            if task.context.discovered_from:
+            if task.context.discovered_from and task.context.discovered_from != state_key:
                 local_state.metadata.discovered_from.append(task.context.discovered_from)
             if task.context.subrun_id:
                 local_state.metadata.subrun_id = task.context.subrun_id
@@ -98,7 +99,6 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                     continue
                     
                 from engine.schemas.engine import PortState
-                local_state.ports[port] = PortState()
                 
                 if not skip_tcp:
                     seen_tcp.add(tcp_cache_key)
@@ -106,32 +106,33 @@ async def scanner_routine(routine_id: str, queue: asyncio.Queue, limiter: AsyncT
                     
                     await limiter.acquire()
                     tcp_result = await check_tcp_and_tls(state_key, port, server_hostname=host_header)
+                    if tcp_result.tcp_status == "open":
+                        open_tcp.add(tcp_cache_key)
                     
                     local_state.ports[port] = tcp_result
                     
                     # If we found SANs, and recursive checking is enabled in the flags
-                    if tcp_result.tls_certificate and task.context.flags.recursive_san_check:
+                    if tcp_result.tls_certificate and task.context.flags.recursive_san:
                         for san in tcp_result.tls_certificate.domains_discovered_sans:
                             if "*" not in san:  # Avoid queuing wildcard domains directly
-                                try:
-                                    ipaddress.IPv4Address(san)
-                                    discovered_from = state_key
-                                except ValueError:
-                                    discovered_from = None
-                                    
                                 from engine.schemas.engine import EngineTask, TaskContext
                                 await queue.put(EngineTask(
                                     target=san, 
                                     ports=[port],
                                     context=TaskContext(
                                         flags=task.context.flags,
-                                        discovered_from=discovered_from,
+                                        discovered_from=state_key,
                                         parent_ip=ip_address,
                                         depth=current_depth
                                     )
                                 ))
+                else:
+                    if tcp_cache_key in open_tcp:
+                        local_state.ports[port] = PortState(tcp_status="open")
+                    else:
+                        local_state.ports[port] = PortState(tcp_status="closed")
                 
-                if not skip_http and task.context.flags.check_http:
+                if not skip_http and task.context.flags.check_http and (tcp_cache_key in open_tcp):
                     seen_http.add(http_cache_key)
                     has_updates = True
                     
@@ -202,7 +203,7 @@ async def _producer_routine(queue: asyncio.Queue, tasks_data: list[dict[str, Any
         return
         
     first_task_dict = tasks_data[0]
-    flags = TaskFlags(**first_task_dict.get("flags", {}))
+    flags = TaskFlags.model_validate(first_task_dict.get("flags") or {})
     context = TaskContext(
         flags=flags,
         discovered_from=first_task_dict.get("discovered_from"),
@@ -290,9 +291,10 @@ def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100):
     The synchronous boundary that the CLI calls.
     It triggers the asyncio event loop.
     """
-    global seen_tcp, seen_http, is_cancelled
+    global seen_tcp, seen_http, open_tcp, is_cancelled
     seen_tcp.clear()
     seen_http.clear()
+    open_tcp.clear()
     is_cancelled = False
     
     logger.info(f"[*] Starting Asyncio Breadth-First Scanner Engine with {workers_count} concurrent routines...")

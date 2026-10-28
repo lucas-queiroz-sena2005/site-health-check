@@ -39,3 +39,48 @@ def test_startup_reconciliation():
         
         r3 = session.get(ScanRun, id3)
         assert r3.status == ScanRunStatus.COMPLETED
+
+
+def test_openapi_schema_contains_table_and_drawer_endpoints():
+    client = TestClient(app)
+    resp = client.get("/api/openapi.json")
+    assert resp.status_code == 200
+    schema = resp.json()
+    paths = schema.get("paths", {})
+
+    # Dedicated table & drawer endpoints present
+    assert "/api/runs/{id}/hosts" in paths
+    assert "get" in paths["/api/runs/{id}/hosts"]
+
+    assert "/api/runs/{id}/hosts/{ip}" in paths
+    assert "get" in paths["/api/runs/{id}/hosts/{ip}"]
+
+    assert "/api/runs/{id}/services" in paths
+    assert "get" in paths["/api/runs/{id}/services"]
+
+    assert "/api/runs/{id}/checks" in paths
+    assert "get" in paths["/api/runs/{id}/checks"]
+
+    # Unified launch & control endpoints
+    assert "/api/runs" in paths
+    assert "post" in paths["/api/runs"]
+
+    assert "/api/scans/{id}" in paths
+    assert "patch" in paths["/api/scans/{id}"]
+
+    # Legacy routes absent
+    assert "/api/results" not in paths
+    assert "/api/runs/{id}/results" not in paths
+    assert "/api/runs/launch" not in paths
+    assert "/api/scans/{id}/launch" not in paths
+    if "/api/scans/{id}/alerts/mute" in paths:
+        assert "get" not in paths["/api/scans/{id}/alerts/mute"]
+    if "/api/scans/{id}/alerts/unmute" in paths:
+        assert "get" not in paths["/api/scans/{id}/alerts/unmute"]
+
+    # DTO components present
+    components = schema.get("components", {}).get("schemas", {})
+    assert "HostRowDTO" in components
+    assert "ServiceRowDTO" in components
+    assert "HttpCheckRowDTO" in components
+    assert "HostDetailDTO" in components

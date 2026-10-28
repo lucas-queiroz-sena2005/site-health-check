@@ -368,7 +368,7 @@ def test_compute_run_summary_closed_port_with_open_tls_warning(session: Session)
     assert summary["ghost"] == 0
 
 
-def test_compute_run_summary_invalid_tls_is_warning(session: Session):
+def test_compute_run_summary_invalid_tls_is_failed(session: Session):
     from api.models import HostState, PortState, ScanRun, ScanRunStatus, TlsCertificate
     from api.services.alerts import compute_run_summary
 
@@ -399,8 +399,8 @@ def test_compute_run_summary_invalid_tls_is_warning(session: Session):
         tls_warning_days=30,
     )
     assert summary["active"] == 0
-    assert summary["warning"] == 1
-    assert summary["failed"] == 0
+    assert summary["warning"] == 0
+    assert summary["failed"] == 1
     assert summary["ghost"] == 0
 
 
@@ -416,7 +416,7 @@ def test_compute_run_summary_counts_void_hosts(session: Session):
     session.commit()
     session.refresh(run)
 
-    # Add 1 active host and 1 synthetic void host
+    # Add 1 active host and 1 inactive (void) host
     h_active = HostState(scan_run_id=run.id, ip_address="10.0.0.1")
     session.add(h_active)
     session.flush()
@@ -424,16 +424,16 @@ def test_compute_run_summary_counts_void_hosts(session: Session):
 
     h_void = HostState(
         scan_run_id=run.id,
-        ip_address="Void (255)",
-        metadata_resolved_from="10.0.0.0/24",
-        metadata_discovered_from_json=["void_aggregated"],
+        ip_address="10.0.0.2",
+        resolved_domains=["10.0.0.0/24"],
+        discovered_from=[],
     )
     session.add(h_void)
     session.commit()
 
     summary = compute_run_summary(session=session, run=run)
     assert summary["active"] == 1
-    assert summary["void"] == 255
+    assert summary["void"] == 1
 
 
 def test_get_results_summary_returns_persisted_summary(client: TestClient, session: Session):
@@ -450,9 +450,137 @@ def test_get_results_summary_returns_persisted_summary(client: TestClient, sessi
     session.commit()
     session.refresh(run)
 
-    resp = client.get(f"/api/results/summary?run_id={run.id}")
+    resp = client.get(f"/api/runs/{run.id}")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["run_id"] == run.id
-    assert data["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
+    assert data["id"] == run.id
+    assert data["metrics_json"]["summary"] == {"active": 4, "warning": 1, "failed": 0, "ghost": 1, "void": 20}
+
+
+def test_compute_run_summary_prefers_metrics_json_directly(session: Session):
+    from api.models import ScanRun, ScanRunStatus
+    from api.services.alerts import compute_run_summary
+
+    run = ScanRun(
+        status=ScanRunStatus.COMPLETED,
+        metrics_json={"summary": {"active": 12, "warning": 2, "failed": 1, "ghost": 0, "void": 50}},
+    )
+    session.add(run)
+    session.commit()
+
+    summary = compute_run_summary(session=session, run=run)
+    assert summary == {"active": 12, "warning": 2, "failed": 1, "ghost": 0, "void": 50}
+
+
+def test_evaluate_alert_triggers_with_finding_codes():
+    config = AlertConfig(
+        webhook_url="https://chat.googleapis.com/test",
+        alert_on_failure=True,
+    )
+    summary = {"active": 5, "warning": 0, "failed": 2, "ghost": 0, "void": 0}
+    findings = ["TLS_EXPIRED", "HTTP_5XX"]
+
+    should_send, triggers, is_healthy = evaluate_alert_triggers(
+        alert_config=config,
+        run_status=ScanRunStatus.COMPLETED,
+        summary_stats=summary,
+        finding_codes=findings,
+    )
+
+    assert should_send is True
+    assert is_healthy is False
+    assert any("TLS_EXPIRED" in t or "HTTP_5XX" in t for t in triggers)
+
+
+def test_build_alert_payload_enriches_findings():
+    summary = {"active": 5, "warning": 0, "failed": 1, "ghost": 0, "void": 0}
+    findings = ["TLS_EXPIRED"]
+
+    payload = build_alert_payload(
+        webhook_url="https://chat.googleapis.com/test",
+        schedule_name="Core Services",
+        run_id="run-test-findings",
+        timestamp_str="2026-10-22 15:00:00 UTC",
+        triggers=["1 Service Failures"],
+        summary_stats=summary,
+        table_url="https://app.test/?run=run-test-findings",
+        is_healthy=False,
+        finding_codes=findings,
+    )
+
+    # Check that finding codes are represented in the Google Chat Card
+    card_text = str(payload)
+    assert "TLS_EXPIRED" in card_text
+
+
+def test_evaluate_alert_triggers_with_custom_rule_injection():
+    from api.services.alerts import TriggerContext
+
+    def custom_rule(ctx: TriggerContext) -> list[str]:
+        if "CUSTOM_ANOMALY" in ctx.finding_codes:
+            return ["Custom Anomaly Detected"]
+        return []
+
+    config = AlertConfig(webhook_url="https://chat.googleapis.com/test")
+    summary = {"active": 5, "warning": 0, "failed": 0, "ghost": 0, "void": 0}
+
+    # With custom rule injected, triggers match
+    should_send, triggers, is_healthy = evaluate_alert_triggers(
+        alert_config=config,
+        run_status=ScanRunStatus.COMPLETED,
+        summary_stats=summary,
+        finding_codes=["CUSTOM_ANOMALY"],
+        rules=[custom_rule],
+    )
+
+    assert should_send is True
+    assert is_healthy is False
+    assert triggers == ["Custom Anomaly Detected"]
+
+
+@pytest.mark.asyncio
+async def test_webhook_cards_link_to_dashboard_not_state_mutating_mute(session: Session):
+    from api.services.alerts import evaluate_and_dispatch_alert
+    from unittest.mock import patch
+
+    scan = Scan(
+        id="test-scan-webhook-links",
+        name="Security Prod",
+        cron_expression="0 0 * * *",
+        targets=["example.com"],
+        ports_json=[80],
+        flags_json={},
+        alert_config_json={
+            "webhook_url": "https://chat.googleapis.com/v1/spaces/test/messages",
+            "notify_on_warning": True,
+        },
+        alerts_muted=False,
+    )
+    run = ScanRun(
+        id="test-run-webhook-links",
+        scan_id=scan.id,
+        status=ScanRunStatus.COMPLETED,
+        metrics_json={"summary": {"active": 1, "warning": 1, "failed": 0, "ghost": 0, "void": 0}},
+    )
+    session.add(scan)
+    session.add(run)
+    session.commit()
+
+    captured_payload = None
+
+    async def fake_dispatch(url: str, payload: dict):
+        nonlocal captured_payload
+        captured_payload = payload
+        return True, None
+
+    with patch("api.services.alerts.dispatch_webhook", side_effect=fake_dispatch):
+        await evaluate_and_dispatch_alert(run.id, session)
+
+    assert captured_payload is not None
+    payload_str = str(captured_payload)
+    # Action links must point to the dashboard, NOT to state-mutating GET /alerts/mute
+    assert "/alerts/mute" not in payload_str
+    assert "/scheduled-runs" in payload_str
+
+
 

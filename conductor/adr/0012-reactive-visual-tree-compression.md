@@ -4,7 +4,7 @@ Date: 2026-09-16
 
 ## Status
 
-Accepted
+Superseded by [ADR 0023](./0023-control-plane-and-flat-explorer-modernization.md)
 
 ## Context
 

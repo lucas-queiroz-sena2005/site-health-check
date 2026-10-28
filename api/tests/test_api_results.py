@@ -36,8 +36,8 @@ def test_get_results(client: TestClient, session: Session):
     ip_state = HostState(
         scan_run_id=job.id,
         ip_address="8.8.8.8",
-        metadata_resolved_from="google.com",
-        metadata_discovered_from_json=[],
+        resolved_domains=["google.com"],
+        discovered_from=[],
     )
     session.add(ip_state)
     session.flush()
@@ -68,25 +68,27 @@ def test_get_results(client: TestClient, session: Session):
     session.add(http_check)
     session.commit()
 
-    response = client.get("/api/results")
-    assert response.status_code == 200
-    data = response.json()
+    # Assert legacy bridge GET /api/runs/{id}/results is retired
+    response = client.get(f"/api/runs/{job.id}/results")
+    assert response.status_code == 404
+
+    # Assert new relational hosts endpoint provides the host data
+    hosts_resp = client.get(f"/api/runs/{job.id}/hosts")
+    assert hosts_resp.status_code == 200
+    hosts_data = hosts_resp.json()
+    assert hosts_data["total"] == 1
+    assert hosts_data["items"][0]["ip_address"] == "8.8.8.8"
     
-    print("DATA: ", data)
-    assert len(data) == 1
-    assert data[0]["ip_address"] == "8.8.8.8"
-    assert data[0]["metadata"]["resolved_from"] == "google.com"
-    
-    # Assert dictionary structure for ports
-    assert "443" in data[0]["ports"]
-    port_443 = data[0]["ports"]["443"]
-    assert port_443["tcp_status"] == "open"
-    assert port_443["tls_certificate"]["valid"] is True
-    
-    # Assert dictionary structure for http_routing_checks
-    assert "google.com" in port_443["http_routing_checks"]
-    http_res = port_443["http_routing_checks"]["google.com"]
-    assert http_res["status_code"] == 200
+    # Assert relational models maintain direct object hierarchy without dict wrappers
+    session.refresh(ip_state)
+    assert len(ip_state.ports) == 1
+    port_443 = ip_state.ports[0]
+    assert port_443.port_number == 443
+    assert port_443.tcp_status == "open"
+    assert port_443.tls_certificate.valid is True
+    assert len(port_443.http_routing_checks) == 1
+    assert port_443.http_routing_checks[0].domain == "google.com"
+    assert port_443.http_routing_checks[0].status_code == 200
 
 def test_host_state_subrun_id(session: Session):
     job = ScanRun(execution_config_snapshot_json={"targets": ["10.0.0.0/24"]}, status=ScanRunStatus.COMPLETED)
@@ -133,9 +135,16 @@ def test_get_results_by_subrun(client: TestClient, session: Session):
     session.add(port_state)
     session.commit()
 
-    response = client.get(f"/api/results?run_id={job.id}&subrun_id=10.0.0.0/24")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["ip_address"] == "10.0.0.5"
+    # Assert legacy bridge returns 404
+    response = client.get(f"/api/runs/{job.id}/results")
+    assert response.status_code == 404
+
+    # Assert new hosts endpoint returns the 2 hosts
+    hosts_resp = client.get(f"/api/runs/{job.id}/hosts")
+    assert hosts_resp.status_code == 200
+    hosts_data = hosts_resp.json()
+    assert hosts_data["total"] == 2
+    ips = [r["ip_address"] for r in hosts_data["items"]]
+    assert "10.0.0.5" in ips
+    assert "10.0.1.5" in ips
 

@@ -1,17 +1,38 @@
 import dataclasses
 from typing import Any
+from pydantic import BaseModel, Field, AliasChoices
 
 
-@dataclasses.dataclass
-class TaskFlags:
+class TaskFlags(BaseModel):
     """Configuration flags defining the depth and behavior of the scan."""
-    check_http: bool = True
-    timeout_seconds: int = 10
-    recursive_san_check: bool = False
-    check_virtual_hosts: bool = True
-    out_of_scope_depth: int = 0
-    rate: float = 50.0
-    user_agent: str | None = None
+    check_http: bool = Field(default=True, title="Check HTTP Routing")
+    recursive_san: bool = Field(
+        default=False,
+        title="Recursive SAN Check",
+        validation_alias=AliasChoices("recursive_san", "recursive_san_check"),
+    )
+    out_of_scope_depth: int = Field(default=0, title="Out-of-Scope Depth")
+    check_virtual_hosts: bool = Field(default=True, title="Check Virtual Hosts")
+    timeout: int = Field(
+        default=10,
+        title="Timeout (seconds)",
+        validation_alias=AliasChoices("timeout", "timeout_seconds"),
+    )
+    workers: int = Field(default=100, title="Async Workers")
+    rate: float = Field(default=50.0, title="Rate Limit (req/s)")
+    user_agent: str | None = Field(default=None, title="Custom User Agent")
+
+    @property
+    def timeout_seconds(self) -> int:
+        return self.timeout
+
+    @property
+    def recursive_san_check(self) -> bool:
+        return self.recursive_san
+
+
+ExecutionFlags = TaskFlags
+
 
 @dataclasses.dataclass
 class TaskConfig:
@@ -26,7 +47,12 @@ class TaskConfig:
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize object to the standardized JSON payload."""
-        return dataclasses.asdict(self)
+        return {
+            "target": self.target,
+            "ports": list(self.ports),
+            "flags": self.flags.model_dump() if hasattr(self.flags, "model_dump") else self.flags,
+            "discovered_from": self.discovered_from,
+        }
 
 
 @dataclasses.dataclass

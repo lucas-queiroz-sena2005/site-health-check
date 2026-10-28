@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted (Amended by [ADR 0023](./0023-control-plane-and-flat-explorer-modernization.md) — CLI flag translation metadata replaced by shared schema and JSON `stdin` ingestion)
 
 ## Context
 

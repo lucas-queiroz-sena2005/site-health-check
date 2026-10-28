@@ -5,7 +5,11 @@ A blackbox network and infrastructure monitoring tool that tests availability an
 
 ## Core Features
 - **Automatic Schedules**: Run sequential tests against mapped targets at configured intervals.
-- **Automated Alerts**: Deliver real-time notifications to Google Chat (Cards v2) and Slack (Block Kit) on service failures, ghost hosts, or expiring certificates.
+- **Automated Alerts**: Deliver real-time notifications to Google Chat (Cards v2) and Slack (Block Kit) on service failures, ghost hosts, or expiring certificates, linking directly to the management dashboard.
+- **Orthogonal Explorer REST API**: Dedicated, SQL-paginated and sorted endpoints for Hosts (`/hosts`), Services (`/services`), and HTTP Checks (`/checks`), plus an on-demand IP Detail Drawer endpoint (`/hosts/{ip}`).
+- **Dumb React Flat Explorer & Slide-Over Drawer**: 3-tab relational explorer (Hosts, Services, HTTP Checks) with strict leftmost IP column, on-demand slide-over IP Detail Drawer with discovery lineage, and URL-synchronized orthogonal filter toolbar.
+- **Database-Agnostic IP Sorting & Pruning**: Normalized IPv4/IPv6 sort keys and configurable finalization pruning for void hosts and routine closed ports.
+- **High-Scale Engine & Set-Based Evaluator**: Micro-batched ingestion and set-based relational evaluator capable of ingesting, evaluating, and pruning full /16 CIDR subnets (65,536 hosts) in seconds.
 - **Recursive SAN Check**: Automatically extract and scan Subject Alternative Names from TLS/SSL certificates.
 - **Consolidated History**: Analyze stability, recurring slowdowns, and peak-time failures.
 - **Advanced Filtering**: Isolate specific services even within massive CIDR blocks.

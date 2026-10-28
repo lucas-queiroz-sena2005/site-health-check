@@ -25,3 +25,21 @@ The output JSON (`results.json`) uses a strict **IP-First** hierarchy (`IP -> Po
 Even if the initial input was a single Application URL (e.g., `https://susy.ic.unicamp.br/login`), the engine resolves the IP first, performs the checks, and places the result inside the unified IP hierarchy. 
 
 This ensures that if you check 10 different URLs that all share the same OpenStack NGINX proxy, the output JSON automatically groups them together under that single physical/virtual server IP, creating a perfect infrastructure map.
+
+---
+
+## 3. Normalized Relational Database Schema (ADR 0023)
+
+In the persistent SQLite database, scan runs and telemetry are stored in a normalized relational schema with cascading deletes and JSON lineage arrays:
+
+![Normalized Entity-Relationship Architecture](./diagrams/er_diagram.svg)
+*(High-resolution raster version: [er_diagram.png](./diagrams/er_diagram.png))*
+
+### Key Entities
+- **`Scan`:** Contains direct `targets: list[str]`.
+- **`ScanRun`:** Represents execution instances (`pending`, `running`, `completed`, `failed`).
+- **`HostState`:** Layer-3 IP node storing `resolved_domains` and `discovered_from` JSON arrays with pre-computed rollups (`open_port_count`, `vhost_count`, `depth`, `min_tcp_latency_ms`, `min_tls_expires_days`, `worst_tls_version`, `worst_http_status`, `status`, `finding_codes`).
+- **`PortState`:** Layer-4 service node with `tcp_status`, `tcp_latency_ms`, and finding rollups.
+- **`TlsCertificate`:** 1:1 certificate details with validity and SAN arrays.
+- **`HttpRoutingCheck`:** Layer-7 virtual host probe details with status code, redirect targets, and individual findings.
+

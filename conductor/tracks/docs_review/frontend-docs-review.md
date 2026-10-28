@@ -1,6 +1,6 @@
 # Frontend Codebase & Documentation Audit Report
 
-We conducted an in-depth review comparing the actual state of the frontend codebase in `/home/lucasse/Documents/site-health-check/frontend` against the existing documentation (`CONTEXT.md`, ADRs under `docs/adr/`, architecture docs in `docs/`, and `.scratch/` tickets).
+We conducted an in-depth review comparing the actual state of the frontend codebase in `frontend/` against the existing documentation (`CONTEXT.md`, ADRs under `docs/adr/`, architecture docs in `docs/`, and `.scratch/` tickets).
 
 ---
 
