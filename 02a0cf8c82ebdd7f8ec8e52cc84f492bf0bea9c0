@@ -1,0 +1,2 @@
+Task: Write failing backend and frontend tests for void pruning settings and dashboard fallback states (Red Phase)
+Summary: Added tests in test_api_scans.py for prune_void_hosts and prune_closed_ports, in ScheduledScansPage.test.tsx for evaluation switches, and in HostTablePage.test.tsx for scan-not-found and no-scans fallback cards.
