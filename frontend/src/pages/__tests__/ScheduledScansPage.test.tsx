@@ -137,4 +137,107 @@ describe('ScheduledScansPage Alert Stopper Controls', () => {
     const statusElem = screen.getByTestId('alert-status-scan-active-alerts')
     expect(statusElem.textContent).toMatch(/Muted/i)
   })
+
+  it('waits for server response on Create Schedule, stays in dialog and shows bottom alert banner on error, and clears error when re-opened', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url === '/api/scans' && (!options?.method || options.method === 'GET')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockScans,
+        })
+      }
+      if (url === '/api/scans' && options?.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          status: 422,
+          json: async () => ({
+            detail: [
+              {
+                loc: ['body', 'cron_expression'],
+                msg: "Value error, Invalid cron expression format (expected 5 fields, e.g. '0 0 * * *')",
+              },
+            ],
+          }),
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <ScheduledScansPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    // Open Create Schedule modal
+    const createTrigger = await screen.findByRole('button', { name: /\+ Create New Schedule/i })
+    fireEvent.click(createTrigger)
+
+    const cronInput = (await screen.findByLabelText(/Cron Schedule/i)) as HTMLInputElement
+    fireEvent.change(cronInput, { target: { value: 'invalid-cron' } })
+
+    const submitBtn = screen.getByRole('button', { name: /Create Schedule/i })
+    fireEvent.click(submitBtn)
+
+    // Bottom alert banner should appear with human-readable error
+    const errorBanner = await screen.findByTestId('form-error-banner')
+    expect(errorBanner.textContent).toContain("Invalid cron expression format (expected 5 fields, e.g. '0 0 * * *')")
+
+    // Dialog remains open and user input is preserved
+    expect(screen.getByText(/Create New Scheduled Scan/i)).toBeTruthy()
+    expect((screen.getByLabelText(/Cron Schedule/i) as HTMLInputElement).value).toBe('invalid-cron')
+
+    // Close modal and re-open — stale error banner must be cleared
+    const cancelBtn = screen.getByRole('button', { name: /Cancel/i })
+    fireEvent.click(cancelBtn)
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ Create New Schedule/i }))
+    await screen.findByText(/Create New Scheduled Scan/i)
+    expect(screen.queryByTestId('form-error-banner')).toBeNull()
+  })
+
+  it('keeps inline Edit Schedule open and displays bottom error banner when update fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url === '/api/scans') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => mockScans,
+        })
+      }
+      if (url === '/api/scans/scan-active-alerts' && options?.method === 'PUT') {
+        return Promise.resolve({
+          ok: false,
+          status: 422,
+          json: async () => ({
+            detail: 'Port 70000 is out of valid range (1-65535)',
+          }),
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <ScheduledScansPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const row = await screen.findByText('Production Core')
+    fireEvent.click(row)
+
+    const editBtn = await screen.findByRole('button', { name: /Edit Schedule/i })
+    fireEvent.click(editBtn)
+
+    const saveBtn = await screen.findByRole('button', { name: /Save Changes/i })
+    fireEvent.click(saveBtn)
+
+    const errorBanner = await screen.findByTestId('form-error-banner')
+    expect(errorBanner.textContent).toContain('Port 70000 is out of valid range (1-65535)')
+    // Still in edit mode
+    expect(screen.getByRole('button', { name: /Save Changes/i })).toBeTruthy()
+  })
 })
