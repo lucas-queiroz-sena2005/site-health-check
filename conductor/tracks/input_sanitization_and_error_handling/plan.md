@@ -46,9 +46,9 @@
 
 ---
 
-## Phase 3: Full End-to-End Verification & Regression Safety
+## Phase 3: Full End-to-End Verification & Regression Safety [checkpoint: 6c89193]
 - [x] Task: Full stack test suite and build verification eb578cf
   - [x] Run full backend `pytest` suite (`.venv/bin/pytest api/ engine/`)
   - [x] Run full frontend `vitest` suite (`cd frontend && env -u LD_LIBRARY_PATH npx vitest run`)
   - [x] Run production frontend build (`cd frontend && env -u LD_LIBRARY_PATH npm run build`)
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) 6c89193
