@@ -1,0 +1,3 @@
+Task: Write failing frontend tests for API error extraction, bottom alert banners, and wait-before-leaving behavior (Red Phase)
+
+Added unit tests in frontend/src/lib/__tests__/utils.test.ts and component tests in ScheduledScansPage.test.tsx and LiveScanPage.test.tsx verifying extractApiErrorMessage, wait-before-leaving modal/edit workflows, bottom alert banner error display, and stale error clearing.
