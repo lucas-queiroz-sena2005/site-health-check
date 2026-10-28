@@ -79,6 +79,8 @@ async def check_and_run_scheduled_scans(app_state):
                         "flags": scan.flags_json or {},
                         "ghost_window": scan.ghost_window,
                         "tls_warning_days": scan.tls_warning_days,
+                        "prune_void_hosts": scan.prune_void_hosts,
+                        "prune_closed_ports": scan.prune_closed_ports,
                         "alert_config": scan.alert_config_json,
                     }
                     
@@ -95,6 +97,10 @@ async def check_and_run_scheduled_scans(app_state):
                     await app_state.run_manager.dispatch_run(
                         run.id, snapshot, scan_id=scan.id
                     )
+            except (croniter.CroniterBadCronError, croniter.CroniterBadDateError, ValueError) as e:
+                logger.warning(
+                    f"Skipping scheduled scan {scan.id} due to invalid cron expression {scan.cron_expression!r}: {e}"
+                )
             except Exception as e:
                 logger.exception(f"Error checking schedule for scan {scan.id}: {e}", exc_info=True)
 

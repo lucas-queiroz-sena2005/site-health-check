@@ -1,11 +1,13 @@
 import ipaddress
+import re
 import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Any
 
+from engine.parsing import validate_and_clean_target
 from engine.schemas.engine import ExecutionFlags, TaskFlags
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pydantic import Field as PydanticField
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
 
@@ -42,6 +44,63 @@ class ScanRunStatus(str, Enum):
     FAILED = "FAILED"
     ABORTED = "ABORTED"
 
+def sanitize_and_validate_targets(targets: list[str]) -> list[str]:
+    """Cleans and validates each target string using engine.parsing without breaking CIDR or ranges."""
+    cleaned_targets: list[str] = []
+    for raw in targets:
+        if not isinstance(raw, str):
+            raise ValueError("Target must be a string")
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        res = validate_and_clean_target(stripped)
+        if not res.is_valid:
+            raise ValueError(res.error_message)
+        for seg in res.segments:
+            cleaned_targets.append(f"{seg.data}{seg.suffix}" if seg.suffix else seg.data)
+    return cleaned_targets
+
+
+def sanitize_and_validate_ports(ports: list[str | int]) -> list[str | int]:
+    """Validates integer ports and hyphenated port ranges (1-65535) without calling sys.exit."""
+    cleaned_ports: list[str | int] = []
+    for item in ports:
+        if isinstance(item, int) and not isinstance(item, bool):
+            if 1 <= item <= 65535:
+                cleaned_ports.append(item)
+            else:
+                raise ValueError(f"Port {item} is out of valid range (1-65535)")
+        elif isinstance(item, str):
+            for part in item.split(","):
+                p = part.strip()
+                if not p:
+                    continue
+                if "-" in p:
+                    bounds = p.split("-")
+                    if len(bounds) != 2 or not bounds[0].isdigit() or not bounds[1].isdigit():
+                        raise ValueError(
+                            f"Invalid port range '{p}' (expected 'start-end' between 1 and 65535)"
+                        )
+                    start_p, end_p = int(bounds[0]), int(bounds[1])
+                    if not (1 <= start_p <= end_p <= 65535):
+                        raise ValueError(
+                            f"Invalid port range '{p}' (start must be <= end and between 1 and 65535)"
+                        )
+                    cleaned_ports.append(f"{start_p}-{end_p}")
+                elif p.isdigit():
+                    p_int = int(p)
+                    if not (1 <= p_int <= 65535):
+                        raise ValueError(f"Port {p_int} is out of valid range (1-65535)")
+                    cleaned_ports.append(p_int)
+                else:
+                    raise ValueError(
+                        f"Invalid port '{p}' (must be an integer between 1 and 65535 or a range like '8080-8090')"
+                    )
+        else:
+            raise ValueError(f"Invalid port value: {item}")
+    return cleaned_ports
+
+
 class AlertConfig(BaseModel):
     webhook_url: str | None = PydanticField(default=None, title="Webhook URL")
     alert_on_failure: bool = PydanticField(default=True, title="Alert on Failures")
@@ -50,6 +109,21 @@ class AlertConfig(BaseModel):
     alert_on_abort: bool = PydanticField(default=True, title="Alert on Run Abort/Crash")
     alert_on_void: bool = PydanticField(default=False, title="Alert on Void Hosts")
     notify_on_healthy: bool = PydanticField(default=False, title="Notify on Healthy Runs")
+
+    @field_validator("webhook_url", mode="before")
+    @classmethod
+    def validate_webhook_url(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            cleaned = v.strip()
+            if not cleaned:
+                return None
+            if not (cleaned.startswith("http://") or cleaned.startswith("https://")):
+                raise ValueError("Webhook URL must start with http:// or https://")
+            return cleaned
+        raise ValueError("Webhook URL must be a string")
+
 
 class ExecutionConfig(BaseModel):
     targets: list[str] = PydanticField(
@@ -64,9 +138,31 @@ class ExecutionConfig(BaseModel):
     )
     flags: ExecutionFlags = PydanticField(default_factory=ExecutionFlags, title="Engine Flags")
     ghost_window: str = PydanticField(default="7d", title="Ghost Window")
-    tls_warning_days: int = PydanticField(default=30, title="TLS Expiry Warning Threshold (days)")
+    tls_warning_days: int = PydanticField(
+        default=30, ge=0, le=3650, title="TLS Expiry Warning Threshold (days)"
+    )
     prune_void_hosts: bool = PydanticField(default=True, title="Prune Void Hosts on Finalization")
     prune_closed_ports: bool = PydanticField(default=True, title="Prune Routine Closed Ports on Finalization")
+
+    @field_validator("targets")
+    @classmethod
+    def validate_targets_list(cls, v: list[str]) -> list[str]:
+        return sanitize_and_validate_targets(v)
+
+    @field_validator("ports")
+    @classmethod
+    def validate_ports_list(cls, v: list[str | int]) -> list[str | int]:
+        return sanitize_and_validate_ports(v)
+
+    @field_validator("ghost_window")
+    @classmethod
+    def validate_ghost_window(cls, v: str) -> str:
+        cleaned = v.strip().lower()
+        if not re.fullmatch(r"^\d+[smhd]$", cleaned):
+            raise ValueError(
+                "Ghost window must be a positive number followed by s, m, h, or d (e.g. '7d', '24h', '30m')"
+            )
+        return cleaned
 
 class Scan(SQLModel, table=True):
     __tablename__: str = "scans"  # type: ignore
@@ -80,6 +176,8 @@ class Scan(SQLModel, table=True):
     flags_json: dict[str, Any] = Field(sa_column=Column(JSON))
     ghost_window: str = Field(default="7d")
     tls_warning_days: int = Field(default=30)
+    prune_void_hosts: bool = Field(default=True)
+    prune_closed_ports: bool = Field(default=True)
     alert_config_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     alerts_muted: bool = Field(default=False)
     

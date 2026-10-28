@@ -437,4 +437,54 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
     expect(screen.getByText(/\(Live • refreshing every 3s\)/i)).toBeTruthy()
     expect(container.querySelector('.animate-ping')).toBeTruthy()
   })
+
+  it('renders scan-not-found fallback card when requested run ID does not exist', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      const u = String(url)
+      if (u.includes('/api/views')) return Promise.resolve({ ok: true, json: async () => [] })
+      if (u.includes('/api/runs?limit=50') || u.includes('/api/runs?limit=1')) {
+        return Promise.resolve({ ok: true, json: async () => [mockRun] })
+      }
+      if (u.includes('/api/runs/missing-run-id')) {
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({ detail: 'Run not found' }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+
+    renderComponent('/?run=missing-run-id')
+
+    const fallbackCard = await screen.findByTestId('scan-not-found-fallback')
+    expect(fallbackCard).toBeTruthy()
+    expect(fallbackCard.textContent).toContain('Scan Run Not Found')
+    expect(fallbackCard.textContent).toContain('missing-run-id')
+
+    // Action buttons must be present
+    expect(screen.getByRole('button', { name: /View Latest Scan/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Select from History/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /▶ Launch Live Scan/i })).toBeTruthy()
+
+    // History Sheet trigger in header must still be accessible
+    expect(screen.getAllByRole('button', { name: /History/i }).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('renders no-scans fallback card when database has zero runs', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      const u = String(url)
+      if (u.includes('/api/views')) return Promise.resolve({ ok: true, json: async () => [] })
+      if (u.includes('/api/runs?limit=1') || u.includes('/api/runs?limit=50')) {
+        return Promise.resolve({ ok: true, json: async () => [] })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
+
+    renderComponent('/')
+
+    const emptyFallback = await screen.findByTestId('no-scan-selected-fallback')
+    expect(emptyFallback).toBeTruthy()
+    expect(emptyFallback.textContent).toContain('No Scan Runs Recorded')
+
+    // Quick action buttons present
+    expect(screen.getByRole('button', { name: /▶ Launch Live Scan/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Configure Scheduled Scans/i })).toBeTruthy()
+  })
 })

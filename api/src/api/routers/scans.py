@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+import re
 from typing import Annotated, Any
 
 import croniter
 from fastapi import APIRouter, HTTPException, Path, Request, status
+from pydantic import BaseModel, Field as PydanticField, field_validator
 from sqlmodel import desc, select
 
 from api.config import settings
@@ -14,12 +16,26 @@ from api.models import (
     Scan,
     ScanRun,
     ScanRunStatus,
+    sanitize_and_validate_ports,
+    sanitize_and_validate_targets,
 )
 from api.routers.runs import ScanRunResponse
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
-from pydantic import BaseModel
+
+def validate_cron_expression(v: str | None) -> str | None:
+    if v is None:
+        return None
+    cleaned = v.strip()
+    if not cleaned:
+        return None
+    if len(cleaned.split()) != 5 or not croniter.croniter.is_valid(cleaned):
+        raise ValueError(
+            "Invalid cron expression format (expected 5 fields, e.g. '0 0 * * *')"
+        )
+    return cleaned
+
 
 class ScanCreateRequest(ExecutionConfig):
     name: str
@@ -27,17 +43,96 @@ class ScanCreateRequest(ExecutionConfig):
     alert_config: AlertConfig | None = None
     alerts_muted: bool = False
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Scan name cannot be empty")
+        return cleaned
+
+    @field_validator("cron_expression")
+    @classmethod
+    def validate_cron(cls, v: str | None) -> str | None:
+        return validate_cron_expression(v)
+
+    @field_validator("targets")
+    @classmethod
+    def validate_non_empty_targets(cls, v: list[str]) -> list[str]:
+        cleaned = sanitize_and_validate_targets(v)
+        if not cleaned:
+            raise ValueError("At least one target must be specified")
+        return cleaned
+
+    @field_validator("ports")
+    @classmethod
+    def validate_non_empty_ports(cls, v: list[str | int]) -> list[str | int]:
+        cleaned = sanitize_and_validate_ports(v)
+        if not cleaned:
+            raise ValueError("At least one port must be specified")
+        return cleaned
+
+
 class ScanUpdateRequest(BaseModel):
     name: str | None = None
     cron_expression: str | None = None
     is_active: bool | None = None
     targets: list[str] | None = None
-    ports: list[int] | None = None
+    ports: list[str | int] | None = None
     flags: ExecutionFlags | None = None
     ghost_window: str | None = None
-    tls_warning_days: int | None = None
+    tls_warning_days: int | None = PydanticField(default=None, ge=0, le=3650)
+    prune_void_hosts: bool | None = None
+    prune_closed_ports: bool | None = None
     alert_config: AlertConfig | None = None
     alerts_muted: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str | None) -> str | None:
+        if v is not None:
+            cleaned = v.strip()
+            if not cleaned:
+                raise ValueError("Scan name cannot be empty")
+            return cleaned
+        return v
+
+    @field_validator("cron_expression")
+    @classmethod
+    def validate_cron(cls, v: str | None) -> str | None:
+        return validate_cron_expression(v)
+
+    @field_validator("targets")
+    @classmethod
+    def validate_targets(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None:
+            cleaned = sanitize_and_validate_targets(v)
+            if not cleaned:
+                raise ValueError("At least one target must be specified")
+            return cleaned
+        return v
+
+    @field_validator("ports")
+    @classmethod
+    def validate_ports(cls, v: list[str | int] | None) -> list[str | int] | None:
+        if v is not None:
+            cleaned = sanitize_and_validate_ports(v)
+            if not cleaned:
+                raise ValueError("At least one port must be specified")
+            return cleaned
+        return v
+
+    @field_validator("ghost_window")
+    @classmethod
+    def validate_ghost_window(cls, v: str | None) -> str | None:
+        if v is not None:
+            cleaned = v.strip().lower()
+            if not re.fullmatch(r"^\d+[smhd]$", cleaned):
+                raise ValueError(
+                    "Ghost window must be a positive number followed by s, m, h, or d (e.g. '7d', '24h', '30m')"
+                )
+            return cleaned
+        return v
 
 class ScanResponse(ExecutionConfig):
     id: str
@@ -91,6 +186,8 @@ def _build_scan_response(
         flags=ExecutionFlags.model_validate(scan.flags_json),
         ghost_window=scan.ghost_window,
         tls_warning_days=scan.tls_warning_days,
+        prune_void_hosts=scan.prune_void_hosts,
+        prune_closed_ports=scan.prune_closed_ports,
         alert_config=(
             AlertConfig.model_validate(scan.alert_config_json)
             if scan.alert_config_json
@@ -110,6 +207,8 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         flags_json=request.flags.model_dump(),
         ghost_window=request.ghost_window,
         tls_warning_days=request.tls_warning_days,
+        prune_void_hosts=request.prune_void_hosts,
+        prune_closed_ports=request.prune_closed_ports,
         alert_config_json=(
             request.alert_config.model_dump() if request.alert_config else None
         ),
@@ -144,6 +243,8 @@ def update_scan(
     scan.flags_json = request.flags.model_dump()
     scan.ghost_window = request.ghost_window
     scan.tls_warning_days = request.tls_warning_days
+    scan.prune_void_hosts = request.prune_void_hosts
+    scan.prune_closed_ports = request.prune_closed_ports
     scan.alert_config_json = (
         request.alert_config.model_dump() if request.alert_config else None
     )
@@ -182,6 +283,10 @@ def patch_scan(
         scan.ghost_window = request.ghost_window
     if "tls_warning_days" in fields_set and request.tls_warning_days is not None:
         scan.tls_warning_days = request.tls_warning_days
+    if "prune_void_hosts" in fields_set and request.prune_void_hosts is not None:
+        scan.prune_void_hosts = request.prune_void_hosts
+    if "prune_closed_ports" in fields_set and request.prune_closed_ports is not None:
+        scan.prune_closed_ports = request.prune_closed_ports
     if "alert_config" in fields_set:
         scan.alert_config_json = (
             request.alert_config.model_dump() if request.alert_config else None
