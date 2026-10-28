@@ -1,0 +1,3 @@
+Task: Implement backend validators, sanitizers, and scheduler resilience (Green & Refactor Phase)
+
+Implemented pure target and port sanitization/validation helpers in api/src/api/models.py (reusing engine.parsing.validate_and_clean_target and validating port integers/ranges without sys.exit), added cron_expression, name, targets, ports, ghost_window, tls_warning_days, and webhook_url validators across models.py, scans.py, and views.py, and handled CroniterBadCronError gracefully in scheduler.py.
