@@ -95,6 +95,10 @@ async def check_and_run_scheduled_scans(app_state):
                     await app_state.run_manager.dispatch_run(
                         run.id, snapshot, scan_id=scan.id
                     )
+            except (croniter.CroniterBadCronError, croniter.CroniterBadDateError, ValueError) as e:
+                logger.warning(
+                    f"Skipping scheduled scan {scan.id} due to invalid cron expression {scan.cron_expression!r}: {e}"
+                )
             except Exception as e:
                 logger.exception(f"Error checking schedule for scan {scan.id}: {e}", exc_info=True)
 

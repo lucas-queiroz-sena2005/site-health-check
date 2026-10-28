@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlmodel import Session
 
 from api.database import get_session
@@ -18,6 +18,24 @@ class SavedViewCreate(BaseModel):
     statuses: list[str] | None = None
     table_sort_by: str | None = None
     table_sort_dir: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("View name cannot be empty")
+        return cleaned
+
+    @field_validator("table_sort_dir")
+    @classmethod
+    def validate_sort_dir(cls, v: str | None) -> str | None:
+        if v is not None:
+            cleaned = v.strip().lower()
+            if cleaned not in ("asc", "desc"):
+                raise ValueError("Sort direction must be 'asc' or 'desc'")
+            return cleaned
+        return v
 
 class SavedViewResponse(SavedViewCreate):
     id: str
