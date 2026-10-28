@@ -17,11 +17,11 @@ Eliminate unconditional `lazy="selectin"` cascades on `ScanRun`/`HostState`, con
 ## Phase 2: Functional Core Rule Engine Extraction (TDD)
 Extract pure, deterministic evaluation rules into `api/src/api/services/evaluator_rules.py` with zero database dependencies.
 
-- [ ] Task: Write failing TDD unit tests in `api/tests/test_evaluator_rules.py` covering all branch combinations for:
-  - [ ] `evaluate_http_check` (2xx/3xx OK, 4xx WARNING, 5xx FAILED, None ERROR).
-  - [ ] `evaluate_tls_cert` (invalid, expired, expiring soon within threshold, healthy, deprecated TLS versions SSLv2/SSLv3/TLSv1.0/TLSv1.1 vs TLSv1.2/TLSv1.3).
-  - [ ] `evaluate_port` (closed routine void, closed historical ghost, error TCP, open healthy/warning/failed).
-  - [ ] `evaluate_host_status` (open ports rollup, ghost port warning rollup, error TCP failure rollup, 0 open ports ghost vs void).
+- [x] Task: Write failing TDD unit tests in `api/tests/test_evaluator_rules.py` covering all branch combinations for: [7833f22]
+  - [x] `evaluate_http_check` (2xx/3xx OK, 4xx WARNING, 5xx FAILED, None ERROR).
+  - [x] `evaluate_tls_cert` (invalid, expired, expiring soon within threshold, healthy, deprecated TLS versions SSLv2/SSLv3/TLSv1.0/TLSv1.1 vs TLSv1.2/TLSv1.3).
+  - [x] `evaluate_port` (closed routine void, closed historical ghost, error TCP, open healthy/warning/failed).
+  - [x] `evaluate_host_status` (open ports rollup, ghost port warning rollup, error TCP failure rollup, 0 open ports ghost vs void).
 - [ ] Task: Implement `api/src/api/services/evaluator_rules.py` to pass all unit tests.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md).
 
