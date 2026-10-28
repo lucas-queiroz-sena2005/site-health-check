@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import {
   useRunDetail,
   useRunHosts,
   useRunServices,
   useRunChecks,
   RunSummaryHeader,
+  RunHistorySheet,
   ScanFilterToolbar,
   ScanTabsNav,
   TablePaginationBar,
@@ -25,7 +27,7 @@ export function HostTablePage() {
   // 1. Run ID & URL Sync
   const runParam = searchParams.get('run') || searchParams.get('run_id')
 
-  const { data: latestRuns } = useQuery<ScanRunResponse[]>({
+  const { data: latestRuns, isLoading: isLatestRunsLoading } = useQuery<ScanRunResponse[]>({
     queryKey: ['runs', 'latest'],
     queryFn: async () => {
       const res = await fetch('/api/runs?limit=1')
@@ -401,8 +403,132 @@ export function HostTablePage() {
     [setSearchParams]
   )
 
-  if (isRunLoading) return <div className="p-8 text-muted-foreground">Loading scans...</div>
-  if (runError) return <div className="p-8 text-destructive">Error loading scans.</div>
+  const handleSelectRun = useCallback(
+    (id: string | null) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (id) next.set('run', id)
+        else next.delete('run')
+        return next
+      })
+    },
+    [setSearchParams]
+  )
+
+  // Fallback 1: Run error (e.g. 404 or missing run)
+  if (runError) {
+    return (
+      <div className="w-full flex-1 flex flex-col bg-background">
+        <RunSummaryHeader
+          selectedRunId={selectedRunId}
+          run={undefined}
+          isRunActive={false}
+          onSelectRun={handleSelectRun}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <div
+            data-testid="scan-not-found-fallback"
+            className="max-w-lg w-full rounded-xl border-2 border-border bg-card p-8 text-center shadow-lg flex flex-col items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold tracking-tight">Scan Run Not Found</h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                No scan run found with ID <code className="font-mono font-bold text-foreground bg-muted px-1.5 py-0.5 rounded text-xs">{selectedRunId}</code>. It may have been pruned, deleted, or the URL parameter is incorrect.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+              <Button
+                variant="default"
+                className="font-bold shadow-sm"
+                onClick={() => {
+                  setSearchParams((prev) => {
+                    const next = new URLSearchParams(prev)
+                    next.delete('run')
+                    return next
+                  })
+                }}
+              >
+                View Latest Scan
+              </Button>
+              <RunHistorySheet
+                selectedRunId={selectedRunId}
+                onSelectRun={handleSelectRun}
+                triggerLabel="Select from History"
+              />
+              <Link to="/scan">
+                <Button variant="outline" className="border-2 font-bold">
+                  ▶ Launch Live Scan
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Fallback 2: No scan runs exist in system or no scan selected
+  if (!selectedRunId && !isLatestRunsLoading) {
+    return (
+      <div className="w-full flex-1 flex flex-col bg-background">
+        <RunSummaryHeader
+          selectedRunId={null}
+          run={undefined}
+          isRunActive={false}
+          onSelectRun={handleSelectRun}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <div
+            data-testid="no-scan-selected-fallback"
+            className="max-w-md w-full rounded-xl border-2 border-border bg-card p-8 text-center shadow-lg flex flex-col items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold tracking-tight">No Scan Runs Recorded</h3>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                There are no recorded scans in the database. Run an ad-hoc live scan or configure automated schedules to begin inspecting your perimeter.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+              <Link to="/scan">
+                <Button size="lg" className="font-bold shadow-sm">
+                  ▶ Launch Live Scan
+                </Button>
+              </Link>
+              <Link to="/scheduled-runs">
+                <Button size="lg" variant="outline" className="border-2 font-bold">
+                  Configure Scheduled Scans
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Loading state
+  if (isRunLoading || (!runParam && isLatestRunsLoading)) {
+    return (
+      <div className="w-full flex-1 flex flex-col bg-background">
+        <RunSummaryHeader
+          selectedRunId={selectedRunId}
+          run={undefined}
+          isRunActive={false}
+          onSelectRun={handleSelectRun}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center p-12 text-muted-foreground gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+          <p className="text-sm font-medium">Loading scan run...</p>
+        </div>
+      </div>
+    )
+  }
 
   const hostsCount = summary ? summary.active + summary.warning + summary.failed + summary.ghost : 0
 

@@ -15,10 +15,14 @@ import { scanQueryKeys } from '../api/queryKeys'
 
 export function RunHistorySheet({ 
   selectedRunId, 
-  onSelectRun 
+  onSelectRun,
+  triggerLabel,
+  className,
 }: { 
   selectedRunId: string | null
   onSelectRun: (id: string | null) => void 
+  triggerLabel?: string
+  className?: string
 }) {
   const [open, setOpen] = useState(false)
   const { data: runs = [], isLoading, refetch } = useQuery<ScanRunResponse[]>({
@@ -57,12 +61,15 @@ export function RunHistorySheet({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger 
         render={
-          <Button variant="outline" className="min-w-[200px] justify-between border-2 border-border bg-background text-foreground shadow-sm font-semibold hover:border-primary/50 transition-colors">
+          <Button
+            variant="outline"
+            className={className || "min-w-[200px] justify-between border-2 border-border bg-background text-foreground shadow-sm font-semibold hover:border-primary/50 transition-colors"}
+          >
             <div className="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 opacity-70"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>{getRunLabel(selectedRunId)}</span>
+              <span>{triggerLabel || getRunLabel(selectedRunId)}</span>
             </div>
-            <span className="opacity-40 text-xs ml-4 uppercase tracking-wider">History</span>
+            {!triggerLabel && <span className="opacity-40 text-xs ml-4 uppercase tracking-wider">History</span>}
           </Button>
         }
       />

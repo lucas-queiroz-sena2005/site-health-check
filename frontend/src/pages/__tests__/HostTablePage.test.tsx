@@ -464,7 +464,7 @@ describe('HostTablePage 3-Tab Flat Relational Explorer', () => {
     expect(screen.getByRole('button', { name: /▶ Launch Live Scan/i })).toBeTruthy()
 
     // History Sheet trigger in header must still be accessible
-    expect(screen.getByRole('button', { name: /History/i })).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: /History/i }).length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders no-scans fallback card when database has zero runs', async () => {
