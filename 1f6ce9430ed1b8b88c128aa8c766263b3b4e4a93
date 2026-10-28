@@ -1,2 +1,2 @@
-Task: Implement dashboard fallback states in HostTablePage (Green & Refactor Phase)
-Summary: Updated HostTablePage.tsx to render dedicated fallback cards for 404/missing run IDs (scan-not-found-fallback) and empty scan databases (no-scan-selected-fallback), while keeping the header shell, history drawer trigger, and navigation accessible.
+Phase 4 Checkpoint: Void Pruning Evaluation Settings & Dashboard Fallback UX
+Persisted prune_void_hosts and prune_closed_ports to Scan SQLModel, added evaluation switches in ScanConfigForm, implemented dashboard fallback cards for missing scans and empty databases. All 136 backend tests and 51 frontend tests pass.
