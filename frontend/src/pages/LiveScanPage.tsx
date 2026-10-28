@@ -3,10 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ScanConfigForm, DEFAULT_NEW_SCAN } from '@/components/scans/ScanConfigForm'
 import { Button } from '@/components/ui/button'
+import { extractApiErrorMessage } from '@/lib/utils'
 
 export function LiveScanPage() {
   const [logs, setLogs] = useState<string[]>([])
   const [isScanning, setIsScanning] = useState(false)
+  const [isLaunching, setIsLaunching] = useState(false)
+  const [launchError, setLaunchError] = useState<string | null>(null)
   const [isFinished, setIsFinished] = useState(false)
   const [currentRunId, setCurrentRunId] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -133,11 +136,8 @@ export function LiveScanPage() {
   }, [countdown, currentRunId, navigate])
 
   const handleLaunch = async (data: any) => {
-    setIsScanning(true)
-    setIsFinished(false)
-    setCurrentRunId(null)
-    setCountdown(null)
-    setLogs([`[INFO] Scanner initialized. Targeting: ${data.targets.length > 0 ? data.targets.join(', ') : 'None'}`])
+    setIsLaunching(true)
+    setLaunchError(null)
     
     try {
       const response = await fetch('/api/runs', {
@@ -147,15 +147,22 @@ export function LiveScanPage() {
       })
       
       if (!response.ok) {
-        throw new Error('Failed to launch scan')
+        const message = await extractApiErrorMessage(response, 'Failed to launch scan')
+        setLaunchError(message)
+        return
       }
       
       const run = await response.json()
+      setIsScanning(true)
+      setIsFinished(false)
+      setCurrentRunId(null)
+      setCountdown(null)
+      setLogs([`[INFO] Scanner initialized. Targeting: ${data.targets.length > 0 ? data.targets.join(', ') : 'None'}`])
       connectToStream(run.id)
     } catch (err: any) {
-      setLogs(prev => [...prev, `[ERROR] ${err.message}`])
-      setIsScanning(false)
-      setIsFinished(true)
+      setLaunchError(err?.message || 'Failed to launch scan')
+    } finally {
+      setIsLaunching(false)
     }
   }
 
@@ -167,12 +174,17 @@ export function LiveScanPage() {
     setLogs([])
     setIsFinished(false)
     setCountdown(null)
+    setLaunchError(null)
   }
 
   const handleStop = async () => {
     if (!currentRunId) return
     try {
-      await fetch(`/api/runs/${currentRunId}/abort`, { method: 'POST' })
+      const res = await fetch(`/api/runs/${currentRunId}/abort`, { method: 'POST' })
+      if (!res.ok) {
+        const msg = await extractApiErrorMessage(res, 'Failed to abort')
+        setLogs(prev => [...prev, `[ERROR] Failed to abort: ${msg}`])
+      }
     } catch (err: any) {
       setLogs(prev => [...prev, `[ERROR] Failed to abort: ${err.message}`])
     }
@@ -194,6 +206,8 @@ export function LiveScanPage() {
             onCancel={handleCancel}
             mode="live"
             isScanning={isScanning}
+            isSubmitting={isLaunching}
+            errorMessage={launchError}
           />
         </div>
 

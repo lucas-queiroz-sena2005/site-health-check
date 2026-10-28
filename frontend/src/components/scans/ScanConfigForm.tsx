@@ -57,19 +57,31 @@ export function ScanConfigForm({
   onCancel, 
   mode = 'schedule', 
   isCreating = false,
-  isScanning = false
+  isScanning = false,
+  isSubmitting = false,
+  errorMessage = null,
 }: { 
   initialData?: any, 
-  onSave: (data: any) => void, 
+  onSave: (data: any) => void | Promise<any>, 
   onCancel?: () => void,
   mode?: 'schedule' | 'live',
   isCreating?: boolean,
-  isScanning?: boolean
+  isScanning?: boolean,
+  isSubmitting?: boolean,
+  errorMessage?: string | null,
 }) {
   const [form, setForm] = useState(initialData)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
   const [testingWebhook, setTestingWebhook] = useState(false)
   const [testStatus, setTestStatus] = useState<{ success: boolean; message: string } | null>(null)
+
+  const clampFlagValue = (name: string, rawVal: number) => {
+    if (Number.isNaN(rawVal)) return 0
+    if (name === 'workers' || name === 'timeout') return Math.max(1, rawVal)
+    if (name === 'rate') return Math.max(0.1, Number(rawVal.toFixed(2)))
+    if (name === 'out_of_scope_depth') return Math.max(0, rawVal)
+    return rawVal
+  }
 
   const handleTestWebhook = async () => {
     const url = form?.alert_config?.webhook_url
@@ -146,7 +158,7 @@ export function ScanConfigForm({
               type="text"
               defaultValue={initialData?.targets?.join(', ') || ''}
               className="bg-background border-black/15 dark:border-white/10"
-              placeholder="e.g. 192.168.1.0/24, 10.0.0.1-50, github.com"
+              placeholder="e.g. 192.168.1.0/24, 10.0.0.1-10.0.0.50, github.com"
               onChange={(e) => {
                 const arr = e.target.value
                   .split(',')
@@ -203,7 +215,7 @@ export function ScanConfigForm({
                       variant="outline"
                       size="icon"
                       className="h-10 w-10 shrink-0 border-2"
-                      onClick={() => handleFlagChange(field.name, field.name === 'workers' ? Math.max(1, Number(val) - 1) : Number(val) - 1)}
+                      onClick={() => handleFlagChange(field.name, clampFlagValue(field.name, Number(val) - 1))}
                     >
                       -
                     </Button>
@@ -211,13 +223,13 @@ export function ScanConfigForm({
                       type="number"
                       value={val}
                       className="text-center font-mono border-2 border-black/15 dark:border-white/10 bg-background h-10"
-                      onChange={(e) => handleFlagChange(field.name, field.name === 'workers' ? Math.max(1, Number(e.target.value)) : Number(e.target.value))}
+                      onChange={(e) => handleFlagChange(field.name, clampFlagValue(field.name, Number(e.target.value)))}
                     />
                     <Button
                       variant="outline"
                       size="icon"
                       className="h-10 w-10 shrink-0 border-2"
-                      onClick={() => handleFlagChange(field.name, Number(val) + 1)}
+                      onClick={() => handleFlagChange(field.name, clampFlagValue(field.name, Number(val) + 1))}
                     >
                       +
                     </Button>
@@ -274,10 +286,11 @@ export function ScanConfigForm({
             <Input
               id="tls_warning_days"
               type="number"
+              min={0}
               value={form?.tls_warning_days !== undefined ? form.tls_warning_days : 30}
               className="bg-background border-black/15 dark:border-white/10"
               placeholder="e.g. 30"
-              onChange={(e) => setForm({ ...form, tls_warning_days: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, tls_warning_days: Math.max(0, Number(e.target.value)) })}
             />
             <span className="text-xs text-muted-foreground">Threshold to classify certificate expiration as a Warning</span>
           </div>
@@ -413,9 +426,19 @@ export function ScanConfigForm({
         </div>
       )}
 
+      {errorMessage && (
+        <div
+          role="alert"
+          data-testid="form-error-banner"
+          className="rounded-lg border-2 border-destructive/40 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive shadow-sm"
+        >
+          {errorMessage}
+        </div>
+      )}
+
       <div className="flex justify-end gap-3 pt-6 border-t-2 border-border/50">
         {onCancel && (
-          <Button variant="ghost" className="hover:bg-muted" onClick={onCancel}>
+          <Button variant="ghost" className="hover:bg-muted" disabled={isSubmitting} onClick={onCancel}>
             {mode === 'live' ? 'Detach' : 'Cancel'}
           </Button>
         )}
@@ -424,8 +447,12 @@ export function ScanConfigForm({
           <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
             <AlertDialogTrigger 
               render={
-                <Button size="lg" className="px-8 font-semibold shadow-sm" disabled={isScanning}>
-                  {isScanning ? 'Scanning...' : '▶ Launch Live Scan'}
+                <Button
+                  size="lg"
+                  className="px-8 font-semibold shadow-sm"
+                  disabled={isScanning || isSubmitting || !form?.targets || form.targets.length === 0}
+                >
+                  {isScanning ? 'Scanning...' : isSubmitting ? 'Launching...' : '▶ Launch Live Scan'}
                 </Button>
               } 
             />
@@ -438,14 +465,37 @@ export function ScanConfigForm({
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="mt-4">
-                <AlertDialogCancel className="border-2 font-bold">Cancel</AlertDialogCancel>
-                <AlertDialogAction className="font-bold" onClick={() => { setIsAlertOpen(false); onSave(form); }}>Launch Scan</AlertDialogAction>
+                <AlertDialogCancel className="border-2 font-bold" disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="font-bold"
+                  disabled={isSubmitting || isScanning}
+                  onClick={async () => {
+                    try {
+                      await onSave(form)
+                    } finally {
+                      setIsAlertOpen(false)
+                    }
+                  }}
+                >
+                  {isSubmitting ? 'Launching...' : 'Launch Scan'}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         ) : (
-          <Button size="lg" className="px-8 font-semibold shadow-sm" onClick={() => onSave(form)}>
-            {isCreating ? 'Create Schedule' : 'Save Changes'}
+          <Button
+            size="lg"
+            className="px-8 font-semibold shadow-sm"
+            disabled={isSubmitting}
+            onClick={() => onSave(form)}
+          >
+            {isSubmitting
+              ? isCreating
+                ? 'Creating...'
+                : 'Saving...'
+              : isCreating
+                ? 'Create Schedule'
+                : 'Save Changes'}
           </Button>
         )}
       </div>
