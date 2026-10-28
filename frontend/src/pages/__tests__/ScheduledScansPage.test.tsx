@@ -240,4 +240,56 @@ describe('ScheduledScansPage Alert Stopper Controls', () => {
     // Still in edit mode
     expect(screen.getByRole('button', { name: /Save Changes/i })).toBeTruthy()
   })
+
+  it('renders void pruning evaluation switches under Evaluation Settings and includes them in form payload', async () => {
+    let capturedPayload: any = null
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+      if (url === '/api/scans' && (!options || options.method === 'GET')) {
+        return Promise.resolve({ ok: true, json: async () => mockScans })
+      }
+      if (url === '/api/scans' && options?.method === 'POST') {
+        capturedPayload = JSON.parse(String(options.body))
+        return Promise.resolve({ ok: true, json: async () => ({ id: 'new-scan' }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <ScheduledScansPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const createTrigger = await screen.findByRole('button', { name: /\+ Create New Schedule/i })
+    fireEvent.click(createTrigger)
+
+    // Check switches exist in Evaluation Settings
+    const voidHostsSwitch = await screen.findByRole('switch', { name: /Prune Void Hosts/i })
+    const closedPortsSwitch = await screen.findByRole('switch', { name: /Prune Routine Closed Ports/i })
+
+    expect(voidHostsSwitch).toBeTruthy()
+    expect(closedPortsSwitch).toBeTruthy()
+
+    // Both should be checked by default
+    expect(voidHostsSwitch.getAttribute('aria-checked')).toBe('true')
+    expect(closedPortsSwitch.getAttribute('aria-checked')).toBe('true')
+
+    // Toggle void hosts off
+    fireEvent.click(voidHostsSwitch)
+    expect(voidHostsSwitch.getAttribute('aria-checked')).toBe('false')
+
+    // Fill minimal required fields
+    fireEvent.change(screen.getByLabelText(/Scan Name/i), { target: { value: 'Void Test Scan' } })
+    fireEvent.change(screen.getByLabelText(/Target IPs\/Subnets/i), { target: { value: '192.168.1.1' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /Create Schedule/i }))
+
+    await waitFor(() => {
+      expect(capturedPayload).not.toBeNull()
+      expect(capturedPayload.prune_void_hosts).toBe(false)
+      expect(capturedPayload.prune_closed_ports).toBe(true)
+    })
+  })
 })

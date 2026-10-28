@@ -323,3 +323,64 @@ def test_settings_and_webhook_validation(client: TestClient):
     )
     assert r_bad_wh.status_code == 422
 
+
+def test_void_pruning_settings_persistence_and_response(client: TestClient):
+    # Default is True
+    resp_default = client.post(
+        "/api/scans",
+        json={"name": "Default Prune Scan", "targets": ["example.com"], "ports": [80]},
+    )
+    assert resp_default.status_code == 201
+    data_default = resp_default.json()
+    assert data_default["prune_void_hosts"] is True
+    assert data_default["prune_closed_ports"] is True
+    scan_id = data_default["id"]
+
+    # Explicitly disabling void pruning persists to database and is returned
+    resp_false = client.post(
+        "/api/scans",
+        json={
+            "name": "No Prune Scan",
+            "targets": ["example.com"],
+            "ports": [80],
+            "prune_void_hosts": False,
+            "prune_closed_ports": False,
+        },
+    )
+    assert resp_false.status_code == 201
+    data_false = resp_false.json()
+    assert data_false["prune_void_hosts"] is False
+    assert data_false["prune_closed_ports"] is False
+    no_prune_id = data_false["id"]
+
+    # Verify GET /api/scans returns persisted values
+    resp_list = client.get("/api/scans")
+    assert resp_list.status_code == 200
+    scans_by_id = {s["id"]: s for s in resp_list.json()}
+    assert scans_by_id[no_prune_id]["prune_void_hosts"] is False
+    assert scans_by_id[no_prune_id]["prune_closed_ports"] is False
+
+    # PATCH updates void pruning flags
+    patch_resp = client.patch(
+        f"/api/scans/{no_prune_id}",
+        json={"prune_void_hosts": True},
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["prune_void_hosts"] is True
+    assert patch_resp.json()["prune_closed_ports"] is False
+
+    # PUT updates both flags
+    put_resp = client.put(
+        f"/api/scans/{scan_id}",
+        json={
+            "name": "Updated Prune Scan",
+            "targets": ["example.com"],
+            "ports": [443],
+            "prune_void_hosts": False,
+            "prune_closed_ports": True,
+        },
+    )
+    assert put_resp.status_code == 200
+    assert put_resp.json()["prune_void_hosts"] is False
+    assert put_resp.json()["prune_closed_ports"] is True
+
