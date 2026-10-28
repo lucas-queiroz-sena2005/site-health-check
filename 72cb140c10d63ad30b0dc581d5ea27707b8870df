@@ -1,0 +1,3 @@
+Task: Write failing backend tests for cron, target, port, and setting validation (Red Phase)
+
+Added unit tests in api/tests/test_api_scans.py, api/tests/test_api_views.py, and api/tests/test_api_scheduler.py verifying cron syntax validation, target cleaning, port range validation, ghost_window/tls_warning_days/webhook_url validation, SavedView validation, and scheduler resilience.
