@@ -82,6 +82,8 @@ class ScanUpdateRequest(BaseModel):
     flags: ExecutionFlags | None = None
     ghost_window: str | None = None
     tls_warning_days: int | None = PydanticField(default=None, ge=0, le=3650)
+    prune_void_hosts: bool | None = None
+    prune_closed_ports: bool | None = None
     alert_config: AlertConfig | None = None
     alerts_muted: bool | None = None
 
@@ -184,6 +186,8 @@ def _build_scan_response(
         flags=ExecutionFlags.model_validate(scan.flags_json),
         ghost_window=scan.ghost_window,
         tls_warning_days=scan.tls_warning_days,
+        prune_void_hosts=scan.prune_void_hosts,
+        prune_closed_ports=scan.prune_closed_ports,
         alert_config=(
             AlertConfig.model_validate(scan.alert_config_json)
             if scan.alert_config_json
@@ -203,6 +207,8 @@ def create_scan(request: ScanCreateRequest, session: SessionDep) -> ScanResponse
         flags_json=request.flags.model_dump(),
         ghost_window=request.ghost_window,
         tls_warning_days=request.tls_warning_days,
+        prune_void_hosts=request.prune_void_hosts,
+        prune_closed_ports=request.prune_closed_ports,
         alert_config_json=(
             request.alert_config.model_dump() if request.alert_config else None
         ),
@@ -237,6 +243,8 @@ def update_scan(
     scan.flags_json = request.flags.model_dump()
     scan.ghost_window = request.ghost_window
     scan.tls_warning_days = request.tls_warning_days
+    scan.prune_void_hosts = request.prune_void_hosts
+    scan.prune_closed_ports = request.prune_closed_ports
     scan.alert_config_json = (
         request.alert_config.model_dump() if request.alert_config else None
     )
@@ -275,6 +283,10 @@ def patch_scan(
         scan.ghost_window = request.ghost_window
     if "tls_warning_days" in fields_set and request.tls_warning_days is not None:
         scan.tls_warning_days = request.tls_warning_days
+    if "prune_void_hosts" in fields_set and request.prune_void_hosts is not None:
+        scan.prune_void_hosts = request.prune_void_hosts
+    if "prune_closed_ports" in fields_set and request.prune_closed_ports is not None:
+        scan.prune_closed_ports = request.prune_closed_ports
     if "alert_config" in fields_set:
         scan.alert_config_json = (
             request.alert_config.model_dump() if request.alert_config else None

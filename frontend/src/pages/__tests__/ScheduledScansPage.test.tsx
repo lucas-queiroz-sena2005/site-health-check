@@ -282,7 +282,7 @@ describe('ScheduledScansPage Alert Stopper Controls', () => {
 
     // Fill minimal required fields
     fireEvent.change(screen.getByLabelText(/Scan Name/i), { target: { value: 'Void Test Scan' } })
-    fireEvent.change(screen.getByLabelText(/Target IPs\/Subnets/i), { target: { value: '192.168.1.1' } })
+    fireEvent.change(screen.getByLabelText(/Targets/i), { target: { value: '192.168.1.1' } })
 
     fireEvent.click(screen.getByRole('button', { name: /Create Schedule/i }))
 

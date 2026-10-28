@@ -40,6 +40,8 @@ export const DEFAULT_NEW_SCAN = {
   flags: { check_http: true, check_virtual_hosts: false, timeout: 10, workers: 100, rate: 50.0 },
   ghost_window: '7d',
   tls_warning_days: 30,
+  prune_void_hosts: true,
+  prune_closed_ports: true,
   alert_config: {
     webhook_url: '',
     alert_on_failure: true,
@@ -153,8 +155,9 @@ export function ScanConfigForm({
         </h4>
         <div className="grid grid-cols-2 gap-x-8 gap-y-4">
           <div className={fieldWrapperClass}>
-            <Label className="text-sm font-semibold">Targets (comma-separated)</Label>
+            <Label htmlFor="targets" className="text-sm font-semibold">Targets (comma-separated)</Label>
             <Input
+              id="targets"
               type="text"
               defaultValue={initialData?.targets?.join(', ') || ''}
               className="bg-background border-black/15 dark:border-white/10"
@@ -293,6 +296,38 @@ export function ScanConfigForm({
               onChange={(e) => setForm({ ...form, tls_warning_days: Math.max(0, Number(e.target.value)) })}
             />
             <span className="text-xs text-muted-foreground">Threshold to classify certificate expiration as a Warning</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className={switchWrapperClass}>
+            <div className="space-y-0.5">
+              <Label className="text-sm font-semibold">Prune Void Hosts on Finalization</Label>
+              <p className="text-xs text-muted-foreground">Remove unresponsive hosts with no open ports or past activity from results</p>
+            </div>
+            <Switch
+              aria-label="Prune Void Hosts"
+              checked={form?.prune_void_hosts ?? true}
+              onCheckedChange={(c) => setForm({
+                ...form,
+                prune_void_hosts: c
+              })}
+            />
+          </div>
+
+          <div className={switchWrapperClass}>
+            <div className="space-y-0.5">
+              <Label className="text-sm font-semibold">Prune Routine Closed Ports on Finalization</Label>
+              <p className="text-xs text-muted-foreground">Remove closed and filtered port records upon run completion</p>
+            </div>
+            <Switch
+              aria-label="Prune Routine Closed Ports"
+              checked={form?.prune_closed_ports ?? true}
+              onCheckedChange={(c) => setForm({
+                ...form,
+                prune_closed_ports: c
+              })}
+            />
           </div>
         </div>
       </div>

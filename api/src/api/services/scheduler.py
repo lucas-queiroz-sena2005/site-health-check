@@ -79,6 +79,8 @@ async def check_and_run_scheduled_scans(app_state):
                         "flags": scan.flags_json or {},
                         "ghost_window": scan.ghost_window,
                         "tls_warning_days": scan.tls_warning_days,
+                        "prune_void_hosts": scan.prune_void_hosts,
+                        "prune_closed_ports": scan.prune_closed_ports,
                         "alert_config": scan.alert_config_json,
                     }
                     

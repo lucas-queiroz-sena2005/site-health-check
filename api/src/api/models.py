@@ -176,6 +176,8 @@ class Scan(SQLModel, table=True):
     flags_json: dict[str, Any] = Field(sa_column=Column(JSON))
     ghost_window: str = Field(default="7d")
     tls_warning_days: int = Field(default=30)
+    prune_void_hosts: bool = Field(default=True)
+    prune_closed_ports: bool = Field(default=True)
     alert_config_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     alerts_muted: bool = Field(default=False)
     

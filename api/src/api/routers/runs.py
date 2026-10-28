@@ -98,6 +98,16 @@ async def create_run(
         flags = config.flags.model_dump() if "flags" in fields_set else (scan.flags_json or {})
         ghost_window = config.ghost_window if "ghost_window" in fields_set else scan.ghost_window
         tls_warning_days = config.tls_warning_days if "tls_warning_days" in fields_set else scan.tls_warning_days
+        prune_void_hosts = (
+            config.prune_void_hosts
+            if "prune_void_hosts" in fields_set
+            else scan.prune_void_hosts
+        )
+        prune_closed_ports = (
+            config.prune_closed_ports
+            if "prune_closed_ports" in fields_set
+            else scan.prune_closed_ports
+        )
         alert_config = scan.alert_config_json
 
         snapshot = {
@@ -107,8 +117,8 @@ async def create_run(
             "ghost_window": ghost_window,
             "tls_warning_days": tls_warning_days,
             "alert_config": alert_config,
-            "prune_void_hosts": config.prune_void_hosts,
-            "prune_closed_ports": config.prune_closed_ports,
+            "prune_void_hosts": prune_void_hosts,
+            "prune_closed_ports": prune_closed_ports,
         }
     else:
         if not config.targets:
