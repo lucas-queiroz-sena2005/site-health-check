@@ -30,10 +30,10 @@ Extract pure, deterministic evaluation rules into `api/src/api/services/evaluato
 ## Phase 3: Relational Pushdown & Set-Based Evaluator Refactor (TDD)
 Refactor `api/src/api/services/evaluator.py` to delegate set operations to SQLite, use `evaluator_rules.py` for non-void candidate hosts, and eliminate SQLite variable-limit overflows.
 
-- [ ] Task: Write failing TDD tests in `api/tests/test_evaluator.py` for:
-  - [ ] Evaluating and pruning $> 35,000$ hosts in a single run (exceeding SQLite's 32,766 bind-parameter limit) without `OperationalError: too many SQL variables`.
-  - [ ] Preserving `scanned_port_count` on active hosts after `prune_closed_ports=True` and preserving idempotency when `evaluate_scan_run` is called a second time after pruning.
-  - [ ] Preserving open ports for future runs' historical ghost detection and preserving ghost hosts/ports for alerts and UI.
+- [x] Task: Write failing TDD tests in `api/tests/test_evaluator.py` for: [53cf990]
+  - [x] Evaluating and pruning $> 35,000$ hosts in a single run (exceeding SQLite's 32,766 bind-parameter limit) without `OperationalError: too many SQL variables`.
+  - [x] Preserving `scanned_port_count` on active hosts after `prune_closed_ports=True` and preserving idempotency when `evaluate_scan_run` is called a second time after pruning.
+  - [x] Preserving open ports for future runs' historical ghost detection and preserving ghost hosts/ports for alerts and UI.
 - [ ] Task: Refactor `api/src/api/services/evaluator.py`:
   - [ ] Use SQL subquery for historical active `(ip_address, port_number)` lookup (1 bind variable).
   - [ ] Implement set-based SQL fast-path for pure routine void hosts (count + direct subquery delete when `prune_void_hosts=True`, or bulk SQL `UPDATE` when `prune_void_hosts=False`).
