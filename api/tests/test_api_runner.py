@@ -2,7 +2,7 @@ import uuid
 import pytest
 from sqlmodel import Session, select, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
-from api.models import HostState, PortState, HttpRoutingCheck, TlsCertificate
+from api.models import HostState, PortState, HttpRoutingCheck, TlsCertificate, ScanRun
 from api.services.runner import _upsert_delta_sync
 from unittest.mock import patch
 
@@ -18,6 +18,9 @@ def test_upsert_delta_sync_inserts_and_updates(test_engine):
     with patch("api.services.runner.db_engine", test_engine):
         # We test that _upsert_delta_sync correctly merges overlapping data (ON CONFLICT DO UPDATE)
         run_id = str(uuid.uuid4())
+        with Session(test_engine) as session:
+            session.add(ScanRun(id=run_id, execution_config_snapshot_json={}))
+            session.commit()
         ip = "192.168.1.100"
         
         # Delta 1: partial data (just TCP open)
@@ -291,6 +294,9 @@ async def test_run_manager_stdin_dispatch(test_engine):
 def test_upsert_delta_sync_preserves_open_tcp_and_merges_discovered_from(test_engine):
     with patch("api.services.runner.db_engine", test_engine):
         run_id = str(uuid.uuid4())
+        with Session(test_engine) as session:
+            session.add(ScanRun(id=run_id, execution_config_snapshot_json={}))
+            session.commit()
         ip = "192.168.1.50"
 
         # Delta 1: TCP probe reveals port 443 open with latency 15ms and subrun_id
@@ -538,6 +544,9 @@ def test_bulk_upsert_deltas_sync_coalescing(test_engine):
 
     with patch("api.services.runner.db_engine", test_engine):
         run_id = str(uuid.uuid4())
+        with Session(test_engine) as session:
+            session.add(ScanRun(id=run_id, execution_config_snapshot_json={}))
+            session.commit()
         ip = "192.168.1.50"
         delta1 = (
             ip,

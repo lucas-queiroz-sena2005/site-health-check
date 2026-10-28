@@ -1,9 +1,11 @@
 import os
+import sqlite3
 from collections.abc import Generator
 from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import event, text
+from sqlalchemy.engine import Engine
 from sqlmodel import Session, create_engine
 
 sqlite_url = os.environ.get("DATABASE_URL") or "sqlite:///site_health_check.db"
@@ -11,13 +13,14 @@ sqlite_url = os.environ.get("DATABASE_URL") or "sqlite:///site_health_check.db"
 connect_args = {"check_same_thread": False} if sqlite_url.startswith("sqlite") else {}
 engine = create_engine(sqlite_url, connect_args=connect_args)
 
-if sqlite_url.startswith("sqlite"):
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if isinstance(dbapi_connection, sqlite3.Connection):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON;")
         cursor.execute("PRAGMA busy_timeout=5000;")
         cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA synchronous=NORMAL;")
         cursor.close()
 
 

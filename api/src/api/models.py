@@ -197,7 +197,7 @@ class ScanRun(SQLModel, table=True):
     metrics_json: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
 
     hosts: list["HostState"] = Relationship(
-        sa_relationship_kwargs={"cascade": "all, delete-orphan", "lazy": "selectin"}
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
 class SavedView(SQLModel, table=True):
