@@ -1,6 +1,6 @@
 # Implementation Plan: Reliability, Data Retention & Lifecycle Management (`reliability_and_lifecycle_management`)
 
-## Phase 1: Engine File Descriptor Resilience (`Errno 24` Prevention)
+## Phase 1: Engine File Descriptor Resilience (`Errno 24` Prevention) [checkpoint: 23ef3f1]
 - [x] Task: Write unit tests for Engine FD resilience, DNS `OSError` handling, and `EMFILE` retry (`engine/tests/test_fd_resilience.py`) [e677d88]
     - [x] Test that `run_engine()` attempts to raise `RLIMIT_NOFILE` soft limit toward hard limit (up to `65535`) and clamps `workers_count` to `max(50, soft_limit - 250)` with a warning when the OS soft limit is constrained
     - [x] Test that `resolve_target()` in `network.py` eagerly imports `concurrent.futures.thread` and catches `OSError` (including `Errno 24`) without crashing the worker routine
@@ -10,10 +10,10 @@
     - [x] Update `run_engine()` in `engine/src/engine/engine.py` to auto-raise `RLIMIT_NOFILE` and clamp `workers_count` safely against the active soft limit
     - [x] Update `engine/src/engine/operations/network.py` to eagerly import `concurrent.futures.thread` and catch `(socket.gaierror, OSError)`
     - [x] Update `engine/src/engine/probes/tcp.py` to explicitly handle `errno.EMFILE` / `errno.ENFILE` with warning logging and a single retry
-- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ## Phase 2: Generic `init_db()` Metadata Auto-Sync & `scan_id`-Scoped Ghost Evaluation
-- [ ] Task: Write unit tests for generic `init_db()` schema sync and `scan_id`-scoped Ghost evaluation (`api/tests/test_database.py`, `api/tests/test_evaluator.py`)
+- [~] Task: Write unit tests for generic `init_db()` schema sync and `scan_id`-scoped Ghost evaluation (`api/tests/test_database.py`, `api/tests/test_evaluator.py`)
     - [ ] Test that `init_db()` generically inspects `SQLModel.metadata.tables` vs `sqlalchemy.inspect(engine)` to add missing columns across any table (including `scans.prune_void_hosts`, `scans.prune_closed_ports`, `scans.last_triggered_at`, and `system_config`)
     - [ ] Test that `init_db()` fails fast by raising `RuntimeError` when an `ALTER TABLE` migration fails instead of silently passing
     - [ ] Test in `api/tests/test_evaluator.py` that Ad-Hoc runs (`scan_id=None`) never evaluate Ghosts and never serve as a historical Ghost baseline for subsequent runs
