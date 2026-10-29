@@ -40,14 +40,14 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ## Phase 4: Frontend `/settings` Page, Run History Deletion & UI Consistency Fixes
-- [~] Task: Write frontend unit tests for `/settings`, Run History deletion, and UI consistency fixes (`frontend/src/pages/__tests__/SettingsPage.test.tsx`, `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx`, `frontend/src/features/scans/__tests__/StatusBadge.test.tsx`)
-    - [ ] Test `SettingsPage.tsx`: displays storage stats, saves `retention_days`, and triggers Purge History / Factory Reset DB confirmation flows
-    - [ ] Test `RunHistorySheet.tsx`: renders target string previews on run cards, deletes non-active runs via `DELETE /api/runs/{id}`, and resets `selectedRunId` to `null` if the currently viewed run is deleted
-    - [ ] Test `ScanConfigForm.tsx` hides `Ghost Window` when `mode === 'live'` and shows it when `mode === 'schedule'`
-    - [ ] Test `FormatTlsExpiry` in `StatusBadge.tsx` renders `0d` as red `expired 0d`, and `ScheduledScansPage.tsx` displays evaluation settings in the expanded row view
-- [ ] Task: Implement `SettingsPage.tsx`, `RunHistorySheet.tsx` enhancements, and UI fixes
-    - [ ] Create `frontend/src/pages/SettingsPage.tsx` and wire `/settings` into `frontend/src/app/router.tsx` and `frontend/src/components/layout/Header.tsx`
-    - [ ] Update `frontend/src/features/scans/components/RunHistorySheet.tsx` with target string preview and per-run Delete button + active run fallback
-    - [ ] Update `frontend/src/components/scans/ScanConfigForm.tsx` to hide `Ghost Window` in `live` mode
-    - [ ] Update `frontend/src/features/scans/components/StatusBadge.tsx` (`days <= 0` expired) and `frontend/src/pages/ScheduledScansPage.tsx` (expanded Evaluation Settings section)
+- [x] Task: Write frontend unit tests for `/settings`, Run History deletion, and UI consistency fixes (`frontend/src/pages/__tests__/SettingsPage.test.tsx`, `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx`, `frontend/src/features/scans/__tests__/StatusBadge.test.tsx`) [4269d9a]
+    - [x] Test `SettingsPage.tsx`: displays storage stats, saves `retention_days`, and triggers Purge History / Factory Reset DB confirmation flows
+    - [x] Test `RunHistorySheet.tsx`: renders target string previews on run cards, deletes non-active runs via `DELETE /api/runs/{id}`, and resets `selectedRunId` to `null` if the currently viewed run is deleted
+    - [x] Test `ScanConfigForm.tsx` hides `Ghost Window` when `mode === 'live'` and shows it when `mode === 'schedule'`
+    - [x] Test `FormatTlsExpiry` in `StatusBadge.tsx` renders `0d` as red `expired 0d`, and `ScheduledScansPage.tsx` displays evaluation settings in the expanded row view
+- [x] Task: Implement `SettingsPage.tsx`, `RunHistorySheet.tsx` enhancements, and UI fixes [ad75927]
+    - [x] Create `frontend/src/pages/SettingsPage.tsx` and wire `/settings` into `frontend/src/app/router.tsx` and `frontend/src/components/layout/Header.tsx`
+    - [x] Update `frontend/src/features/scans/components/RunHistorySheet.tsx` with target string preview and per-run Delete button + active run fallback
+    - [x] Update `frontend/src/components/scans/ScanConfigForm.tsx` to hide `Ghost Window` in `live` mode
+    - [x] Update `frontend/src/features/scans/components/StatusBadge.tsx` (`days <= 0` expired) and `frontend/src/pages/ScheduledScansPage.tsx` (expanded Evaluation Settings section)
 - [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
