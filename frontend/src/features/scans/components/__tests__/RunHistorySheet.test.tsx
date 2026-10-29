@@ -16,7 +16,7 @@ describe('RunHistorySheet', () => {
   })
 
   it('renders target string preview on run cards', async () => {
-    vi.spyOn(global, 'fetch').mockImplementation(async (url: any) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
       if (String(url).includes('/api/runs')) {
         return {
           ok: true,
@@ -51,7 +51,7 @@ describe('RunHistorySheet', () => {
     const onSelectRunMock = vi.fn()
     let deleteCalled = false
 
-    vi.spyOn(global, 'fetch').mockImplementation(async (url: any, init?: any) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, init?: any) => {
       if (String(url).includes('/api/runs/run-to-delete') && init?.method === 'DELETE') {
         deleteCalled = true
         return { ok: true, status: 204 } as Response

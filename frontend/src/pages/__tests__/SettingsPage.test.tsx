@@ -16,7 +16,7 @@ describe('SettingsPage', () => {
   })
 
   it('renders system storage metrics from GET /api/system/settings', async () => {
-    vi.spyOn(global, 'fetch').mockImplementation(async (url: any) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
       if (String(url).includes('/api/system/settings')) {
         return {
           ok: true,
@@ -47,7 +47,7 @@ describe('SettingsPage', () => {
   it('saves retention policy with PUT /api/system/settings', async () => {
     let putBody: any = null
 
-    vi.spyOn(global, 'fetch').mockImplementation(async (url: any, init?: any) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, init?: any) => {
       if (String(url).includes('/api/system/settings')) {
         if (init?.method === 'PUT') {
           putBody = JSON.parse(init.body)
@@ -98,7 +98,7 @@ describe('SettingsPage', () => {
   it('triggers purge history flow calling POST /api/system/purge-runs', async () => {
     let purgeCalled = false
 
-    vi.spyOn(global, 'fetch').mockImplementation(async (url: any, init?: any) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
       if (String(url).includes('/api/system/purge-runs')) {
         purgeCalled = true
         return {
