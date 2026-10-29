@@ -39,7 +39,7 @@
     - [x] Create `api/src/api/routers/system.py` (`GET /api/system/settings`, `PUT /api/system/settings`, `POST /api/system/purge-runs`, `POST /api/system/reset-db`) and register it in `api/src/api/main.py`
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
-## Phase 4: Frontend `/settings` Page, Run History Deletion & UI Consistency Fixes
+## Phase 4: Frontend `/settings` Page, Run History Deletion & UI Consistency Fixes [checkpoint: 6045e29]
 - [x] Task: Write frontend unit tests for `/settings`, Run History deletion, and UI consistency fixes (`frontend/src/pages/__tests__/SettingsPage.test.tsx`, `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx`, `frontend/src/features/scans/__tests__/StatusBadge.test.tsx`) [4269d9a]
     - [x] Test `SettingsPage.tsx`: displays storage stats, saves `retention_days`, and triggers Purge History / Factory Reset DB confirmation flows
     - [x] Test `RunHistorySheet.tsx`: renders target string previews on run cards, deletes non-active runs via `DELETE /api/runs/{id}`, and resets `selectedRunId` to `null` if the currently viewed run is deleted
@@ -50,4 +50,4 @@
     - [x] Update `frontend/src/features/scans/components/RunHistorySheet.tsx` with target string preview and per-run Delete button + active run fallback
     - [x] Update `frontend/src/components/scans/ScanConfigForm.tsx` to hide `Ghost Window` in `live` mode
     - [x] Update `frontend/src/features/scans/components/StatusBadge.tsx` (`days <= 0` expired) and `frontend/src/pages/ScheduledScansPage.tsx` (expanded Evaluation Settings section)
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`) [6045e29]
