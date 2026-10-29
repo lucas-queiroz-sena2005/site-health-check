@@ -24,23 +24,23 @@
     - [x] Update existing Ghost test fixtures in `api/tests/test_evaluator.py` and `api/tests/test_scale_slash16.py` to associate a `Scan` (`scan_id`) with scheduled Ghost test runs
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
-## Phase 3: Backend Run Deletion, Schedule Hard-Delete, Retention Policy & System Reset API
-- [~] Task: Write unit tests for Run Deletion, Schedule Cascade Delete, Cron Trigger Tracking, Retention Cleanup, and System Maintenance endpoints (`api/tests/test_system_and_lifecycle.py`)
-    - [ ] Test `DELETE /api/runs/{id}`: returns `409 Conflict` on active (`RUNNING`/`PENDING`) runs, and `204 No Content` on terminal runs while cascading deletion to `HostState`, `PortState`, `TlsCertificate`, and `HttpRoutingCheck` and cleaning up `RunManager` buffers
-    - [ ] Test `DELETE /api/scans/{id}`: hard-deletes the `Scan` and cascades deletion to all associated `ScanRun` records
-    - [ ] Test `scheduler.py`: tracks `Scan.last_triggered_at` so deleting the latest `ScanRun` of an active schedule does not cause an immediate duplicate re-trigger
-    - [ ] Test `GET /api/system/settings` and `PUT /api/system/settings` (`retention_days` persistence and immediate pruning of expired terminal runs)
-    - [ ] Test `POST /api/system/purge-runs` (wipes all `ScanRun` history while preserving `Scan`, `SavedView`, and `SystemConfig`) and `POST /api/system/reset-db` (`drop_all` + `create_all` + `VACUUM`)
-- [ ] Task: Implement Backend Lifecycle Models, Endpoints, and Scheduler Retention
-    - [ ] Add `last_triggered_at: datetime | None = None` to `Scan` and create `SystemConfig` (`id: int = 1`, `retention_days: int = 0`) in `api/src/api/models.py`
-    - [ ] Implement `DELETE /api/runs/{id}` in `api/src/api/routers/runs.py`
-    - [ ] Update `DELETE /api/scans/{id}` in `api/src/api/routers/scans.py` to abort active runs for the schedule and hard-delete the `Scan` row
-    - [ ] Update `api/src/api/services/scheduler.py` to persist `scan.last_triggered_at`, evaluate cron against `max(scan.last_triggered_at, latest_run.started_at)`, and prune expired terminal runs when `SystemConfig.retention_days > 0`
-    - [ ] Create `api/src/api/routers/system.py` (`GET /api/system/settings`, `PUT /api/system/settings`, `POST /api/system/purge-runs`, `POST /api/system/reset-db`) and register it in `api/src/api/main.py`
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+## Phase 3: Backend Run Deletion, Schedule Hard-Delete, Retention Policy & System Reset API [checkpoint: 8d5eb9d]
+- [x] Task: Write unit tests for Run Deletion, Schedule Cascade Delete, Cron Trigger Tracking, Retention Cleanup, and System Maintenance endpoints (`api/tests/test_system_and_lifecycle.py`) [eabfc78]
+    - [x] Test `DELETE /api/runs/{id}`: returns `409 Conflict` on active (`RUNNING`/`PENDING`) runs, and `204 No Content` on terminal runs while cascading deletion to `HostState`, `PortState`, `TlsCertificate`, and `HttpRoutingCheck` and cleaning up `RunManager` buffers
+    - [x] Test `DELETE /api/scans/{id}`: hard-deletes the `Scan` and cascades deletion to all associated `ScanRun` records
+    - [x] Test `scheduler.py`: tracks `Scan.last_triggered_at` so deleting the latest `ScanRun` of an active schedule does not cause an immediate duplicate re-trigger
+    - [x] Test `GET /api/system/settings` and `PUT /api/system/settings` (`retention_days` persistence and immediate pruning of expired terminal runs)
+    - [x] Test `POST /api/system/purge-runs` (wipes all `ScanRun` history while preserving `Scan`, `SavedView`, and `SystemConfig`) and `POST /api/system/reset-db` (`drop_all` + `create_all` + `VACUUM`)
+- [x] Task: Implement Backend Lifecycle Models, Endpoints, and Scheduler Retention [8d5eb9d]
+    - [x] Add `last_triggered_at: datetime | None = None` to `Scan` and create `SystemConfig` (`id: int = 1`, `retention_days: int = 0`) in `api/src/api/models.py`
+    - [x] Implement `DELETE /api/runs/{id}` in `api/src/api/routers/runs.py`
+    - [x] Update `DELETE /api/scans/{id}` in `api/src/api/routers/scans.py` to abort active runs for the schedule and hard-delete the `Scan` row
+    - [x] Update `api/src/api/services/scheduler.py` to persist `scan.last_triggered_at`, evaluate cron against `max(scan.last_triggered_at, latest_run.started_at)`, and prune expired terminal runs when `SystemConfig.retention_days > 0`
+    - [x] Create `api/src/api/routers/system.py` (`GET /api/system/settings`, `PUT /api/system/settings`, `POST /api/system/purge-runs`, `POST /api/system/reset-db`) and register it in `api/src/api/main.py`
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ## Phase 4: Frontend `/settings` Page, Run History Deletion & UI Consistency Fixes
-- [ ] Task: Write frontend unit tests for `/settings`, Run History deletion, and UI consistency fixes (`frontend/src/pages/__tests__/SettingsPage.test.tsx`, `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx`, `frontend/src/features/scans/__tests__/StatusBadge.test.tsx`)
+- [~] Task: Write frontend unit tests for `/settings`, Run History deletion, and UI consistency fixes (`frontend/src/pages/__tests__/SettingsPage.test.tsx`, `frontend/src/pages/__tests__/ScheduledScansPage.test.tsx`, `frontend/src/features/scans/__tests__/StatusBadge.test.tsx`)
     - [ ] Test `SettingsPage.tsx`: displays storage stats, saves `retention_days`, and triggers Purge History / Factory Reset DB confirmation flows
     - [ ] Test `RunHistorySheet.tsx`: renders target string previews on run cards, deletes non-active runs via `DELETE /api/runs/{id}`, and resets `selectedRunId` to `null` if the currently viewed run is deleted
     - [ ] Test `ScanConfigForm.tsx` hides `Ghost Window` when `mode === 'live'` and shows it when `mode === 'schedule'`
