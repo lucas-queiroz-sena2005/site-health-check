@@ -5,12 +5,12 @@
     - [x] Test that `run_engine()` attempts to raise `RLIMIT_NOFILE` soft limit toward hard limit (up to `65535`) and clamps `workers_count` to `max(50, soft_limit - 250)` with a warning when the OS soft limit is constrained
     - [x] Test that `resolve_target()` in `network.py` eagerly imports `concurrent.futures.thread` and catches `OSError` (including `Errno 24`) without crashing the worker routine
     - [x] Test that `check_tcp_and_tls()` in `tcp.py` catches `OSError(errno.EMFILE)` / `OSError(errno.ENFILE)`, logs a warning, retries once after a brief backoff, and does not silently swallow the error at `DEBUG` level
-- [~] Task: Implement Engine FD auto-tuning, `docker-compose.yml` `ulimits`, and probe resilience
-    - [ ] Add `ulimits.nofile` (`soft: 65535`, `hard: 65535`) to the `backend` service in `docker-compose.yml`
-    - [ ] Update `run_engine()` in `engine/src/engine/engine.py` to auto-raise `RLIMIT_NOFILE` and clamp `workers_count` safely against the active soft limit
-    - [ ] Update `engine/src/engine/operations/network.py` to eagerly import `concurrent.futures.thread` and catch `(socket.gaierror, OSError)`
-    - [ ] Update `engine/src/engine/probes/tcp.py` to explicitly handle `errno.EMFILE` / `errno.ENFILE` with warning logging and a single retry
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+- [x] Task: Implement Engine FD auto-tuning, `docker-compose.yml` `ulimits`, and probe resilience [23ef3f1]
+    - [x] Add `ulimits.nofile` (`soft: 65535`, `hard: 65535`) to the `backend` service in `docker-compose.yml`
+    - [x] Update `run_engine()` in `engine/src/engine/engine.py` to auto-raise `RLIMIT_NOFILE` and clamp `workers_count` safely against the active soft limit
+    - [x] Update `engine/src/engine/operations/network.py` to eagerly import `concurrent.futures.thread` and catch `(socket.gaierror, OSError)`
+    - [x] Update `engine/src/engine/probes/tcp.py` to explicitly handle `errno.EMFILE` / `errno.ENFILE` with warning logging and a single retry
+- [~] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ## Phase 2: Generic `init_db()` Metadata Auto-Sync & `scan_id`-Scoped Ghost Evaluation
 - [ ] Task: Write unit tests for generic `init_db()` schema sync and `scan_id`-scoped Ghost evaluation (`api/tests/test_database.py`, `api/tests/test_evaluator.py`)
