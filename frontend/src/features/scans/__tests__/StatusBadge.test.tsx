@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { RunStatusBadge, EntityStatusBadge, FindingBadge } from '../components/StatusBadge'
+import { RunStatusBadge, EntityStatusBadge, FindingBadge, FormatTlsExpiry } from '../components/StatusBadge'
 import { ScanRunStatus } from '../types'
 
 describe('RunStatusBadge', () => {
@@ -53,5 +53,29 @@ describe('FindingBadge and EntityStatusBadge backwards compatibility', () => {
   it('renders FindingBadge correctly', () => {
     render(<FindingBadge code="TLS_EXPIRED" />)
     expect(screen.getByText('TLS_EXPIRED')).toBeTruthy()
+  })
+})
+
+describe('FormatTlsExpiry', () => {
+  it('renders days <= 0 as red expired badge', () => {
+    const { rerender } = render(<FormatTlsExpiry days={0} />)
+    expect(screen.getByText('expired 0d')).toBeTruthy()
+    expect(screen.getByText('expired 0d').className).toContain('text-red')
+
+    rerender(<FormatTlsExpiry days={-5} />)
+    expect(screen.getByText('expired 5d')).toBeTruthy()
+    expect(screen.getByText('expired 5d').className).toContain('text-red')
+  })
+
+  it('renders days between 1 and 29 as yellow warning badge', () => {
+    render(<FormatTlsExpiry days={15} />)
+    expect(screen.getByText('15d')).toBeTruthy()
+    expect(screen.getByText('15d').className).toContain('text-yellow')
+  })
+
+  it('renders days >= 30 as green ok badge', () => {
+    render(<FormatTlsExpiry days={60} />)
+    expect(screen.getByText('60d')).toBeTruthy()
+    expect(screen.getByText('60d').className).toContain('text-green')
   })
 })
