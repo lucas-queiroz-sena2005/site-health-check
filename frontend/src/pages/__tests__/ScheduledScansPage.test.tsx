@@ -292,4 +292,48 @@ describe('ScheduledScansPage Alert Stopper Controls', () => {
       expect(capturedPayload.prune_closed_ports).toBe(true)
     })
   })
+
+  it('renders Evaluation Settings when expanding a schedule row', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/api/scans') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            {
+              id: 'scan-eval-test',
+              name: 'Eval Test Schedule',
+              cron_expression: '0 0 * * *',
+              targets: ['10.0.0.1'],
+              ports: [80],
+              flags: {},
+              ghost_window: '14d',
+              tls_warning_days: 45,
+              prune_void_hosts: true,
+              prune_closed_ports: false,
+              alert_config: null,
+              alerts_muted: false,
+              last_run: null,
+              next_run: null,
+            },
+          ],
+        })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <ScheduledScansPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    const row = await screen.findByText('Eval Test Schedule')
+    fireEvent.click(row)
+
+    expect(await screen.findByText('Evaluation Settings')).toBeTruthy()
+    expect(screen.getByText('14d')).toBeTruthy()
+    expect(screen.getByText('45d')).toBeTruthy()
+  })
 })

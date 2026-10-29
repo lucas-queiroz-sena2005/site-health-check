@@ -17,4 +17,6 @@
 - [x] **Track: Dumb React Flat Explorer (`frontend_flat_explorer`)** *Link: [./tracks/frontend_flat_explorer/index.md](./tracks/frontend_flat_explorer/index.md)*
 - [x] **Track: Input Sanitization & Error Handling Workflow (`input_sanitization_and_error_handling`)** *Link: [./tracks/input_sanitization_and_error_handling/index.md](./tracks/input_sanitization_and_error_handling/index.md)*
 - [x] **Track: Evaluator Refactor & SQL Optimization (`evaluator_refactor_and_sql_optimization`)** *Link: [./tracks/evaluator_refactor_and_sql_optimization/index.md](./tracks/evaluator_refactor_and_sql_optimization/index.md)*
+- [x] **Track: Reliability, Data Retention & Lifecycle Management (`reliability_and_lifecycle_management`)** *Link: [./tracks/reliability_and_lifecycle_management/index.md](./tracks/reliability_and_lifecycle_management/index.md)*
+
 

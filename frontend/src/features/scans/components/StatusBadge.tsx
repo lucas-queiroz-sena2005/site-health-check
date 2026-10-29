@@ -177,10 +177,10 @@ export function FormatTlsExpiry({ days }: { days?: number | null }) {
   if (days === null || days === undefined) {
     return <span className="text-muted-foreground/60">—</span>
   }
-  if (days < 0) {
+  if (days <= 0) {
     return (
       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-        expired {-days}d
+        expired {Math.abs(days)}d
       </span>
     )
   }

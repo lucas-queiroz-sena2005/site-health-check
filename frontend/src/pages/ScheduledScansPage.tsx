@@ -356,6 +356,28 @@ export function ScheduledScansPage() {
                                     )}
                                   </div>
                                 </div>
+
+                                <div className="space-y-4">
+                                  <div className="text-sm font-extrabold text-primary uppercase tracking-widest border-b-2 border-border/50 pb-2">Evaluation Settings</div>
+                                  <div className="flex flex-wrap gap-3">
+                                    <div className="bg-background border-2 border-border px-3 py-2 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2">
+                                      <span className="text-muted-foreground font-semibold">Ghost Window:</span>
+                                      <span className="font-bold text-foreground text-sm">{scan.ghost_window || '7d'}</span>
+                                    </div>
+                                    <div className="bg-background border-2 border-border px-3 py-2 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2">
+                                      <span className="text-muted-foreground font-semibold">TLS Expiry Warning:</span>
+                                      <span className="font-bold text-foreground text-sm">{scan.tls_warning_days ?? 30}d</span>
+                                    </div>
+                                    <div className="bg-background border-2 border-border px-3 py-2 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2">
+                                      <span className="text-muted-foreground font-semibold">Prune Void Hosts:</span>
+                                      <span className="font-bold text-foreground text-sm">{scan.prune_void_hosts ? 'Enabled' : 'Disabled'}</span>
+                                    </div>
+                                    <div className="bg-background border-2 border-border px-3 py-2 rounded-lg text-xs font-mono shadow-sm flex items-center gap-2">
+                                      <span className="text-muted-foreground font-semibold">Prune Closed Ports:</span>
+                                      <span className="font-bold text-foreground text-sm">{scan.prune_closed_ports ? 'Enabled' : 'Disabled'}</span>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                               <div className="flex flex-col gap-3 shrink-0 min-w-[140px]">
                                 <AlertDialog

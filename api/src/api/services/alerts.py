@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import re
 from typing import Any
@@ -706,7 +706,7 @@ async def evaluate_and_dispatch_alert(run_id: str, session: Session) -> None:
     if not should_send:
         return
 
-    timestamp_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+    timestamp_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     table_url = f"{settings.app_base_url}/?run={run.id}"
     dashboard_url = f"{settings.app_base_url}/scheduled-runs"
 

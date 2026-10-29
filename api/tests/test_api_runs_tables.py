@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
@@ -45,8 +45,8 @@ def populated_run_fixture(session: Session) -> str:
     run = ScanRun(
         id=run_id,
         status=ScanRunStatus.COMPLETED,
-        started_at=datetime.now(UTC),
-        finished_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
+        finished_at=datetime.now(timezone.utc),
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
         metrics_json={
             "summary": {
@@ -470,7 +470,7 @@ def test_services_table_unpruned_run_void_exclusion(client: TestClient, session:
     run = ScanRun(
         id=run_id,
         status=ScanRunStatus.COMPLETED,
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         execution_config_snapshot_json={"ghost_window": "7d", "prune_closed_ports": False},
     )
     session.add(run)

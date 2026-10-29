@@ -206,6 +206,8 @@ def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
 
     scan_cols = {row[1] for row in c.execute("PRAGMA table_info(scans);").fetchall()}
     assert "targets" in scan_cols
+    assert "prune_void_hosts" in scan_cols
+    assert "prune_closed_ports" in scan_cols
 
     port_cols = {row[1] for row in c.execute("PRAGMA table_info(port_states);").fetchall()}
     assert "status" in port_cols
@@ -217,6 +219,27 @@ def test_init_db_auto_migration_for_existing_database(tmp_path, monkeypatch):
     assert "finding_code" in check_cols
 
     conn2.close()
+
+
+def test_init_db_fails_fast_on_migration_failure(tmp_path, monkeypatch):
+    """Verify that init_db() raises RuntimeError if a table migration fails."""
+    import sqlite3
+    from unittest.mock import patch
+    from api.database import init_db
+
+    db_file = tmp_path / "legacy_fail.db"
+    conn = sqlite3.connect(db_file)
+    conn.execute("CREATE TABLE scans (id VARCHAR PRIMARY KEY, name VARCHAR);")
+    conn.commit()
+    conn.close()
+
+    legacy_engine = create_engine(f"sqlite:///{db_file}", connect_args={"check_same_thread": False})
+    monkeypatch.setattr("api.database.engine", legacy_engine)
+
+    # Simulate an error during migration execution
+    with patch("sqlalchemy.engine.base.Connection.execute", side_effect=Exception("Database locked or disk full")):
+        with pytest.raises(RuntimeError, match="Database initialization/migration failed"):
+            init_db()
 
 
 def test_compute_ip_sort_key_and_entity_status():

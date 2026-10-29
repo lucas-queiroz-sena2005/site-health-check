@@ -5,7 +5,7 @@ import re
 import sys
 import uuid
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi.sse import ServerSentEvent
@@ -362,7 +362,7 @@ def _finalize_run(run_id: str, returncode: int):
         if not run:
             return
 
-        run.finished_at = datetime.now(UTC)
+        run.finished_at = datetime.now(timezone.utc)
 
         if returncode == 130 or returncode == 143:
             run.status = ScanRunStatus.ABORTED
@@ -376,7 +376,7 @@ def _finalize_run(run_id: str, returncode: int):
         if run.started_at and run.finished_at:
             started_at = run.started_at
             if started_at.tzinfo is None:
-                started_at = started_at.replace(tzinfo=UTC)
+                started_at = started_at.replace(tzinfo=timezone.utc)
             duration = round((run.finished_at - started_at).total_seconds(), 2)
 
         snapshot = run.execution_config_snapshot_json or {}
