@@ -1,11 +1,11 @@
 # Implementation Plan: Reliability, Data Retention & Lifecycle Management (`reliability_and_lifecycle_management`)
 
 ## Phase 1: Engine File Descriptor Resilience (`Errno 24` Prevention)
-- [ ] Task: Write unit tests for Engine FD resilience, DNS `OSError` handling, and `EMFILE` retry (`engine/tests/test_fd_resilience.py`)
-    - [ ] Test that `run_engine()` attempts to raise `RLIMIT_NOFILE` soft limit toward hard limit (up to `65535`) and clamps `workers_count` to `max(50, soft_limit - 250)` with a warning when the OS soft limit is constrained
-    - [ ] Test that `resolve_target()` in `network.py` eagerly imports `concurrent.futures.thread` and catches `OSError` (including `Errno 24`) without crashing the worker routine
-    - [ ] Test that `check_tcp_and_tls()` in `tcp.py` catches `OSError(errno.EMFILE)` / `OSError(errno.ENFILE)`, logs a warning, retries once after a brief backoff, and does not silently swallow the error at `DEBUG` level
-- [ ] Task: Implement Engine FD auto-tuning, `docker-compose.yml` `ulimits`, and probe resilience
+- [x] Task: Write unit tests for Engine FD resilience, DNS `OSError` handling, and `EMFILE` retry (`engine/tests/test_fd_resilience.py`) [e677d88]
+    - [x] Test that `run_engine()` attempts to raise `RLIMIT_NOFILE` soft limit toward hard limit (up to `65535`) and clamps `workers_count` to `max(50, soft_limit - 250)` with a warning when the OS soft limit is constrained
+    - [x] Test that `resolve_target()` in `network.py` eagerly imports `concurrent.futures.thread` and catches `OSError` (including `Errno 24`) without crashing the worker routine
+    - [x] Test that `check_tcp_and_tls()` in `tcp.py` catches `OSError(errno.EMFILE)` / `OSError(errno.ENFILE)`, logs a warning, retries once after a brief backoff, and does not silently swallow the error at `DEBUG` level
+- [~] Task: Implement Engine FD auto-tuning, `docker-compose.yml` `ulimits`, and probe resilience
     - [ ] Add `ulimits.nofile` (`soft: 65535`, `hard: 65535`) to the `backend` service in `docker-compose.yml`
     - [ ] Update `run_engine()` in `engine/src/engine/engine.py` to auto-raise `RLIMIT_NOFILE` and clamp `workers_count` safely against the active soft limit
     - [ ] Update `engine/src/engine/operations/network.py` to eagerly import `concurrent.futures.thread` and catch `(socket.gaierror, OSError)`
