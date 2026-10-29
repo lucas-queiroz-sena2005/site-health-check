@@ -1,5 +1,5 @@
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
@@ -141,7 +141,7 @@ def test_host_state_rollups_and_ghost_evaluation(session: Session):
     session.commit()
 
     # Past run where 10.0.0.99 was active (to simulate ghost host)
-    past_time = datetime.now(UTC) - timedelta(days=2)
+    past_time = datetime.now(timezone.utc) - timedelta(days=2)
     past_run = ScanRun(
         scan_id=scan.id,
         execution_config_snapshot_json={},
@@ -162,7 +162,7 @@ def test_host_state_rollups_and_ghost_evaluation(session: Session):
     current_run = ScanRun(
         scan_id=scan.id,
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(current_run)
@@ -232,7 +232,7 @@ def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
     session.add(scan)
     session.commit()
 
-    past_time = datetime.now(UTC) - timedelta(days=1)
+    past_time = datetime.now(timezone.utc) - timedelta(days=1)
     past_run = ScanRun(
         scan_id=scan.id,
         execution_config_snapshot_json={},
@@ -255,7 +255,7 @@ def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
     run = ScanRun(
         scan_id=scan.id,
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -308,7 +308,7 @@ def test_evaluator_summary_service_and_check_counts(session: Session):
     """Verify that evaluate_scan_run computes service_count and http_check_count in metrics_json['summary']."""
     run = ScanRun(
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -348,7 +348,7 @@ def test_evaluator_assigns_entity_status_void_and_ghost(session: Session):
     session.add(scan)
     session.commit()
 
-    past_time = datetime.now(UTC) - timedelta(days=2)
+    past_time = datetime.now(timezone.utc) - timedelta(days=2)
     past_run = ScanRun(
         scan_id=scan.id,
         execution_config_snapshot_json={},
@@ -374,7 +374,7 @@ def test_evaluator_assigns_entity_status_void_and_ghost(session: Session):
             "prune_void_hosts": False,
             "prune_closed_ports": False,
         },
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -428,7 +428,7 @@ def test_evaluator_unified_pruning_pipeline(session: Session):
     session.add(scan)
     session.commit()
 
-    past_time = datetime.now(UTC) - timedelta(days=2)
+    past_time = datetime.now(timezone.utc) - timedelta(days=2)
     past_run = ScanRun(
         scan_id=scan.id,
         execution_config_snapshot_json={},
@@ -452,7 +452,7 @@ def test_evaluator_unified_pruning_pipeline(session: Session):
             "prune_void_hosts": True,
             "prune_closed_ports": True,
         },
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -630,7 +630,7 @@ def test_evaluator_ignores_adhoc_runs_for_ghost_baseline(session: Session):
     run1 = ScanRun(
         scan_id=None,
         status=ScanRunStatus.COMPLETED,
-        started_at=datetime.now(UTC) - timedelta(hours=2),
+        started_at=datetime.now(timezone.utc) - timedelta(hours=2),
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
     )
     session.add(run1)
@@ -646,7 +646,7 @@ def test_evaluator_ignores_adhoc_runs_for_ghost_baseline(session: Session):
     run2 = ScanRun(
         scan_id=None,
         status=ScanRunStatus.COMPLETED,
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30, "prune_void_hosts": False},
     )
     session.add(run2)
@@ -681,7 +681,7 @@ def test_evaluator_scopes_ghosts_to_exact_scheduled_scan_id(session: Session):
     run_a1 = ScanRun(
         scan_id=scan_a.id,
         status=ScanRunStatus.COMPLETED,
-        started_at=datetime.now(UTC) - timedelta(hours=2),
+        started_at=datetime.now(timezone.utc) - timedelta(hours=2),
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
     )
     session.add(run_a1)
@@ -696,7 +696,7 @@ def test_evaluator_scopes_ghosts_to_exact_scheduled_scan_id(session: Session):
     run_b1 = ScanRun(
         scan_id=scan_b.id,
         status=ScanRunStatus.COMPLETED,
-        started_at=datetime.now(UTC) - timedelta(hours=1),
+        started_at=datetime.now(timezone.utc) - timedelta(hours=1),
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30, "prune_void_hosts": False},
     )
     session.add(run_b1)
@@ -716,7 +716,7 @@ def test_evaluator_scopes_ghosts_to_exact_scheduled_scan_id(session: Session):
     run_a2 = ScanRun(
         scan_id=scan_a.id,
         status=ScanRunStatus.COMPLETED,
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30, "prune_void_hosts": False},
     )
     session.add(run_a2)

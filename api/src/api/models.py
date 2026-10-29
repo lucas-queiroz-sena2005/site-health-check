@@ -1,7 +1,7 @@
 import ipaddress
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -182,6 +182,14 @@ class Scan(SQLModel, table=True):
     alerts_muted: bool = Field(default=False)
     
     deleted_at: datetime | None = None
+    last_triggered_at: datetime | None = None
+
+
+class SystemConfig(SQLModel, table=True):
+    __tablename__: str = "system_config"  # type: ignore
+    id: int = Field(default=1, primary_key=True)
+    retention_days: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ScanRun(SQLModel, table=True):
     __tablename__: str = "scan_runs"  # type: ignore

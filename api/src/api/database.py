@@ -78,5 +78,12 @@ def init_db() -> None:
                     conn.execute(
                         text(f'ALTER TABLE "{table_name}" ADD COLUMN "{col.name}" {type_str}{default_clause}')
                     )
+
+        from api.models import SystemConfig
+        with Session(engine) as session:
+            cfg = session.get(SystemConfig, 1)
+            if not cfg:
+                session.add(SystemConfig(id=1, retention_days=0))
+                session.commit()
     except Exception as exc:
         raise RuntimeError(f"Database initialization/migration failed: {exc}") from exc

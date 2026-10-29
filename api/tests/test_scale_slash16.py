@@ -1,7 +1,7 @@
 import time
 import uuid
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -55,7 +55,7 @@ def test_slash16_end_to_end_scale_and_pruning(scale_engine):
                 id=run_id,
                 scan_id=scan.id,
                 status=ScanRunStatus.RUNNING,
-                started_at=datetime.now(UTC),
+                started_at=datetime.now(timezone.utc),
                 execution_config_snapshot_json={
                     "prune_void_hosts": True,
                     "prune_closed_ports": True,
@@ -170,7 +170,7 @@ def test_slash16_end_to_end_scale_and_pruning(scale_engine):
 
         # Step 2: Run a subsequent scan run where 5 previously active hosts are now offline (Ghost detection test)
         run2_id = str(uuid.uuid4())
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         with Session(scale_engine) as session:
             run2 = ScanRun(
                 id=run2_id,

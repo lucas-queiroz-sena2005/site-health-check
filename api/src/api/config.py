@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -68,4 +69,9 @@ class Settings(BaseSettings):
             return ZoneInfo("UTC")
 
 settings = Settings()
+
+
+def get_now() -> datetime:
+    """Returns the current timezone-aware datetime using the configured environment timezone."""
+    return datetime.now(settings.get_tz())
 

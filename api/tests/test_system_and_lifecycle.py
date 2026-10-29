@@ -1,7 +1,7 @@
 import os
 import uuid
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import status
@@ -81,7 +81,7 @@ def test_delete_run_conflict_when_active(client: TestClient, lifecycle_engine):
             id="active-run-1",
             status=ScanRunStatus.RUNNING,
             execution_config_snapshot_json={},
-            started_at=datetime.now(UTC),
+            started_at=datetime.now(timezone.utc),
         )
         session.add(run)
         session.commit()
@@ -99,8 +99,8 @@ def test_delete_run_cascades_terminal_run_and_children(client: TestClient, lifec
             id=run_id,
             status=ScanRunStatus.COMPLETED,
             execution_config_snapshot_json={},
-            started_at=datetime.now(UTC) - timedelta(hours=1),
-            finished_at=datetime.now(UTC),
+            started_at=datetime.now(timezone.utc) - timedelta(hours=1),
+            finished_at=datetime.now(timezone.utc),
         )
         session.add(run)
         session.flush()
@@ -149,7 +149,7 @@ def test_delete_scan_hard_deletes_and_cascades(client: TestClient, lifecycle_eng
             scan_id=scan_id,
             status=ScanRunStatus.COMPLETED,
             execution_config_snapshot_json={},
-            started_at=datetime.now(UTC) - timedelta(hours=2),
+            started_at=datetime.now(timezone.utc) - timedelta(hours=2),
         )
         session.add(run)
         session.flush()
@@ -167,14 +167,15 @@ def test_delete_scan_hard_deletes_and_cascades(client: TestClient, lifecycle_eng
         assert session.get(HostState, "h-sched") is None
 
 
-def test_scheduler_tracks_last_triggered_at_and_decouples_history_deletion(lifecycle_engine):
+def test_scheduler_tracks_last_triggered_at_and_decouples_history_deletion(lifecycle_engine, monkeypatch):
     """Scheduler tracks Scan.last_triggered_at so deleting past runs does not re-trigger schedule immediately."""
     from unittest.mock import AsyncMock
 
+    monkeypatch.setattr("api.services.scheduler.engine", lifecycle_engine)
     mock_app_state = MagicMock()
     mock_app_state.run_manager.dispatch_run = AsyncMock()
 
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     with Session(lifecycle_engine) as session:
         scan = Scan(
             id="cron-decoupled-scan",
@@ -197,7 +198,7 @@ def test_scheduler_tracks_last_triggered_at_and_decouples_history_deletion(lifec
 
 def test_prune_expired_runs_retention_policy(lifecycle_engine):
     """prune_expired_runs deletes terminal runs older than retention_days and preserves active/recent runs."""
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     with Session(lifecycle_engine) as session:
         # Run 1: Completed 10 days ago (expired if retention=7)
         r1 = ScanRun(
@@ -248,8 +249,8 @@ def test_system_settings_get_and_put(client: TestClient, lifecycle_engine):
         old_run = ScanRun(
             id="run-to-expire",
             status=ScanRunStatus.COMPLETED,
-            started_at=datetime.now(UTC) - timedelta(days=40),
-            finished_at=datetime.now(UTC) - timedelta(days=40),
+            started_at=datetime.now(timezone.utc) - timedelta(days=40),
+            finished_at=datetime.now(timezone.utc) - timedelta(days=40),
             execution_config_snapshot_json={},
         )
         session.add(old_run)

@@ -1,15 +1,43 @@
 import asyncio
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timedelta, timezone
 
 import croniter
+from sqlalchemy import and_, or_
 from sqlmodel import Session, col, desc, select
 
 from api.config import settings
 from api.database import engine
-from api.models import Scan, ScanRun, ScanRunStatus
+from api.models import Scan, ScanRun, ScanRunStatus, SystemConfig
 
 logger = logging.getLogger("scheduler")
+
+
+def prune_expired_runs(session: Session, retention_days: int) -> int:
+    """Prunes terminal ScanRuns older than retention_days, cascading to child records."""
+    if retention_days <= 0:
+        return 0
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    terminal_statuses = [
+        ScanRunStatus.COMPLETED,
+        ScanRunStatus.FAILED,
+        ScanRunStatus.ABORTED,
+    ]
+    expired_runs = session.exec(
+        select(ScanRun).where(
+            col(ScanRun.status).in_(terminal_statuses),
+            or_(
+                ScanRun.finished_at < cutoff,
+                and_(ScanRun.finished_at == None, ScanRun.started_at < cutoff),
+            ),
+        )
+    ).all()
+    count = len(expired_runs)
+    for run in expired_runs:
+        session.delete(run)
+    if count > 0:
+        session.commit()
+    return count
 
 
 async def check_and_run_scheduled_scans(app_state):
@@ -36,17 +64,23 @@ async def check_and_run_scheduled_scans(app_state):
                 if session.exec(active_run_stmt).first():
                     continue
 
-                # Get the most recent run
+                # Get reference start time from either scan.last_triggered_at or the most recent run
                 latest_run_stmt = select(ScanRun).where(
                     ScanRun.scan_id == scan.id
                 ).order_by(desc(ScanRun.started_at)).limit(1)
                 latest_run = session.exec(latest_run_stmt).first()
-                
-                should_run = False
+
+                ref_candidates: list[datetime] = []
+                if scan.last_triggered_at:
+                    ref_candidates.append(scan.last_triggered_at)
                 if latest_run and latest_run.started_at:
-                    lr_started = latest_run.started_at
+                    ref_candidates.append(latest_run.started_at)
+
+                should_run = False
+                if ref_candidates:
+                    lr_started = max(ref_candidates)
                     if lr_started.tzinfo is None:
-                        lr_started = lr_started.replace(tzinfo=UTC)
+                        lr_started = lr_started.replace(tzinfo=timezone.utc)
                     lr_started_tz = lr_started.astimezone(tz)
                     # Prevent running multiple times in the same minute
                     if (now - lr_started_tz).total_seconds() < 55:
@@ -58,7 +92,7 @@ async def check_and_run_scheduled_scans(app_state):
                     if now >= next_run:
                         should_run = True
                 else:
-                    # Never ran before - check if current minute matches cron expression
+                    # Never ran or triggered before - check if current minute matches cron expression
                     if croniter.croniter.match(scan.cron_expression, now):
                         should_run = True
                     else:
@@ -71,6 +105,8 @@ async def check_and_run_scheduled_scans(app_state):
                             
                 if should_run:
                     logger.info(f"Triggering scheduled scan: {scan.name} ({scan.id})")
+                    scan.last_triggered_at = datetime.now(timezone.utc)
+                    session.add(scan)
                     targets = scan.targets or []
                         
                     snapshot = {
@@ -88,7 +124,7 @@ async def check_and_run_scheduled_scans(app_state):
                         scan_id=scan.id,
                         execution_config_snapshot_json=snapshot,
                         status=ScanRunStatus.PENDING,
-                        started_at=datetime.now(UTC)
+                        started_at=datetime.now(timezone.utc)
                     )
                     session.add(run)
                     session.commit()
@@ -109,6 +145,12 @@ async def scheduler_loop(app_state):
     while True:
         try:
             await check_and_run_scheduled_scans(app_state)
+            with Session(engine) as session:
+                cfg = session.get(SystemConfig, 1)
+                if cfg and cfg.retention_days > 0:
+                    pruned = prune_expired_runs(session, cfg.retention_days)
+                    if pruned > 0:
+                        logger.info("Background retention cleanup pruned %d expired run(s)", pruned)
         except Exception as e:
             logger.exception(f"Error in scheduler loop: {e}", exc_info=True)
         await asyncio.sleep(10)

@@ -77,6 +77,33 @@ async def abort_run(
     raise HTTPException(status_code=404, detail="Run process not running locally")
 
 
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_run(
+    id: Annotated[str, Path()],
+    request: Request,
+    session: SessionDep,
+):
+    run = session.get(ScanRun, id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    run_manager = getattr(request.app.state, "run_manager", None)
+    if (run_manager and run_manager.is_active(id)) or run.status in (
+        ScanRunStatus.RUNNING,
+        ScanRunStatus.PENDING,
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete an active run. Abort it first.",
+        )
+
+    if run_manager and hasattr(run_manager, "unregister_run"):
+        run_manager.unregister_run(id)
+
+    session.delete(run)
+    session.commit()
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_run(
     config: LaunchRunRequest,

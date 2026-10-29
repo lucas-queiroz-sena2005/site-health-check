@@ -5,7 +5,7 @@ from typing import Annotated, Any
 import croniter
 from fastapi import APIRouter, HTTPException, Path, Request, status
 from pydantic import BaseModel, Field as PydanticField, field_validator
-from sqlmodel import desc, select
+from sqlmodel import col, desc, select
 
 from api.config import settings
 from api.database import SessionDep
@@ -302,13 +302,28 @@ def patch_scan(
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_scan(id: Annotated[str, Path()], session: SessionDep):
+def delete_scan(
+    id: Annotated[str, Path()],
+    request: Request,
+    session: SessionDep,
+):
     scan = session.get(Scan, id)
-    if not scan or scan.deleted_at is not None:
+    if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
-        
-    scan.deleted_at = datetime.now(timezone.utc)
-    scan.is_active = False
-    session.add(scan)
+
+    run_manager = getattr(request.app.state, "run_manager", None)
+    active_runs = session.exec(
+        select(ScanRun).where(
+            ScanRun.scan_id == scan.id,
+            col(ScanRun.status).in_([ScanRunStatus.PENDING, ScanRunStatus.RUNNING]),
+        )
+    ).all()
+    for ar in active_runs:
+        if run_manager and run_manager.is_active(ar.id):
+            run_manager.abort_run(ar.id)
+        if run_manager and hasattr(run_manager, "unregister_run"):
+            run_manager.unregister_run(ar.id)
+
+    session.delete(scan)
     session.commit()
 
