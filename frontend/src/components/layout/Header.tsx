@@ -35,6 +35,14 @@ export function Header() {
             >
               Scheduled Scans
             </NavLink>
+            <NavLink
+              to="/settings"
+              className={({ isActive }) =>
+                buttonVariants({ variant: isActive ? 'default' : 'ghost', size: 'lg' })
+              }
+            >
+              Settings
+            </NavLink>
           </nav>
         </div>
         <div className="flex items-center justify-end">

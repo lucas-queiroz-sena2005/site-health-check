@@ -5,7 +5,7 @@ import signal
 import sys
 from collections import defaultdict, deque
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi.sse import ServerSentEvent
@@ -186,7 +186,7 @@ class RunManager:
                 if run:
                     run.status = ScanRunStatus.RUNNING
                     if not run.started_at:
-                        run.started_at = datetime.now(UTC)
+                        run.started_at = datetime.now(timezone.utc)
                     session.add(run)
                     session.commit()
 
@@ -274,7 +274,7 @@ class RunManager:
                 run = session.get(ScanRun, run_id)
                 if run:
                     run.status = ScanRunStatus.FAILED
-                    run.finished_at = datetime.now(UTC)
+                    run.finished_at = datetime.now(timezone.utc)
                     session.add(run)
                     session.commit()
         finally:

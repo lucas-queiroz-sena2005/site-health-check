@@ -30,6 +30,10 @@ services:
       - .env
     volumes:
       - site_health_data:/data
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/docs')"]
       interval: 10s

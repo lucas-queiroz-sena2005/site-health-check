@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ScanRunResponse } from '../types'
 import { scanQueryKeys } from '../api/queryKeys'
 
@@ -25,6 +25,8 @@ export function RunHistorySheet({
   className?: string
 }) {
   const [open, setOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const { data: runs = [], isLoading, refetch } = useQuery<ScanRunResponse[]>({
     queryKey: scanQueryKeys.history(),
     queryFn: async () => {
@@ -42,6 +44,23 @@ export function RunHistorySheet({
       refetch()
     }
   }, [open, refetch])
+
+  const handleDeleteRun = async (e: React.MouseEvent, runId: string) => {
+    e.stopPropagation()
+    setDeletingId(runId)
+    try {
+      const res = await fetch(`/api/runs/${runId}`, { method: 'DELETE' })
+      if (res.ok) {
+        if (selectedRunId === runId) {
+          onSelectRun(null)
+        }
+        await queryClient.invalidateQueries({ queryKey: scanQueryKeys.history() })
+        refetch()
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const getRunLabel = (id: string | null) => {
     if (!id) return "Loading Latest Run..."
@@ -81,42 +100,80 @@ export function RunHistorySheet({
         
         <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 pr-4">
 
-          {runs.map((run) => (
-            <button 
-              type="button"
-              key={run.id}
-              onClick={() => {
-                onSelectRun(run.id)
-                setOpen(false)
-              }}
-              className={`w-full text-left p-3 rounded-md border-2 cursor-pointer transition-colors ${
-                selectedRunId === run.id 
-                  ? 'border-primary bg-primary/10' 
-                  : 'border-border hover:border-primary/50 bg-card'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-bold text-sm tracking-tight">{run.scan_name || 'Ad-hoc Scan'}</span>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                  run.status === 'COMPLETED' ? 'bg-green-500/20 text-green-700 dark:text-green-400' :
-                  run.status === 'FAILED' ? 'bg-red-500/20 text-red-700 dark:text-red-400' :
-                  run.status === 'ABORTED' ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400' :
-                  'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
-                }`}>
-                  {run.status}
-                </span>
-              </div>
-              {run.status !== 'COMPLETED' && run.status !== 'PENDING' && run.status !== 'RUNNING' && (
-                <div className="text-[10px] bg-orange-500/10 text-orange-600 px-2 py-1 mb-2 rounded-sm border border-orange-500/30 font-bold uppercase tracking-widest w-fit">
-                  Partial Results
+          {runs.map((run) => {
+            const targetsPreview = run.targets && run.targets.length > 0 ? run.targets.join(', ') : 'None'
+            const isTerminal = run.status === 'COMPLETED' || run.status === 'FAILED' || run.status === 'ABORTED'
+
+            return (
+              <button 
+                type="button"
+                key={run.id}
+                onClick={() => {
+                  onSelectRun(run.id)
+                  setOpen(false)
+                }}
+                className={`w-full text-left p-3 rounded-md border-2 cursor-pointer transition-colors ${
+                  selectedRunId === run.id 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:border-primary/50 bg-card'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-bold text-sm tracking-tight">{run.scan_name || 'Ad-hoc Scan'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                      run.status === 'COMPLETED' ? 'bg-green-500/20 text-green-700 dark:text-green-400' :
+                      run.status === 'FAILED' ? 'bg-red-500/20 text-red-700 dark:text-red-400' :
+                      run.status === 'ABORTED' ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400' :
+                      'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400'
+                    }`}>
+                      {run.status}
+                    </span>
+                    {isTerminal && (
+                      <span
+                        role="button"
+                        title="Delete Run"
+                        tabIndex={0}
+                        onClick={(e) => handleDeleteRun(e, run.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleDeleteRun(e as any, run.id)
+                          }
+                        }}
+                        className={`p-1 rounded text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer ${
+                          deletingId === run.id ? 'opacity-50 pointer-events-none' : ''
+                        }`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        </svg>
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
-              <div className="text-xs text-muted-foreground flex flex-col gap-1 font-mono">
-                <span>Targets: <strong className="text-foreground">{run.targets?.length || 0}</strong></span>
-                <span>Started: <strong className="text-foreground">{run.started_at ? new Date(run.started_at).toLocaleString() : 'N/A'}</strong></span>
-              </div>
-            </button>
-          ))}
+                {run.status !== 'COMPLETED' && run.status !== 'PENDING' && run.status !== 'RUNNING' && (
+                  <div className="text-[10px] bg-orange-500/10 text-orange-600 px-2 py-1 mb-2 rounded-sm border border-orange-500/30 font-bold uppercase tracking-widest w-fit">
+                    Partial Results
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground flex flex-col gap-1 font-mono">
+                  <div className="flex items-center gap-1.5 overflow-hidden">
+                    <span className="shrink-0 text-muted-foreground">Targets:</span>
+                    <span className="font-semibold text-foreground truncate" title={targetsPreview}>
+                      {targetsPreview}
+                    </span>
+                    {run.targets && run.targets.length > 1 && (
+                      <span className="text-[10px] bg-muted px-1 rounded text-muted-foreground shrink-0">
+                        ({run.targets.length})
+                      </span>
+                    )}
+                  </div>
+                  <span>Started: <strong className="text-foreground">{run.started_at ? new Date(run.started_at).toLocaleString() : 'N/A'}</strong></span>
+                </div>
+              </button>
+            )
+          })}
           
           {isLoading && (
             <div className="text-center py-4 text-sm text-muted-foreground font-semibold">Loading runs...</div>

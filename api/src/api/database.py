@@ -33,73 +33,57 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 def init_db() -> None:
     """Initializes tables and ensures schema migrations for SQLite."""
+    from enum import Enum
+    from sqlalchemy import inspect
     from sqlmodel import SQLModel
 
-    SQLModel.metadata.create_all(engine)
-    with engine.begin() as conn:
-        try:
-            # 1. Scans migrations
-            res = conn.execute(text("PRAGMA table_info(scans)"))
-            existing_cols = {row[1] for row in res.fetchall()}
-            if existing_cols:
-                if "alerts_muted" not in existing_cols:
+    try:
+        SQLModel.metadata.create_all(engine)
+        with engine.begin() as conn:
+            inspector = inspect(conn)
+            existing_tables = set(inspector.get_table_names())
+
+            for table_name, table in SQLModel.metadata.tables.items():
+                if table_name not in existing_tables:
+                    continue
+
+                existing_cols = {col["name"] for col in inspector.get_columns(table_name)}
+                for col in table.columns:
+                    if col.name in existing_cols:
+                        continue
+
+                    type_str = col.type.compile(conn.dialect)
+                    default_clause = ""
+                    if col.default is not None and hasattr(col.default, "arg"):
+                        val = col.default.arg
+                        if isinstance(val, Enum):
+                            val = val.value
+                        if isinstance(val, bool):
+                            default_clause = f" DEFAULT {1 if val else 0}"
+                        elif isinstance(val, (int, float)):
+                            default_clause = f" DEFAULT {val}"
+                        elif isinstance(val, str):
+                            escaped = val.replace("'", "''")
+                            default_clause = f" DEFAULT '{escaped}'"
+                    elif type_str.upper() == "JSON":
+                        default_clause = " DEFAULT '[]'"
+                    elif not col.nullable:
+                        if "INT" in type_str.upper():
+                            default_clause = " DEFAULT 0"
+                        elif "BOOL" in type_str.upper():
+                            default_clause = " DEFAULT 0"
+                        else:
+                            default_clause = " DEFAULT ''"
+
                     conn.execute(
-                        text("ALTER TABLE scans ADD COLUMN alerts_muted BOOLEAN DEFAULT 0")
-                    )
-                if "targets" not in existing_cols:
-                    conn.execute(
-                        text("ALTER TABLE scans ADD COLUMN targets JSON DEFAULT '[]'")
+                        text(f'ALTER TABLE "{table_name}" ADD COLUMN "{col.name}" {type_str}{default_clause}')
                     )
 
-            # 2. HostState migrations (Track 2: set-union lineage + evaluation columns)
-            res = conn.execute(text("PRAGMA table_info(host_states)"))
-            host_cols = {row[1] for row in res.fetchall()}
-            if host_cols:
-                new_host_cols = {
-                    "resolved_domains": "JSON DEFAULT '[]'",
-                    "discovered_from": "JSON DEFAULT '[]'",
-                    "depth": "INTEGER DEFAULT 0",
-                    "status": "VARCHAR DEFAULT 'ok'",
-                    "ip_sort_key": "VARCHAR DEFAULT NULL",
-                    "open_port_count": "INTEGER DEFAULT 0",
-                    "scanned_port_count": "INTEGER DEFAULT 0",
-                    "vhost_count": "INTEGER DEFAULT 0",
-                    "min_tcp_latency_ms": "INTEGER DEFAULT NULL",
-                    "min_tls_expires_days": "INTEGER DEFAULT NULL",
-                    "worst_tls_version": "VARCHAR DEFAULT NULL",
-                    "worst_http_status": "INTEGER DEFAULT NULL",
-                    "finding_codes": "JSON DEFAULT '[]'",
-                }
-                for col_name, col_def in new_host_cols.items():
-                    if col_name not in host_cols:
-                        conn.execute(text(f"ALTER TABLE host_states ADD COLUMN {col_name} {col_def}"))
-
-            # 3. PortState migrations (Track 2: evaluation columns)
-            res = conn.execute(text("PRAGMA table_info(port_states)"))
-            port_cols = {row[1] for row in res.fetchall()}
-            if port_cols:
-                new_port_cols = {
-                    "status": "VARCHAR DEFAULT 'ok'",
-                    "san_count": "INTEGER DEFAULT 0",
-                    "http_check_count": "INTEGER DEFAULT 0",
-                    "worst_http_status": "INTEGER DEFAULT NULL",
-                    "finding_codes": "JSON DEFAULT '[]'",
-                }
-                for col_name, col_def in new_port_cols.items():
-                    if col_name not in port_cols:
-                        conn.execute(text(f"ALTER TABLE port_states ADD COLUMN {col_name} {col_def}"))
-
-            # 4. HttpRoutingCheck migrations (Track 2: evaluation columns)
-            res = conn.execute(text("PRAGMA table_info(http_routing_checks)"))
-            check_cols = {row[1] for row in res.fetchall()}
-            if check_cols:
-                new_check_cols = {
-                    "status": "VARCHAR DEFAULT 'ok'",
-                    "finding_code": "VARCHAR DEFAULT NULL",
-                }
-                for col_name, col_def in new_check_cols.items():
-                    if col_name not in check_cols:
-                        conn.execute(text(f"ALTER TABLE http_routing_checks ADD COLUMN {col_name} {col_def}"))
-
-        except Exception:
-            pass
+        from api.models import SystemConfig
+        with Session(engine) as session:
+            cfg = session.get(SystemConfig, 1)
+            if not cfg:
+                session.add(SystemConfig(id=1, retention_days=0))
+                session.commit()
+    except Exception as exc:
+        raise RuntimeError(f"Database initialization/migration failed: {exc}") from exc

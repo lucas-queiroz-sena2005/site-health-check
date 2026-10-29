@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 from sqlalchemy import column, func, or_, update
 from sqlalchemy.orm import selectinload
@@ -104,10 +104,10 @@ def evaluate_scan_run(
         .where(HostState.scan_run_id == scan_run_id)
     )
 
-    if ghost_window_td is not None:
-        now_dt = run.started_at or datetime.now(UTC)
+    if ghost_window_td is not None and run.scan_id is not None:
+        now_dt = run.started_at or datetime.now(timezone.utc)
         if now_dt.tzinfo is None:
-            now_dt = now_dt.replace(tzinfo=UTC)
+            now_dt = now_dt.replace(tzinfo=timezone.utc)
         cutoff = now_dt - ghost_window_td
 
         hist_stmt = (
@@ -118,6 +118,7 @@ def evaluate_scan_run(
             .where(col(ScanRun.started_at) >= cutoff)
             .where(ScanRun.status == ScanRunStatus.COMPLETED)
             .where(col(ScanRun.id) != scan_run_id)
+            .where(ScanRun.scan_id == run.scan_id)
             .where(col(HostState.ip_address).in_(current_run_ips_subq))
             .distinct()
         )

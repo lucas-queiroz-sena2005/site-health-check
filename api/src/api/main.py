@@ -14,7 +14,7 @@ logging.basicConfig(
 
 
 from api.database import engine, init_db
-from api.routers import alerts, runs, scans, schemas, views
+from api.routers import alerts, runs, scans, schemas, views, system
 from api.services.run_manager import RunManager
 from api.services.scheduler import scheduler_loop
 
@@ -89,5 +89,6 @@ api_router.include_router(scans.router)
 api_router.include_router(schemas.router)
 api_router.include_router(views.router)
 api_router.include_router(alerts.router)
+api_router.include_router(system.router)
 
 app.include_router(api_router)

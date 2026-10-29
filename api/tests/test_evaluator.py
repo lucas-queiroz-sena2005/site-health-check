@@ -1,5 +1,5 @@
 import pytest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
@@ -136,9 +136,14 @@ def test_port_state_rollups_and_tls_findings(session: Session):
 
 def test_host_state_rollups_and_ghost_evaluation(session: Session):
     """Level 3: HostState bottom-up rollups and Ghost classification."""
+    scan = Scan(id="test-ghost-scan-1", name="Ghost Scan 1", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
     # Past run where 10.0.0.99 was active (to simulate ghost host)
-    past_time = datetime.now(UTC) - timedelta(days=2)
+    past_time = datetime.now(timezone.utc) - timedelta(days=2)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -155,8 +160,9 @@ def test_host_state_rollups_and_ghost_evaluation(session: Session):
 
     # Current run
     current_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(current_run)
@@ -222,8 +228,13 @@ def test_host_state_rollups_and_ghost_evaluation(session: Session):
 
 def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
     """Void closed ports on active hosts must not fail the host, while historically open closed ports trigger ghost warning, and evaluate_scan_run writes metrics_json['summary']."""
-    past_time = datetime.now(UTC) - timedelta(days=1)
+    scan = Scan(id="test-ghost-scan-2", name="Ghost Scan 2", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
+    past_time = datetime.now(timezone.utc) - timedelta(days=1)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -242,8 +253,9 @@ def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
     session.commit()
 
     run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -296,7 +308,7 @@ def test_evaluator_summary_service_and_check_counts(session: Session):
     """Verify that evaluate_scan_run computes service_count and http_check_count in metrics_json['summary']."""
     run = ScanRun(
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -332,8 +344,13 @@ def test_evaluator_assigns_entity_status_void_and_ghost(session: Session):
     and inactive non-ghost hosts get status='void'."""
     from api.models import EntityStatus
 
-    past_time = datetime.now(UTC) - timedelta(days=2)
+    scan = Scan(id="test-ghost-scan-3", name="Ghost Scan 3", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
+    past_time = datetime.now(timezone.utc) - timedelta(days=2)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -350,13 +367,14 @@ def test_evaluator_assigns_entity_status_void_and_ghost(session: Session):
 
     # Current run with pruning disabled to inspect evaluated statuses in DB
     run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={
             "ghost_window": "7d",
             "tls_warning_days": 30,
             "prune_void_hosts": False,
             "prune_closed_ports": False,
         },
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -406,8 +424,13 @@ def test_evaluator_unified_pruning_pipeline(session: Session):
     """evaluate_scan_run directly performs pruning of void hosts and routine closed ports when configured."""
     from api.models import EntityStatus
 
-    past_time = datetime.now(UTC) - timedelta(days=2)
+    scan = Scan(id="test-ghost-scan-4", name="Ghost Scan 4", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
+    past_time = datetime.now(timezone.utc) - timedelta(days=2)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -423,12 +446,13 @@ def test_evaluator_unified_pruning_pipeline(session: Session):
 
     # Current run with prune_void_hosts=True and prune_closed_ports=True (defaults)
     run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={
             "ghost_window": "7d",
             "prune_void_hosts": True,
             "prune_closed_ports": True,
         },
-        started_at=datetime.now(UTC),
+        started_at=datetime.now(timezone.utc),
         status=ScanRunStatus.COMPLETED,
     )
     session.add(run)
@@ -598,6 +622,116 @@ def test_evaluate_scan_run_large_scale_exceeding_sqlite_variable_limit(session: 
     # Verify pruned from SQLite
     remaining_hosts_count = len(session.exec(select(HostState.id).where(HostState.scan_run_id == run.id)).all())
     assert remaining_hosts_count == 0, "All 35,000 routine void hosts should be pruned"
+
+
+def test_evaluator_ignores_adhoc_runs_for_ghost_baseline(session: Session):
+    """Ad-hoc runs (scan_id=None) must never evaluate ghosts and never serve as historical baseline."""
+    # Past ad-hoc run where 10.0.0.99 had port 80 open
+    run1 = ScanRun(
+        scan_id=None,
+        status=ScanRunStatus.COMPLETED,
+        started_at=datetime.now(timezone.utc) - timedelta(hours=2),
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+    )
+    session.add(run1)
+    session.commit()
+
+    h1 = HostState(id=f"{run1.id}_10.0.0.99", scan_run_id=run1.id, ip_address="10.0.0.99", status="ok")
+    session.add(h1)
+    p1 = PortState(id=f"{h1.id}_80", host_state_id=h1.id, port_number=80, tcp_status="open", status="ok")
+    session.add(p1)
+    session.commit()
+
+    # Current ad-hoc run where 10.0.0.99 has port 80 closed
+    run2 = ScanRun(
+        scan_id=None,
+        status=ScanRunStatus.COMPLETED,
+        started_at=datetime.now(timezone.utc),
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30, "prune_void_hosts": False},
+    )
+    session.add(run2)
+    session.commit()
+
+    h2 = HostState(id=f"{run2.id}_10.0.0.99", scan_run_id=run2.id, ip_address="10.0.0.99", status="ok")
+    session.add(h2)
+    p2 = PortState(id=f"{h2.id}_80", host_state_id=h2.id, port_number=80, tcp_status="closed", status="ok")
+    session.add(p2)
+    session.commit()
+
+    summary = evaluate_scan_run(run2.id, session)
+    session.refresh(h2)
+    session.refresh(p2)
+
+    # Must NOT be evaluated as ghost because scan_id is None!
+    assert summary["ghost"] == 0
+    assert h2.status == "void"
+    assert p2.status == "void"
+
+
+def test_evaluator_scopes_ghosts_to_exact_scheduled_scan_id(session: Session):
+    """Scheduled runs strictly compare against past runs of the same scan_id, ignoring other schedules."""
+    from api.models import Scan
+
+    scan_a = Scan(id="scan-a", name="Schedule A", targets=["10.0.0.50"], ports_json=[80], flags_json={})
+    scan_b = Scan(id="scan-b", name="Schedule B", targets=["10.0.0.50"], ports_json=[80], flags_json={})
+    session.add_all([scan_a, scan_b])
+    session.commit()
+
+    # Schedule A Run 1: 10.0.0.50 was open
+    run_a1 = ScanRun(
+        scan_id=scan_a.id,
+        status=ScanRunStatus.COMPLETED,
+        started_at=datetime.now(timezone.utc) - timedelta(hours=2),
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
+    )
+    session.add(run_a1)
+    session.commit()
+    h_a1 = HostState(id=f"{run_a1.id}_10.0.0.50", scan_run_id=run_a1.id, ip_address="10.0.0.50", status="ok")
+    session.add(h_a1)
+    p_a1 = PortState(id=f"{h_a1.id}_80", host_state_id=h_a1.id, port_number=80, tcp_status="open", status="ok")
+    session.add(p_a1)
+    session.commit()
+
+    # Schedule B Run 1: 10.0.0.50 is closed (Must NOT be ghost, because Schedule B never saw it open!)
+    run_b1 = ScanRun(
+        scan_id=scan_b.id,
+        status=ScanRunStatus.COMPLETED,
+        started_at=datetime.now(timezone.utc) - timedelta(hours=1),
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30, "prune_void_hosts": False},
+    )
+    session.add(run_b1)
+    session.commit()
+    h_b1 = HostState(id=f"{run_b1.id}_10.0.0.50", scan_run_id=run_b1.id, ip_address="10.0.0.50", status="ok")
+    session.add(h_b1)
+    p_b1 = PortState(id=f"{h_b1.id}_80", host_state_id=h_b1.id, port_number=80, tcp_status="closed", status="ok")
+    session.add(p_b1)
+    session.commit()
+
+    summary_b1 = evaluate_scan_run(run_b1.id, session)
+    session.refresh(h_b1)
+    assert summary_b1["ghost"] == 0, "Schedule B must not see ghosts from Schedule A"
+    assert h_b1.status == "void"
+
+    # Schedule A Run 2: 10.0.0.50 is now closed (MUST be ghost, matching Schedule A Run 1!)
+    run_a2 = ScanRun(
+        scan_id=scan_a.id,
+        status=ScanRunStatus.COMPLETED,
+        started_at=datetime.now(timezone.utc),
+        execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30, "prune_void_hosts": False},
+    )
+    session.add(run_a2)
+    session.commit()
+    h_a2 = HostState(id=f"{run_a2.id}_10.0.0.50", scan_run_id=run_a2.id, ip_address="10.0.0.50", status="ok")
+    session.add(h_a2)
+    p_a2 = PortState(id=f"{h_a2.id}_80", host_state_id=h_a2.id, port_number=80, tcp_status="closed", status="ok")
+    session.add(p_a2)
+    session.commit()
+
+    summary_a2 = evaluate_scan_run(run_a2.id, session)
+    session.refresh(h_a2)
+    assert summary_a2["ghost"] == 1, "Schedule A Run 2 must detect ghost from Schedule A Run 1"
+    assert h_a2.status == "ghost"
+
 
 
 
