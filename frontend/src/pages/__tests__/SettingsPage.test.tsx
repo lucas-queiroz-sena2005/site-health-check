@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SettingsPage } from '../SettingsPage'
 
@@ -46,7 +45,6 @@ describe('SettingsPage', () => {
   })
 
   it('saves retention policy with PUT /api/system/settings', async () => {
-    const user = userEvent.setup()
     let putBody: any = null
 
     vi.spyOn(global, 'fetch').mockImplementation(async (url: any, init?: any) => {
@@ -84,12 +82,13 @@ describe('SettingsPage', () => {
       </QueryClientProvider>
     )
 
-    const input = await screen.findByLabelText(/retention period/i)
-    await user.clear(input)
-    await user.type(input, '30')
+    // Wait for initial fetch to populate the card metrics
+    await screen.findByText('10')
+    const input = screen.getByLabelText(/retention period/i)
+    fireEvent.change(input, { target: { value: '30' } })
 
     const saveBtn = screen.getByRole('button', { name: /save retention policy/i })
-    await user.click(saveBtn)
+    fireEvent.click(saveBtn)
 
     await waitFor(() => {
       expect(putBody).toEqual({ retention_days: 30 })
@@ -97,7 +96,6 @@ describe('SettingsPage', () => {
   })
 
   it('triggers purge history flow calling POST /api/system/purge-runs', async () => {
-    const user = userEvent.setup()
     let purgeCalled = false
 
     vi.spyOn(global, 'fetch').mockImplementation(async (url: any, init?: any) => {
@@ -130,11 +128,11 @@ describe('SettingsPage', () => {
     )
 
     const purgeBtn = await screen.findByRole('button', { name: /purge history/i })
-    await user.click(purgeBtn)
+    fireEvent.click(purgeBtn)
 
     // Confirmation dialog
     const confirmBtn = await screen.findByRole('button', { name: /confirm purge/i })
-    await user.click(confirmBtn)
+    fireEvent.click(confirmBtn)
 
     await waitFor(() => {
       expect(purgeCalled).toBe(true)

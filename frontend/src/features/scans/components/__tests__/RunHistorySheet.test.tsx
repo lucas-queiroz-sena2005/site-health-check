@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RunHistorySheet } from '../RunHistorySheet'
 
@@ -17,7 +16,6 @@ describe('RunHistorySheet', () => {
   })
 
   it('renders target string preview on run cards', async () => {
-    const user = userEvent.setup()
     vi.spyOn(global, 'fetch').mockImplementation(async (url: any) => {
       if (String(url).includes('/api/runs')) {
         return {
@@ -43,14 +41,13 @@ describe('RunHistorySheet', () => {
     )
 
     // Open sheet
-    const trigger = screen.getByRole('button', { name: /ad-hoc scan/i })
-    await user.click(trigger)
+    const trigger = screen.getByRole('button', { name: /history/i })
+    fireEvent.click(trigger)
 
     expect(await screen.findByText(/143\.106\.16\.128\/26, nimbus\.lab\.ic\.unicamp\.br/i)).toBeTruthy()
   })
 
   it('deletes terminal run with DELETE /api/runs/{id} and resets selectedRunId if active', async () => {
-    const user = userEvent.setup()
     const onSelectRunMock = vi.fn()
     let deleteCalled = false
 
@@ -83,11 +80,11 @@ describe('RunHistorySheet', () => {
     )
 
     // Open sheet
-    const trigger = screen.getByRole('button', { name: /past scan/i })
-    await user.click(trigger)
+    const trigger = screen.getByRole('button', { name: /history/i })
+    fireEvent.click(trigger)
 
     const deleteBtn = await screen.findByTitle(/delete run/i)
-    await user.click(deleteBtn)
+    fireEvent.click(deleteBtn)
 
     await waitFor(() => {
       expect(deleteCalled).toBe(true)

@@ -272,18 +272,20 @@ export function ScanConfigForm({
         <h4 className="text-sm font-bold uppercase text-primary tracking-wider border-b-2 border-border/50 pb-2">
           Evaluation Settings
         </h4>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-          <div className={fieldWrapperClass}>
-            <Label htmlFor="ghost_window" className="text-sm font-semibold">Ghost Window</Label>
-            <Input
-              id="ghost_window"
-              value={form?.ghost_window || '7d'}
-              className="bg-background border-black/15 dark:border-white/10"
-              placeholder="e.g. 7d, 24h, 30m"
-              onChange={(e) => setForm({ ...form, ghost_window: e.target.value })}
-            />
-            <span className="text-xs text-muted-foreground">Historical window to detect unresponsive hosts that were active</span>
-          </div>
+        <div className={`grid ${mode === 'schedule' ? 'grid-cols-2' : 'grid-cols-1'} gap-x-8 gap-y-4`}>
+          {mode === 'schedule' && (
+            <div className={fieldWrapperClass}>
+              <Label htmlFor="ghost_window" className="text-sm font-semibold">Ghost Window</Label>
+              <Input
+                id="ghost_window"
+                value={form?.ghost_window || '7d'}
+                className="bg-background border-black/15 dark:border-white/10"
+                placeholder="e.g. 7d, 24h, 30m"
+                onChange={(e) => setForm({ ...form, ghost_window: e.target.value })}
+              />
+              <span className="text-xs text-muted-foreground">Historical window to detect unresponsive hosts that were active</span>
+            </div>
+          )}
           <div className={fieldWrapperClass}>
             <Label htmlFor="tls_warning_days" className="text-sm font-semibold">TLS Expiry Warning (Days)</Label>
             <Input
