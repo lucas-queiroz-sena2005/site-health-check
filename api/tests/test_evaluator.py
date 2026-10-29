@@ -136,9 +136,14 @@ def test_port_state_rollups_and_tls_findings(session: Session):
 
 def test_host_state_rollups_and_ghost_evaluation(session: Session):
     """Level 3: HostState bottom-up rollups and Ghost classification."""
+    scan = Scan(id="test-ghost-scan-1", name="Ghost Scan 1", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
     # Past run where 10.0.0.99 was active (to simulate ghost host)
     past_time = datetime.now(UTC) - timedelta(days=2)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -155,6 +160,7 @@ def test_host_state_rollups_and_ghost_evaluation(session: Session):
 
     # Current run
     current_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
         started_at=datetime.now(UTC),
         status=ScanRunStatus.COMPLETED,
@@ -222,8 +228,13 @@ def test_host_state_rollups_and_ghost_evaluation(session: Session):
 
 def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
     """Void closed ports on active hosts must not fail the host, while historically open closed ports trigger ghost warning, and evaluate_scan_run writes metrics_json['summary']."""
+    scan = Scan(id="test-ghost-scan-2", name="Ghost Scan 2", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
     past_time = datetime.now(UTC) - timedelta(days=1)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -242,6 +253,7 @@ def test_active_host_void_port_vs_ghost_port_and_summary(session: Session):
     session.commit()
 
     run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30},
         started_at=datetime.now(UTC),
         status=ScanRunStatus.COMPLETED,
@@ -332,8 +344,13 @@ def test_evaluator_assigns_entity_status_void_and_ghost(session: Session):
     and inactive non-ghost hosts get status='void'."""
     from api.models import EntityStatus
 
+    scan = Scan(id="test-ghost-scan-3", name="Ghost Scan 3", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
     past_time = datetime.now(UTC) - timedelta(days=2)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -350,6 +367,7 @@ def test_evaluator_assigns_entity_status_void_and_ghost(session: Session):
 
     # Current run with pruning disabled to inspect evaluated statuses in DB
     run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={
             "ghost_window": "7d",
             "tls_warning_days": 30,
@@ -406,8 +424,13 @@ def test_evaluator_unified_pruning_pipeline(session: Session):
     """evaluate_scan_run directly performs pruning of void hosts and routine closed ports when configured."""
     from api.models import EntityStatus
 
+    scan = Scan(id="test-ghost-scan-4", name="Ghost Scan 4", targets=["10.0.0.0/24"], ports_json=[80, 443], flags_json={})
+    session.add(scan)
+    session.commit()
+
     past_time = datetime.now(UTC) - timedelta(days=2)
     past_run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={},
         started_at=past_time,
         status=ScanRunStatus.COMPLETED,
@@ -423,6 +446,7 @@ def test_evaluator_unified_pruning_pipeline(session: Session):
 
     # Current run with prune_void_hosts=True and prune_closed_ports=True (defaults)
     run = ScanRun(
+        scan_id=scan.id,
         execution_config_snapshot_json={
             "ghost_window": "7d",
             "prune_void_hosts": True,

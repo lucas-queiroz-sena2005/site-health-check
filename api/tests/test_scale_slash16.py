@@ -12,6 +12,7 @@ from api.models import (
     HostState,
     HttpRoutingCheck,
     PortState,
+    Scan,
     ScanRun,
     ScanRunStatus,
     TlsCertificate,
@@ -42,8 +43,17 @@ def test_slash16_end_to_end_scale_and_pruning(scale_engine):
         BATCH_SIZE = 500
 
         with Session(scale_engine) as session:
+            scan = Scan(
+                id="slash16-test-scan",
+                name="Slash16 Scan",
+                targets=["10.0.0.0/16"],
+                ports_json=[80, 443],
+                flags_json={},
+            )
+            session.add(scan)
             run = ScanRun(
                 id=run_id,
+                scan_id=scan.id,
                 status=ScanRunStatus.RUNNING,
                 started_at=datetime.now(UTC),
                 execution_config_snapshot_json={
@@ -164,6 +174,7 @@ def test_slash16_end_to_end_scale_and_pruning(scale_engine):
         with Session(scale_engine) as session:
             run2 = ScanRun(
                 id=run2_id,
+                scan_id="slash16-test-scan",
                 status=ScanRunStatus.RUNNING,
                 started_at=now,
                 execution_config_snapshot_json={

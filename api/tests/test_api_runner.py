@@ -2,7 +2,7 @@ import uuid
 import pytest
 from sqlmodel import Session, select, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
-from api.models import HostState, PortState, HttpRoutingCheck, TlsCertificate, ScanRun
+from api.models import HostState, PortState, HttpRoutingCheck, TlsCertificate, ScanRun, Scan
 from api.services.runner import _upsert_delta_sync
 from unittest.mock import patch
 
@@ -160,9 +160,20 @@ def test_finalize_run_preserves_active_and_ghost_hosts_while_pruning_void(test_e
         curr_run_id = str(uuid.uuid4())
 
         with Session(test_engine) as session:
+            scan = Scan(
+                id="runner-ghost-scan-1",
+                name="Runner Ghost Scan 1",
+                targets=["10.0.0.0/24"],
+                ports_json=[80],
+                flags_json={},
+            )
+            session.add(scan)
+            session.commit()
+
             # Historical completed run 2 days ago where 10.0.0.2 was active
             prev_run = ScanRun(
                 id=prev_run_id,
+                scan_id=scan.id,
                 status=ScanRunStatus.COMPLETED,
                 started_at=now - timedelta(days=2),
                 execution_config_snapshot_json={"ghost_window": "7d"}
@@ -186,6 +197,7 @@ def test_finalize_run_preserves_active_and_ghost_hosts_while_pruning_void(test_e
             # Current run
             curr_run = ScanRun(
                 id=curr_run_id,
+                scan_id=scan.id,
                 status=ScanRunStatus.RUNNING,
                 started_at=now,
                 execution_config_snapshot_json={"ghost_window": "7d", "tls_warning_days": 30}
@@ -423,9 +435,20 @@ def test_finalize_run_pruning_toggles(test_engine):
         prev_run_id = str(uuid.uuid4())
 
         with Session(test_engine) as session:
+            scan = Scan(
+                id="runner-ghost-scan-2",
+                name="Runner Ghost Scan 2",
+                targets=["10.0.0.0/24"],
+                ports_json=[80, 8080],
+                flags_json={},
+            )
+            session.add(scan)
+            session.commit()
+
             # Previous run: 10.0.0.10 had port 80 open (Ghost candidate)
             prev_run = ScanRun(
                 id=prev_run_id,
+                scan_id=scan.id,
                 status=ScanRunStatus.COMPLETED,
                 started_at=now - timedelta(days=1),
                 execution_config_snapshot_json={"ghost_window": "7d"},
@@ -451,6 +474,7 @@ def test_finalize_run_pruning_toggles(test_engine):
         with Session(test_engine) as session:
             run_a = ScanRun(
                 id=run_a_id,
+                scan_id="runner-ghost-scan-2",
                 status=ScanRunStatus.RUNNING,
                 started_at=now,
                 execution_config_snapshot_json={
@@ -486,6 +510,7 @@ def test_finalize_run_pruning_toggles(test_engine):
         with Session(test_engine) as session:
             run_b = ScanRun(
                 id=run_b_id,
+                scan_id="runner-ghost-scan-2",
                 status=ScanRunStatus.RUNNING,
                 started_at=now,
                 execution_config_snapshot_json={
