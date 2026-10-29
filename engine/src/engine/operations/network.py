@@ -1,6 +1,7 @@
 """Network operations and helpers."""
 
 import asyncio
+import concurrent.futures.thread  # noqa: F401 - Eager import to prevent lazy file open during FD saturation
 import ipaddress
 import socket
 
@@ -27,7 +28,7 @@ async def resolve_target(target: str) -> tuple[str, str, bool]:
             # Resolve domain asynchronously
             loop = asyncio.get_running_loop()
             ip_address = await loop.run_in_executor(None, socket.gethostbyname, target)
-        except socket.gaierror:
+        except (socket.gaierror, OSError):
             # Return empty IP to signal resolution failure
             return "", target, True
             

@@ -286,6 +286,55 @@ def cancel_engine():
     if cancel_event is not None and engine_loop is not None and not engine_loop.is_closed():
         engine_loop.call_soon_threadsafe(cancel_event.set)
 
+def tune_nofile_and_workers(
+    requested_workers: int,
+    current_soft: int | None = None,
+    current_hard: int | None = None,
+) -> int:
+    """Attempts to raise RLIMIT_NOFILE soft limit toward the hard limit (up to 65535)
+    and clamps requested workers if the active soft limit is too small to safely support them.
+    """
+    import resource
+
+    soft = current_soft
+    hard = current_hard
+
+    if soft is None or hard is None:
+        try:
+            cur_soft, cur_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft is None:
+                soft = cur_soft
+            if hard is None:
+                hard = cur_hard
+        except Exception as e:
+            logger.debug(f"Could not query RLIMIT_NOFILE: {e}")
+            return requested_workers
+
+    # Try raising soft limit to min(hard, 65535) if running in real environment
+    if current_soft is None and current_hard is None:
+        try:
+            target_soft = min(hard, 65535)
+            if target_soft > soft:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (target_soft, hard))
+                soft = target_soft
+                logger.info(f"[*] Raised RLIMIT_NOFILE soft limit to {soft}")
+        except Exception as e:
+            logger.debug(f"Could not raise RLIMIT_NOFILE soft limit: {e}")
+
+    # Reserve 250 file descriptors for event loop, stdio, database, and system sockets
+    fd_headroom = 250
+    safe_max_workers = max(50, soft - fd_headroom)
+
+    if requested_workers > safe_max_workers:
+        logger.warning(
+            f"[!] OS file descriptor soft limit is {soft}. "
+            f"Clamping requested {requested_workers} workers to {safe_max_workers} "
+            f"to prevent socket exhaustion (Errno 24)."
+        )
+        return safe_max_workers
+
+    return requested_workers
+
 def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100):
     """
     The synchronous boundary that the CLI calls.
@@ -296,6 +345,8 @@ def run_engine(tasks_data: list[dict[str, Any]], workers_count: int = 100):
     seen_http.clear()
     open_tcp.clear()
     is_cancelled = False
+    
+    workers_count = tune_nofile_and_workers(workers_count)
     
     logger.info(f"[*] Starting Asyncio Breadth-First Scanner Engine with {workers_count} concurrent routines...")
     asyncio.run(async_main(tasks_data, workers_count=workers_count))

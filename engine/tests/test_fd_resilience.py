@@ -3,7 +3,7 @@ import errno
 import logging
 import resource
 import socket
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -49,22 +49,17 @@ async def test_check_tcp_and_tls_retries_on_emfile(caplog):
     caplog.set_level(logging.WARNING)
 
     # First attempt raises EMFILE, second attempt succeeds
-    mock_reader = AsyncMock()
-    mock_writer = AsyncMock()
+    mock_reader = MagicMock()
+    mock_writer = MagicMock()
     mock_writer.get_extra_info.return_value = None
+    mock_writer.wait_closed = AsyncMock()
 
     attempts = [
         OSError(errno.EMFILE, "Too many open files"),
         (mock_reader, mock_writer),
     ]
 
-    async def mock_open_connection(*args, **kwargs):
-        res = attempts.pop(0)
-        if isinstance(res, Exception):
-            raise res
-        return res
-
-    with patch("asyncio.open_connection", side_effect=mock_open_connection):
+    with patch("asyncio.open_connection", side_effect=attempts):
         result = await check_tcp_and_tls("192.168.1.1", 80, timeout=1.0)
         assert result.tcp_status == "open"
         assert any("Too many open files" in record.message for record in caplog.records)

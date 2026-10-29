@@ -1,5 +1,6 @@
 """TCP and TLS socket probes."""
 import asyncio
+import errno
 import logging
 import ssl
 import time
@@ -23,15 +24,30 @@ async def check_tcp_and_tls(ip: str, port: int, server_hostname: str | None = No
     start_time = time.perf_counter()
 
     try:
-        _reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(
-                host=ip,
-                port=port,
-                ssl=_SSL_CONTEXT,
-                server_hostname=server_hostname
-            ),
-            timeout=timeout
-        )
+        writer = None
+        for attempt in range(2):
+            try:
+                _reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(
+                        host=ip,
+                        port=port,
+                        ssl=_SSL_CONTEXT,
+                        server_hostname=server_hostname
+                    ),
+                    timeout=timeout
+                )
+                break
+            except OSError as e:
+                if getattr(e, "errno", None) in (errno.EMFILE, errno.ENFILE) or "Too many open files" in str(e):
+                    logger.warning(f"File descriptor limit reached probing {ip}:{port}: {e}. Retrying after brief backoff...")
+                    if attempt == 0:
+                        await asyncio.sleep(0.05)
+                        continue
+                    else:
+                        logger.error(f"File descriptor limit persisted for {ip}:{port} after retry: {e}")
+                        result.tcp_status = "closed"
+                        return result
+                raise
 
         # If we reach here without throwing an error, the port is open AND speaks TLS
         result.tcp_status = "open"
