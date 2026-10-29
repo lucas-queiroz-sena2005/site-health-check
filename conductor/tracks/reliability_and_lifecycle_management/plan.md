@@ -12,20 +12,20 @@
     - [x] Update `engine/src/engine/probes/tcp.py` to explicitly handle `errno.EMFILE` / `errno.ENFILE` with warning logging and a single retry
 - [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
-## Phase 2: Generic `init_db()` Metadata Auto-Sync & `scan_id`-Scoped Ghost Evaluation
-- [~] Task: Write unit tests for generic `init_db()` schema sync and `scan_id`-scoped Ghost evaluation (`api/tests/test_database.py`, `api/tests/test_evaluator.py`)
-    - [ ] Test that `init_db()` generically inspects `SQLModel.metadata.tables` vs `sqlalchemy.inspect(engine)` to add missing columns across any table (including `scans.prune_void_hosts`, `scans.prune_closed_ports`, `scans.last_triggered_at`, and `system_config`)
-    - [ ] Test that `init_db()` fails fast by raising `RuntimeError` when an `ALTER TABLE` migration fails instead of silently passing
-    - [ ] Test in `api/tests/test_evaluator.py` that Ad-Hoc runs (`scan_id=None`) never evaluate Ghosts and never serve as a historical Ghost baseline for subsequent runs
-    - [ ] Test that Scheduled Scan runs (`scan_id != None`, including "Scan Now" runs) strictly evaluate Ghosts against completed runs with the exact same `scan_id` and ignore runs from other schedules
-- [ ] Task: Implement generic metadata-driven `init_db()` and `scan_id`-scoped Ghost baseline
-    - [ ] Replace hardcoded column checks in `api/src/api/database.py` (`init_db`) with generic `SQLModel.metadata.tables` + `sqlalchemy.inspect(engine)` column diffing and fail-fast `RuntimeError` handling
-    - [ ] Update `evaluate_scan_run()` in `api/src/api/services/evaluator.py` to only query `hist_stmt` when `run.scan_id is not None` and filter by `ScanRun.scan_id == run.scan_id`
-    - [ ] Update existing Ghost test fixtures in `api/tests/test_evaluator.py` and `api/tests/test_scale_slash16.py` to associate a `Scan` (`scan_id`) with scheduled Ghost test runs
-- [ ] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
+## Phase 2: Generic `init_db()` Metadata Auto-Sync & `scan_id`-Scoped Ghost Evaluation [checkpoint: e3fcc99]
+- [x] Task: Write unit tests for generic `init_db()` schema sync and `scan_id`-scoped Ghost evaluation (`api/tests/test_database.py`, `api/tests/test_evaluator.py`) [b24933f]
+    - [x] Test that `init_db()` generically inspects `SQLModel.metadata.tables` vs `sqlalchemy.inspect(engine)` to add missing columns across any table (including `scans.prune_void_hosts`, `scans.prune_closed_ports`, `scans.last_triggered_at`, and `system_config`)
+    - [x] Test that `init_db()` fails fast by raising `RuntimeError` when an `ALTER TABLE` migration fails instead of silently passing
+    - [x] Test in `api/tests/test_evaluator.py` that Ad-Hoc runs (`scan_id=None`) never evaluate Ghosts and never serve as a historical Ghost baseline for subsequent runs
+    - [x] Test that Scheduled Scan runs (`scan_id != None`, including "Scan Now" runs) strictly evaluate Ghosts against completed runs with the exact same `scan_id` and ignore runs from other schedules
+- [x] Task: Implement generic metadata-driven `init_db()` and `scan_id`-scoped Ghost baseline [e3fcc99]
+    - [x] Replace hardcoded column checks in `api/src/api/database.py` (`init_db`) with generic `SQLModel.metadata.tables` + `sqlalchemy.inspect(engine)` column diffing and fail-fast `RuntimeError` handling
+    - [x] Update `evaluate_scan_run()` in `api/src/api/services/evaluator.py` to only query `hist_stmt` when `run.scan_id is not None` and filter by `ScanRun.scan_id == run.scan_id`
+    - [x] Update existing Ghost test fixtures in `api/tests/test_evaluator.py` and `api/tests/test_scale_slash16.py` to associate a `Scan` (`scan_id`) with scheduled Ghost test runs
+- [x] Task: Phase Verification & Checkpoint (Refer to `workflow.md`)
 
 ## Phase 3: Backend Run Deletion, Schedule Hard-Delete, Retention Policy & System Reset API
-- [ ] Task: Write unit tests for Run Deletion, Schedule Cascade Delete, Cron Trigger Tracking, Retention Cleanup, and System Maintenance endpoints (`api/tests/test_system_and_lifecycle.py`)
+- [~] Task: Write unit tests for Run Deletion, Schedule Cascade Delete, Cron Trigger Tracking, Retention Cleanup, and System Maintenance endpoints (`api/tests/test_system_and_lifecycle.py`)
     - [ ] Test `DELETE /api/runs/{id}`: returns `409 Conflict` on active (`RUNNING`/`PENDING`) runs, and `204 No Content` on terminal runs while cascading deletion to `HostState`, `PortState`, `TlsCertificate`, and `HttpRoutingCheck` and cleaning up `RunManager` buffers
     - [ ] Test `DELETE /api/scans/{id}`: hard-deletes the `Scan` and cascades deletion to all associated `ScanRun` records
     - [ ] Test `scheduler.py`: tracks `Scan.last_triggered_at` so deleting the latest `ScanRun` of an active schedule does not cause an immediate duplicate re-trigger
